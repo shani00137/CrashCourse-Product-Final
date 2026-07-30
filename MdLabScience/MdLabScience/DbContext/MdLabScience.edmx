@@ -1,0 +1,1182 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+  <!-- EF Runtime content -->
+  <edmx:Runtime>
+    <!-- SSDL content -->
+    <edmx:StorageModels>
+    <Schema Namespace="MdLabScienceDbModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="AdditionalDocumentTb">
+          <Key>
+            <PropertyRef Name="AdditionalDocumentId" />
+          </Key>
+          <Property Name="AdditionalDocumentId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="AdditionalDocumentsDataflow" Type="bit" />
+          <Property Name="AdditionalDocumentsDataflowRemarks" Type="nvarchar(max)" />
+          <Property Name="ApplicantId" Type="int" />
+        </EntityType>
+        <EntityType Name="ApplicantCourseSelectionTb">
+          <Key>
+            <PropertyRef Name="CourseSelectionId" />
+          </Key>
+          <Property Name="CourseSelectionId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ApplicantId" Type="int" Nullable="false" />
+          <Property Name="CourseCode" Type="int" Nullable="false" />
+          <Property Name="CourseId" Type="int" Nullable="false" />
+          <Property Name="Date" Type="datetime" />
+        </EntityType>
+        <EntityType Name="ApplicantInvoiceTB">
+          <Key>
+            <PropertyRef Name="InvoiceId" />
+          </Key>
+          <Property Name="InvoiceId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="InvoiceNo" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="ApplicantId" Type="int" Nullable="false" />
+          <Property Name="Amount" Type="float" Nullable="false" />
+          <Property Name="Service" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="Remarks" Type="nvarchar(max)" />
+          <Property Name="DateTime" Type="datetime" Nullable="false" />
+          <Property Name="PaidAmount" Type="float" />
+          <Property Name="Balance" Type="float" />
+          <Property Name="Currency" Type="nvarchar(max)" />
+        </EntityType>
+        <EntityType Name="ApplicantsTb">
+          <Key>
+            <PropertyRef Name="RecordId" />
+          </Key>
+          <Property Name="RecordId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ApplicantId" Type="int" />
+          <Property Name="RegistrationNo" Type="nvarchar(max)" />
+          <Property Name="FirstName" Type="nvarchar(max)" />
+          <Property Name="LastName" Type="nvarchar(max)" />
+          <Property Name="Mobile" Type="nchar" MaxLength="15" />
+          <Property Name="OtherMobile" Type="nchar" MaxLength="15" />
+          <Property Name="Address" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="Email" Type="nvarchar" MaxLength="200" />
+          <Property Name="CreatedOn" Type="datetime" Nullable="false" />
+          <Property Name="RegistrationDate" Type="datetime" Nullable="false" />
+          <Property Name="ExpiryDate" Type="date" Nullable="false" />
+          <Property Name="UserNo" Type="int" Nullable="false" />
+          <Property Name="PhotoUrl" Type="nvarchar(max)" />
+          <Property Name="CountryId" Type="int" Nullable="false" />
+          <Property Name="IsActive" Type="bit" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ApplicantTransactionTB">
+          <Key>
+            <PropertyRef Name="TransactionId" />
+          </Key>
+          <Property Name="TransactionId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="Debit" Type="float" Nullable="false" />
+          <Property Name="Credit" Type="float" Nullable="false" />
+          <Property Name="DateTime" Type="datetime" />
+          <Property Name="Reference" Type="nvarchar(max)" />
+          <Property Name="Remarks" Type="nvarchar(max)" />
+          <Property Name="ApplicantId" Type="int" />
+        </EntityType>
+        <EntityType Name="AppUserScreenshotTB">
+          <Key>
+            <PropertyRef Name="ScreenShotId" />
+          </Key>
+          <Property Name="ScreenShotId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ApplicantId" Type="int" Nullable="false" />
+          <Property Name="UserId" Type="int" />
+          <Property Name="DateTime" Type="datetime" Nullable="false" />
+          <Property Name="ImageUrl" Type="nvarchar(max)" />
+        </EntityType>
+        <EntityType Name="AppUserTb">
+          <Key>
+            <PropertyRef Name="AppUserRecordId" />
+          </Key>
+          <Property Name="AppUserRecordId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="AppUserId" Type="int" Nullable="false" />
+          <Property Name="ApplicantId" Type="int" Nullable="false" />
+          <Property Name="Status" Type="bit" Nullable="false" />
+          <Property Name="CreateOn" Type="datetime" Nullable="false" />
+          <Property Name="LoginOn" Type="datetime" />
+          <Property Name="DeviceId" Type="nvarchar(max)" />
+          <Property Name="UserName" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="Password" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="Token" Type="nvarchar" MaxLength="2000" />
+        </EntityType>
+        <!--Errors Found During Generation:
+warning 6002: The table/view 'db_aa41a7_rahatzaman.dbo.AppUserTestDetailsTb' does not have a primary key defined. The key has been inferred and the definition was created as a read-only table/view.-->
+        <EntityType Name="AppUserTestDetailsTb">
+          <Key>
+            <PropertyRef Name="TestRecordId" />
+            <PropertyRef Name="TestId" />
+            <PropertyRef Name="AppUserId" />
+            <PropertyRef Name="QuestionId" />
+            <PropertyRef Name="Options" />
+            <PropertyRef Name="IsChooseRight" />
+          </Key>
+          <Property Name="TestRecordId" Type="int" Nullable="false" />
+          <Property Name="TestId" Type="int" Nullable="false" />
+          <Property Name="AppUserId" Type="int" Nullable="false" />
+          <Property Name="QuestionId" Type="int" Nullable="false" />
+          <Property Name="Options" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="IsChooseRight" Type="bit" Nullable="false" />
+        </EntityType>
+        <EntityType Name="AppUserTestTb">
+          <Key>
+            <PropertyRef Name="TestRecordId" />
+          </Key>
+          <Property Name="TestRecordId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="TestId" Type="int" Nullable="false" />
+          <Property Name="CourseId" Type="int" Nullable="false" />
+          <Property Name="CreatedDate" Type="datetime" Nullable="false" />
+          <Property Name="ApplicantId" Type="int" Nullable="false" />
+          <Property Name="IsCompleted" Type="bit" Nullable="false" />
+          <Property Name="Questions" Type="int" Nullable="false" />
+          <Property Name="CreatedBy" Type="int" Nullable="false" />
+          <Property Name="TestDate" Type="date" Nullable="false" />
+          <Property Name="Duration" Type="int" Nullable="false" />
+          <Property Name="TestStartTime" Type="datetime" />
+          <Property Name="RightQuestions" Type="int" />
+          <Property Name="Remarks" Type="nvarchar" MaxLength="1000" />
+        </EntityType>
+        <EntityType Name="CertificateInvoiceTb">
+          <Key>
+            <PropertyRef Name="CertificateInoviceId" />
+          </Key>
+          <Property Name="CertificateInoviceId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="Amount" Type="float" />
+          <Property Name="Service" Type="nvarchar(max)" />
+          <Property Name="InvoiceId" Type="int" />
+        </EntityType>
+        <EntityType Name="CertificationApplicantTB">
+          <Key>
+            <PropertyRef Name="RecordId" />
+          </Key>
+          <Property Name="RecordId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="CertifiedApplicantId" Type="int" Nullable="false" />
+          <Property Name="FirstName" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="LastName" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="Mobile" Type="nchar" MaxLength="15" />
+          <Property Name="Address" Type="nvarchar(max)" />
+          <Property Name="Email" Type="nvarchar" MaxLength="200" />
+          <Property Name="CreatedOn" Type="datetime" Nullable="false" />
+          <Property Name="RegistrationDate" Type="datetime" Nullable="false" />
+          <Property Name="CountryId" Type="int" />
+          <Property Name="Specialty" Type="nvarchar(max)" />
+          <Property Name="CourseName" Type="nvarchar(max)" />
+          <Property Name="IsDeleted" Type="bit" />
+        </EntityType>
+        <EntityType Name="ChatTb">
+          <Key>
+            <PropertyRef Name="ChatId" />
+          </Key>
+          <Property Name="ChatId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="AppUserId" Type="int" Nullable="false" />
+          <Property Name="ReceiverId" Type="int" Nullable="false" />
+          <Property Name="DateTime" Type="datetime" Nullable="false" />
+          <Property Name="Message" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="IsSender" Type="bit" Nullable="false" />
+          <Property Name="IsRead" Type="bit" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ControllerPermissions">
+          <Key>
+            <PropertyRef Name="CPermissionId" />
+          </Key>
+          <Property Name="CPermissionId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ControllerId" Type="int" />
+          <Property Name="UserNo" Type="int" />
+          <Property Name="Permission" Type="bit" />
+        </EntityType>
+        <EntityType Name="CountryTb">
+          <Key>
+            <PropertyRef Name="CountryId" />
+          </Key>
+          <Property Name="CountryId" Type="int" Nullable="false" />
+          <Property Name="CoutryName" Type="nvarchar" MaxLength="255" />
+        </EntityType>
+        <EntityType Name="CourseMaterialTb">
+          <Key>
+            <PropertyRef Name="CourseMaterialId" />
+          </Key>
+          <Property Name="CourseMaterialId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="CourseId" Type="int" Nullable="false" />
+          <Property Name="CourseUrl" Type="nvarchar(max)" />
+          <Property Name="MaterialType" Type="nvarchar" MaxLength="50" />
+          <Property Name="FileName" Type="nvarchar(max)" />
+        </EntityType>
+        <EntityType Name="CourseTb">
+          <Key>
+            <PropertyRef Name="CourseId" />
+          </Key>
+          <Property Name="CourseId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="CourseCode" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="CourseName" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="IsActive" Type="bit" Nullable="false" />
+          <Property Name="CourseUrl" Type="nvarchar" MaxLength="3000" />
+        </EntityType>
+        <EntityType Name="DataFlowTransferTB">
+          <Key>
+            <PropertyRef Name="DataFlowTransferredId" />
+          </Key>
+          <Property Name="DataFlowTransferredId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ApplicantId" Type="int" Nullable="false" />
+          <Property Name="DataFlowTransferred" Type="bit" />
+          <Property Name="Remarks" Type="nvarchar(max)" />
+          <Property Name="Date" Type="datetime" />
+        </EntityType>
+        <EntityType Name="DataFlowVerificationTb">
+          <Key>
+            <PropertyRef Name="DataFlowVerificationId" />
+          </Key>
+          <Property Name="DataFlowVerificationId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ApplicantId" Type="int" Nullable="false" />
+          <Property Name="CNIC" Type="bit" />
+          <Property Name="Photo" Type="nvarchar" MaxLength="4000" />
+          <Property Name="Passport" Type="nvarchar" MaxLength="2000" />
+          <Property Name="MatricMarketSheet" Type="nvarchar" MaxLength="2000" />
+          <Property Name="Degree" Type="nvarchar" MaxLength="2000" />
+          <Property Name="ExperienceCertificate" Type="nvarchar" MaxLength="2000" />
+          <Property Name="RegistrationCertificate" Type="nvarchar" MaxLength="2000" />
+          <Property Name="AdditionalDocuments" Type="nvarchar" MaxLength="2000" />
+          <Property Name="Others" Type="nvarchar(max)" />
+          <Property Name="DataFlowRemarks" Type="nvarchar(max)" />
+          <Property Name="LicenseTransfer" Type="nvarchar" MaxLength="2000" />
+          <Property Name="DegreeMarkSheet" Type="nvarchar" MaxLength="2000" />
+          <Property Name="GoodStandingDocuments" Type="nvarchar" MaxLength="2000" />
+          <Property Name="IntermediateMarkSheet" Type="nvarchar" MaxLength="2000" />
+        </EntityType>
+        <EntityType Name="ExerciseTb">
+          <Key>
+            <PropertyRef Name="ExerciseRecordId" />
+          </Key>
+          <Property Name="ExerciseRecordId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="Exercise" Type="nvarchar(max)" />
+          <Property Name="StartFrom" Type="int" />
+          <Property Name="EndFrom" Type="int" />
+        </EntityType>
+        <EntityType Name="QuestionOptionsTb">
+          <Key>
+            <PropertyRef Name="QuestionJobOptionId" />
+          </Key>
+          <Property Name="QuestionJobOptionId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="QuestionId" Type="int" />
+          <Property Name="JobsId" Type="int" />
+          <Property Name="Options" Type="nvarchar(max)" />
+          <Property Name="IsRightAns" Type="bit" />
+        </EntityType>
+        <EntityType Name="QuestionsTB">
+          <Key>
+            <PropertyRef Name="QuestionRecordId" />
+          </Key>
+          <Property Name="QuestionRecordId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="QuestionId" Type="int" Nullable="false" />
+          <Property Name="CourseId" Type="int" Nullable="false" />
+          <Property Name="DateTime" Type="datetime" />
+          <Property Name="QuestionContent" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="StartDateTime" Type="datetime" />
+        </EntityType>
+        <EntityType Name="TestQuestionOptionTb">
+          <Key>
+            <PropertyRef Name="TestQuestionOptionId" />
+          </Key>
+          <Property Name="TestQuestionOptionId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="QuestionId" Type="int" />
+          <Property Name="JobsId" Type="int" />
+          <Property Name="Options" Type="nvarchar(max)" />
+          <Property Name="IsRightAns" Type="bit" />
+          <Property Name="TestId" Type="int" Nullable="false" />
+          <Property Name="isSelected" Type="int" />
+          <Property Name="Answer" Type="nvarchar" MaxLength="2000" />
+        </EntityType>
+        <EntityType Name="TestQuestionTb">
+          <Key>
+            <PropertyRef Name="TestQuestionRecordId" />
+          </Key>
+          <Property Name="TestQuestionRecordId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="QuestionId" Type="int" Nullable="false" />
+          <Property Name="CourseId" Type="int" Nullable="false" />
+          <Property Name="DateTime" Type="datetime" />
+          <Property Name="QuestionContent" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="TestId" Type="int" Nullable="false" />
+        </EntityType>
+        <EntityType Name="UserControllers">
+          <Key>
+            <PropertyRef Name="ControllerId" />
+          </Key>
+          <Property Name="ControllerId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ControllerName" Type="nvarchar(max)" />
+          <Property Name="ControllerUrl" Type="nvarchar(max)" />
+          <Property Name="MenuId" Type="int" />
+        </EntityType>
+        <EntityType Name="UserInfo">
+          <Key>
+            <PropertyRef Name="UserId" />
+          </Key>
+          <Property Name="UserId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="UserNo" Type="int" Nullable="false" />
+          <Property Name="UserName" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="UserPassword" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="Status" Type="bit" />
+          <Property Name="RoleId" Type="int" />
+          <Property Name="CreatedDate" Type="date" />
+          <Property Name="ExpireDate" Type="date" />
+          <Property Name="UserType" Type="nvarchar" MaxLength="50" />
+          <Property Name="Email" Type="nvarchar(max)" />
+          <Property Name="UserToken" Type="nvarchar" MaxLength="2000" />
+        </EntityType>
+        <EntityType Name="UserMenu">
+          <Key>
+            <PropertyRef Name="RecordId" />
+          </Key>
+          <Property Name="RecordId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="MenuId" Type="int" Nullable="false" />
+          <Property Name="MenuName" Type="nvarchar(max)" />
+          <Property Name="url" Type="nvarchar(max)" />
+          <Property Name="icon" Type="nvarchar(max)" />
+        </EntityType>
+        <EntityType Name="UserPage">
+          <Key>
+            <PropertyRef Name="PageId" />
+          </Key>
+          <Property Name="PageId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="name" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="url" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="icon" Type="nvarchar(max)" />
+          <Property Name="MenuId" Type="int" />
+        </EntityType>
+        <EntityType Name="UserPermission">
+          <Key>
+            <PropertyRef Name="PermissionId" />
+          </Key>
+          <Property Name="PermissionId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="RoleId" Type="int" Nullable="false" />
+          <Property Name="PageId" Type="int" Nullable="false" />
+          <Property Name="MenuId" Type="int" />
+          <Property Name="EmpCode" Type="int" />
+        </EntityType>
+        <EntityType Name="UserRole">
+          <Key>
+            <PropertyRef Name="RoleId" />
+          </Key>
+          <Property Name="RoleId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="RoleName" Type="varchar(max)" Nullable="false" />
+        </EntityType>
+        <EntityContainer Name="MdLabScienceDbModelStoreContainer">
+          <EntitySet Name="AdditionalDocumentTb" EntityType="Self.AdditionalDocumentTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ApplicantCourseSelectionTb" EntityType="Self.ApplicantCourseSelectionTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ApplicantInvoiceTB" EntityType="Self.ApplicantInvoiceTB" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ApplicantsTb" EntityType="Self.ApplicantsTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ApplicantTransactionTB" EntityType="Self.ApplicantTransactionTB" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="AppUserScreenshotTB" EntityType="Self.AppUserScreenshotTB" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="AppUserTb" EntityType="Self.AppUserTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="AppUserTestTb" EntityType="Self.AppUserTestTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="CertificateInvoiceTb" EntityType="Self.CertificateInvoiceTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="CertificationApplicantTB" EntityType="Self.CertificationApplicantTB" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ChatTb" EntityType="Self.ChatTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ControllerPermissions" EntityType="Self.ControllerPermissions" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="CountryTb" EntityType="Self.CountryTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="CourseMaterialTb" EntityType="Self.CourseMaterialTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="CourseTb" EntityType="Self.CourseTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="DataFlowTransferTB" EntityType="Self.DataFlowTransferTB" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="DataFlowVerificationTb" EntityType="Self.DataFlowVerificationTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ExerciseTb" EntityType="Self.ExerciseTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="QuestionOptionsTb" EntityType="Self.QuestionOptionsTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="QuestionsTB" EntityType="Self.QuestionsTB" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="TestQuestionOptionTb" EntityType="Self.TestQuestionOptionTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="TestQuestionTb" EntityType="Self.TestQuestionTb" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="UserControllers" EntityType="Self.UserControllers" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="UserInfo" EntityType="Self.UserInfo" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="UserMenu" EntityType="Self.UserMenu" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="UserPage" EntityType="Self.UserPage" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="UserPermission" EntityType="Self.UserPermission" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="UserRole" EntityType="Self.UserRole" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="AppUserTestDetailsTb" EntityType="Self.AppUserTestDetailsTb" store:Type="Tables" store:Schema="dbo">
+            <DefiningQuery>SELECT 
+    [AppUserTestDetailsTb].[TestRecordId] AS [TestRecordId], 
+    [AppUserTestDetailsTb].[TestId] AS [TestId], 
+    [AppUserTestDetailsTb].[AppUserId] AS [AppUserId], 
+    [AppUserTestDetailsTb].[QuestionId] AS [QuestionId], 
+    [AppUserTestDetailsTb].[Options] AS [Options], 
+    [AppUserTestDetailsTb].[IsChooseRight] AS [IsChooseRight]
+    FROM [dbo].[AppUserTestDetailsTb] AS [AppUserTestDetailsTb]</DefiningQuery>
+          </EntitySet>
+        </EntityContainer>
+      </Schema></edmx:StorageModels>
+    <!-- CSDL content -->
+    <edmx:ConceptualModels>
+      <Schema Namespace="MdLabScienceDbModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+        <EntityContainer Name="MdLabScienceDbEntities" annotation:LazyLoadingEnabled="true">
+          <EntitySet Name="AppUserScreenshotTBs" EntityType="MdLabScienceDbModel.AppUserScreenshotTB" />
+          <EntitySet Name="AdditionalDocumentTbs" EntityType="MdLabScienceDbModel.AdditionalDocumentTb" />
+          <EntitySet Name="ApplicantCourseSelectionTbs" EntityType="MdLabScienceDbModel.ApplicantCourseSelectionTb" />
+          <EntitySet Name="ApplicantInvoiceTBs" EntityType="MdLabScienceDbModel.ApplicantInvoiceTB" />
+          <EntitySet Name="ApplicantsTbs" EntityType="MdLabScienceDbModel.ApplicantsTb" />
+          <EntitySet Name="ApplicantTransactionTBs" EntityType="MdLabScienceDbModel.ApplicantTransactionTB" />
+          <EntitySet Name="AppUserTbs" EntityType="MdLabScienceDbModel.AppUserTb" />
+          <EntitySet Name="AppUserTestTbs" EntityType="MdLabScienceDbModel.AppUserTestTb" />
+          <EntitySet Name="CertificateInvoiceTbs" EntityType="MdLabScienceDbModel.CertificateInvoiceTb" />
+          <EntitySet Name="CertificationApplicantTBs" EntityType="MdLabScienceDbModel.CertificationApplicantTB" />
+          <EntitySet Name="ChatTbs" EntityType="MdLabScienceDbModel.ChatTb" />
+          <EntitySet Name="ControllerPermissions" EntityType="MdLabScienceDbModel.ControllerPermission" />
+          <EntitySet Name="CountryTbs" EntityType="MdLabScienceDbModel.CountryTb" />
+          <EntitySet Name="CourseMaterialTbs" EntityType="MdLabScienceDbModel.CourseMaterialTb" />
+          <EntitySet Name="CourseTbs" EntityType="MdLabScienceDbModel.CourseTb" />
+          <EntitySet Name="DataFlowTransferTBs" EntityType="MdLabScienceDbModel.DataFlowTransferTB" />
+          <EntitySet Name="DataFlowVerificationTbs" EntityType="MdLabScienceDbModel.DataFlowVerificationTb" />
+          <EntitySet Name="ExerciseTbs" EntityType="MdLabScienceDbModel.ExerciseTb" />
+          <EntitySet Name="QuestionOptionsTbs" EntityType="MdLabScienceDbModel.QuestionOptionsTb" />
+          <EntitySet Name="QuestionsTBs" EntityType="MdLabScienceDbModel.QuestionsTB" />
+          <EntitySet Name="TestQuestionOptionTbs" EntityType="MdLabScienceDbModel.TestQuestionOptionTb" />
+          <EntitySet Name="TestQuestionTbs" EntityType="MdLabScienceDbModel.TestQuestionTb" />
+          <EntitySet Name="UserControllers" EntityType="MdLabScienceDbModel.UserController" />
+          <EntitySet Name="UserInfoes" EntityType="MdLabScienceDbModel.UserInfo" />
+          <EntitySet Name="UserMenus" EntityType="MdLabScienceDbModel.UserMenu" />
+          <EntitySet Name="UserPages" EntityType="MdLabScienceDbModel.UserPage" />
+          <EntitySet Name="UserPermissions" EntityType="MdLabScienceDbModel.UserPermission" />
+          <EntitySet Name="UserRoles" EntityType="MdLabScienceDbModel.UserRole" />
+          <EntitySet Name="AppUserTestDetailsTbs" EntityType="MdLabScienceDbModel.AppUserTestDetailsTb" />
+          </EntityContainer>
+        <EntityType Name="AppUserScreenshotTB">
+          <Key>
+            <PropertyRef Name="ScreenShotId" />
+          </Key>
+          <Property Name="ScreenShotId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ApplicantId" Type="Int32" Nullable="false" />
+          <Property Name="UserId" Type="Int32" />
+          <Property Name="DateTime" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="ImageUrl" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="AdditionalDocumentTb">
+          <Key>
+            <PropertyRef Name="AdditionalDocumentId" />
+          </Key>
+          <Property Name="AdditionalDocumentId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="AdditionalDocumentsDataflow" Type="Boolean" />
+          <Property Name="AdditionalDocumentsDataflowRemarks" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="ApplicantId" Type="Int32" />
+        </EntityType>
+        <EntityType Name="ApplicantCourseSelectionTb">
+          <Key>
+            <PropertyRef Name="CourseSelectionId" />
+          </Key>
+          <Property Name="CourseSelectionId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ApplicantId" Type="Int32" Nullable="false" />
+          <Property Name="CourseCode" Type="Int32" Nullable="false" />
+          <Property Name="CourseId" Type="Int32" Nullable="false" />
+          <Property Name="Date" Type="DateTime" Precision="3" />
+        </EntityType>
+        <EntityType Name="ApplicantInvoiceTB">
+          <Key>
+            <PropertyRef Name="InvoiceId" />
+          </Key>
+          <Property Name="InvoiceId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="InvoiceNo" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="ApplicantId" Type="Int32" Nullable="false" />
+          <Property Name="Amount" Type="Double" Nullable="false" />
+          <Property Name="Service" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Remarks" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="DateTime" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="PaidAmount" Type="Double" />
+          <Property Name="Balance" Type="Double" />
+          <Property Name="Currency" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="ApplicantsTb">
+          <Key>
+            <PropertyRef Name="RecordId" />
+          </Key>
+          <Property Name="RecordId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ApplicantId" Type="Int32" />
+          <Property Name="RegistrationNo" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="FirstName" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="LastName" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Mobile" Type="String" MaxLength="15" FixedLength="true" Unicode="true" />
+          <Property Name="OtherMobile" Type="String" MaxLength="15" FixedLength="true" Unicode="true" />
+          <Property Name="Address" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Email" Type="String" MaxLength="200" FixedLength="false" Unicode="true" />
+          <Property Name="CreatedOn" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="RegistrationDate" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="ExpiryDate" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="UserNo" Type="Int32" Nullable="false" />
+          <Property Name="PhotoUrl" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="CountryId" Type="Int32" Nullable="false" />
+          <Property Name="IsActive" Type="Boolean" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ApplicantTransactionTB">
+          <Key>
+            <PropertyRef Name="TransactionId" />
+          </Key>
+          <Property Name="TransactionId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Debit" Type="Double" Nullable="false" />
+          <Property Name="Credit" Type="Double" Nullable="false" />
+          <Property Name="DateTime" Type="DateTime" Precision="3" />
+          <Property Name="Reference" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Remarks" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="ApplicantId" Type="Int32" />
+        </EntityType>
+        <EntityType Name="AppUserTb">
+          <Key>
+            <PropertyRef Name="AppUserRecordId" />
+          </Key>
+          <Property Name="AppUserRecordId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="AppUserId" Type="Int32" Nullable="false" />
+          <Property Name="ApplicantId" Type="Int32" Nullable="false" />
+          <Property Name="Status" Type="Boolean" Nullable="false" />
+          <Property Name="CreateOn" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="LoginOn" Type="DateTime" Precision="3" />
+          <Property Name="DeviceId" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="UserName" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Password" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Token" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="AppUserTestTb">
+          <Key>
+            <PropertyRef Name="TestRecordId" />
+          </Key>
+          <Property Name="TestRecordId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="TestId" Type="Int32" Nullable="false" />
+          <Property Name="CourseId" Type="Int32" Nullable="false" />
+          <Property Name="CreatedDate" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="ApplicantId" Type="Int32" Nullable="false" />
+          <Property Name="IsCompleted" Type="Boolean" Nullable="false" />
+          <Property Name="Questions" Type="Int32" Nullable="false" />
+          <Property Name="CreatedBy" Type="Int32" Nullable="false" />
+          <Property Name="TestDate" Type="DateTime" Nullable="false" Precision="0" />
+          <Property Name="Duration" Type="Int32" Nullable="false" />
+          <Property Name="TestStartTime" Type="DateTime" Precision="3" />
+          <Property Name="RightQuestions" Type="Int32" />
+          <Property Name="Remarks" Type="String" MaxLength="1000" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="CertificateInvoiceTb">
+          <Key>
+            <PropertyRef Name="CertificateInoviceId" />
+          </Key>
+          <Property Name="CertificateInoviceId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Amount" Type="Double" />
+          <Property Name="Service" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="InvoiceId" Type="Int32" />
+        </EntityType>
+        <EntityType Name="CertificationApplicantTB">
+          <Key>
+            <PropertyRef Name="RecordId" />
+          </Key>
+          <Property Name="RecordId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="CertifiedApplicantId" Type="Int32" Nullable="false" />
+          <Property Name="FirstName" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="LastName" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Mobile" Type="String" MaxLength="15" FixedLength="true" Unicode="true" />
+          <Property Name="Address" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Email" Type="String" MaxLength="200" FixedLength="false" Unicode="true" />
+          <Property Name="CreatedOn" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="RegistrationDate" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="CountryId" Type="Int32" />
+          <Property Name="Specialty" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="CourseName" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="IsDeleted" Type="Boolean" />
+        </EntityType>
+        <EntityType Name="ChatTb">
+          <Key>
+            <PropertyRef Name="ChatId" />
+          </Key>
+          <Property Name="ChatId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="AppUserId" Type="Int32" Nullable="false" />
+          <Property Name="ReceiverId" Type="Int32" Nullable="false" />
+          <Property Name="DateTime" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="Message" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="IsSender" Type="Boolean" Nullable="false" />
+          <Property Name="IsRead" Type="Boolean" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ControllerPermission">
+          <Key>
+            <PropertyRef Name="CPermissionId" />
+          </Key>
+          <Property Name="CPermissionId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ControllerId" Type="Int32" />
+          <Property Name="UserNo" Type="Int32" />
+          <Property Name="Permission" Type="Boolean" />
+        </EntityType>
+        <EntityType Name="CountryTb">
+          <Key>
+            <PropertyRef Name="CountryId" />
+          </Key>
+          <Property Name="CountryId" Type="Int32" Nullable="false" />
+          <Property Name="CoutryName" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="CourseMaterialTb">
+          <Key>
+            <PropertyRef Name="CourseMaterialId" />
+          </Key>
+          <Property Name="CourseMaterialId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="CourseId" Type="Int32" Nullable="false" />
+          <Property Name="CourseUrl" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="MaterialType" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="FileName" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="CourseTb">
+          <Key>
+            <PropertyRef Name="CourseId" />
+          </Key>
+          <Property Name="CourseId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="CourseCode" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="CourseName" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="IsActive" Type="Boolean" Nullable="false" />
+          <Property Name="CourseUrl" Type="String" MaxLength="3000" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="DataFlowTransferTB">
+          <Key>
+            <PropertyRef Name="DataFlowTransferredId" />
+          </Key>
+          <Property Name="DataFlowTransferredId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ApplicantId" Type="Int32" Nullable="false" />
+          <Property Name="DataFlowTransferred" Type="Boolean" />
+          <Property Name="Remarks" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Date" Type="DateTime" Precision="3" />
+        </EntityType>
+        <EntityType Name="DataFlowVerificationTb">
+          <Key>
+            <PropertyRef Name="DataFlowVerificationId" />
+          </Key>
+          <Property Name="DataFlowVerificationId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ApplicantId" Type="Int32" Nullable="false" />
+          <Property Name="CNIC" Type="Boolean" />
+          <Property Name="Photo" Type="String" MaxLength="4000" FixedLength="false" Unicode="true" />
+          <Property Name="Passport" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+          <Property Name="MatricMarketSheet" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+          <Property Name="Degree" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+          <Property Name="ExperienceCertificate" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+          <Property Name="RegistrationCertificate" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+          <Property Name="AdditionalDocuments" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+          <Property Name="Others" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="DataFlowRemarks" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="LicenseTransfer" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+          <Property Name="DegreeMarkSheet" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+          <Property Name="GoodStandingDocuments" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+          <Property Name="IntermediateMarkSheet" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="ExerciseTb">
+          <Key>
+            <PropertyRef Name="ExerciseRecordId" />
+          </Key>
+          <Property Name="ExerciseRecordId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Exercise" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="StartFrom" Type="Int32" />
+          <Property Name="EndFrom" Type="Int32" />
+        </EntityType>
+        <EntityType Name="QuestionOptionsTb">
+          <Key>
+            <PropertyRef Name="QuestionJobOptionId" />
+          </Key>
+          <Property Name="QuestionJobOptionId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="QuestionId" Type="Int32" />
+          <Property Name="JobsId" Type="Int32" />
+          <Property Name="Options" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="IsRightAns" Type="Boolean" />
+        </EntityType>
+        <EntityType Name="QuestionsTB">
+          <Key>
+            <PropertyRef Name="QuestionRecordId" />
+          </Key>
+          <Property Name="QuestionRecordId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="QuestionId" Type="Int32" Nullable="false" />
+          <Property Name="CourseId" Type="Int32" Nullable="false" />
+          <Property Name="DateTime" Type="DateTime" Precision="3" />
+          <Property Name="QuestionContent" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="StartDateTime" Type="DateTime" Precision="3" />
+        </EntityType>
+        <EntityType Name="TestQuestionOptionTb">
+          <Key>
+            <PropertyRef Name="TestQuestionOptionId" />
+          </Key>
+          <Property Name="TestQuestionOptionId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="QuestionId" Type="Int32" />
+          <Property Name="JobsId" Type="Int32" />
+          <Property Name="Options" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="IsRightAns" Type="Boolean" />
+          <Property Name="TestId" Type="Int32" Nullable="false" />
+          <Property Name="isSelected" Type="Int32" />
+          <Property Name="Answer" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="TestQuestionTb">
+          <Key>
+            <PropertyRef Name="TestQuestionRecordId" />
+          </Key>
+          <Property Name="TestQuestionRecordId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="QuestionId" Type="Int32" Nullable="false" />
+          <Property Name="CourseId" Type="Int32" Nullable="false" />
+          <Property Name="DateTime" Type="DateTime" Precision="3" />
+          <Property Name="QuestionContent" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="TestId" Type="Int32" Nullable="false" />
+        </EntityType>
+        <EntityType Name="UserController">
+          <Key>
+            <PropertyRef Name="ControllerId" />
+          </Key>
+          <Property Name="ControllerId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ControllerName" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="ControllerUrl" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="MenuId" Type="Int32" />
+        </EntityType>
+        <EntityType Name="UserInfo">
+          <Key>
+            <PropertyRef Name="UserId" />
+          </Key>
+          <Property Name="UserId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="UserNo" Type="Int32" Nullable="false" />
+          <Property Name="UserName" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="UserPassword" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Status" Type="Boolean" />
+          <Property Name="RoleId" Type="Int32" />
+          <Property Name="CreatedDate" Type="DateTime" Precision="0" />
+          <Property Name="ExpireDate" Type="DateTime" Precision="0" />
+          <Property Name="UserType" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="Email" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="UserToken" Type="String" MaxLength="2000" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="UserMenu">
+          <Key>
+            <PropertyRef Name="RecordId" />
+          </Key>
+          <Property Name="RecordId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="MenuId" Type="Int32" Nullable="false" />
+          <Property Name="MenuName" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="url" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="icon" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+        </EntityType>
+        <EntityType Name="UserPage">
+          <Key>
+            <PropertyRef Name="PageId" />
+          </Key>
+          <Property Name="PageId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="name" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="url" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="icon" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="MenuId" Type="Int32" />
+        </EntityType>
+        <EntityType Name="UserPermission">
+          <Key>
+            <PropertyRef Name="PermissionId" />
+          </Key>
+          <Property Name="PermissionId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="RoleId" Type="Int32" Nullable="false" />
+          <Property Name="PageId" Type="Int32" Nullable="false" />
+          <Property Name="MenuId" Type="Int32" />
+          <Property Name="EmpCode" Type="Int32" />
+        </EntityType>
+        <EntityType Name="UserRole">
+          <Key>
+            <PropertyRef Name="RoleId" />
+          </Key>
+          <Property Name="RoleId" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="RoleName" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="false" />
+        </EntityType>
+        <EntityType Name="AppUserTestDetailsTb">
+          <Key>
+            <PropertyRef Name="TestRecordId" />
+            <PropertyRef Name="TestId" />
+            <PropertyRef Name="AppUserId" />
+            <PropertyRef Name="QuestionId" />
+            <PropertyRef Name="Options" />
+            <PropertyRef Name="IsChooseRight" />
+          </Key>
+          <Property Name="TestRecordId" Type="Int32" Nullable="false" />
+          <Property Name="TestId" Type="Int32" Nullable="false" />
+          <Property Name="AppUserId" Type="Int32" Nullable="false" />
+          <Property Name="QuestionId" Type="Int32" Nullable="false" />
+          <Property Name="Options" Type="String" Nullable="false" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="IsChooseRight" Type="Boolean" Nullable="false" />
+        </EntityType>
+        </Schema>
+    </edmx:ConceptualModels>
+    <!-- C-S mapping content -->
+    <edmx:Mappings>
+      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+        <EntityContainerMapping StorageEntityContainer="MdLabScienceDbModelStoreContainer" CdmEntityContainer="MdLabScienceDbEntities">
+          <EntitySetMapping Name="AppUserScreenshotTBs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.AppUserScreenshotTB">
+              <MappingFragment StoreEntitySet="AppUserScreenshotTB">
+                <ScalarProperty Name="ImageUrl" ColumnName="ImageUrl" />
+                <ScalarProperty Name="DateTime" ColumnName="DateTime" />
+                <ScalarProperty Name="UserId" ColumnName="UserId" />
+                <ScalarProperty Name="ApplicantId" ColumnName="ApplicantId" />
+                <ScalarProperty Name="ScreenShotId" ColumnName="ScreenShotId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="AdditionalDocumentTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.AdditionalDocumentTb">
+              <MappingFragment StoreEntitySet="AdditionalDocumentTb">
+                <ScalarProperty Name="ApplicantId" ColumnName="ApplicantId" />
+                <ScalarProperty Name="AdditionalDocumentsDataflowRemarks" ColumnName="AdditionalDocumentsDataflowRemarks" />
+                <ScalarProperty Name="AdditionalDocumentsDataflow" ColumnName="AdditionalDocumentsDataflow" />
+                <ScalarProperty Name="AdditionalDocumentId" ColumnName="AdditionalDocumentId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ApplicantCourseSelectionTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.ApplicantCourseSelectionTb">
+              <MappingFragment StoreEntitySet="ApplicantCourseSelectionTb">
+                <ScalarProperty Name="Date" ColumnName="Date" />
+                <ScalarProperty Name="CourseId" ColumnName="CourseId" />
+                <ScalarProperty Name="CourseCode" ColumnName="CourseCode" />
+                <ScalarProperty Name="ApplicantId" ColumnName="ApplicantId" />
+                <ScalarProperty Name="CourseSelectionId" ColumnName="CourseSelectionId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ApplicantInvoiceTBs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.ApplicantInvoiceTB">
+              <MappingFragment StoreEntitySet="ApplicantInvoiceTB">
+                <ScalarProperty Name="Currency" ColumnName="Currency" />
+                <ScalarProperty Name="Balance" ColumnName="Balance" />
+                <ScalarProperty Name="PaidAmount" ColumnName="PaidAmount" />
+                <ScalarProperty Name="DateTime" ColumnName="DateTime" />
+                <ScalarProperty Name="Remarks" ColumnName="Remarks" />
+                <ScalarProperty Name="Service" ColumnName="Service" />
+                <ScalarProperty Name="Amount" ColumnName="Amount" />
+                <ScalarProperty Name="ApplicantId" ColumnName="ApplicantId" />
+                <ScalarProperty Name="InvoiceNo" ColumnName="InvoiceNo" />
+                <ScalarProperty Name="InvoiceId" ColumnName="InvoiceId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ApplicantsTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.ApplicantsTb">
+              <MappingFragment StoreEntitySet="ApplicantsTb">
+                <ScalarProperty Name="IsActive" ColumnName="IsActive" />
+                <ScalarProperty Name="CountryId" ColumnName="CountryId" />
+                <ScalarProperty Name="PhotoUrl" ColumnName="PhotoUrl" />
+                <ScalarProperty Name="UserNo" ColumnName="UserNo" />
+                <ScalarProperty Name="ExpiryDate" ColumnName="ExpiryDate" />
+                <ScalarProperty Name="RegistrationDate" ColumnName="RegistrationDate" />
+                <ScalarProperty Name="CreatedOn" ColumnName="CreatedOn" />
+                <ScalarProperty Name="Email" ColumnName="Email" />
+                <ScalarProperty Name="Address" ColumnName="Address" />
+                <ScalarProperty Name="OtherMobile" ColumnName="OtherMobile" />
+                <ScalarProperty Name="Mobile" ColumnName="Mobile" />
+                <ScalarProperty Name="LastName" ColumnName="LastName" />
+                <ScalarProperty Name="FirstName" ColumnName="FirstName" />
+                <ScalarProperty Name="RegistrationNo" ColumnName="RegistrationNo" />
+                <ScalarProperty Name="ApplicantId" ColumnName="ApplicantId" />
+                <ScalarProperty Name="RecordId" ColumnName="RecordId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ApplicantTransactionTBs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.ApplicantTransactionTB">
+              <MappingFragment StoreEntitySet="ApplicantTransactionTB">
+                <ScalarProperty Name="ApplicantId" ColumnName="ApplicantId" />
+                <ScalarProperty Name="Remarks" ColumnName="Remarks" />
+                <ScalarProperty Name="Reference" ColumnName="Reference" />
+                <ScalarProperty Name="DateTime" ColumnName="DateTime" />
+                <ScalarProperty Name="Credit" ColumnName="Credit" />
+                <ScalarProperty Name="Debit" ColumnName="Debit" />
+                <ScalarProperty Name="TransactionId" ColumnName="TransactionId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="AppUserTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.AppUserTb">
+              <MappingFragment StoreEntitySet="AppUserTb">
+                <ScalarProperty Name="Token" ColumnName="Token" />
+                <ScalarProperty Name="Password" ColumnName="Password" />
+                <ScalarProperty Name="UserName" ColumnName="UserName" />
+                <ScalarProperty Name="DeviceId" ColumnName="DeviceId" />
+                <ScalarProperty Name="LoginOn" ColumnName="LoginOn" />
+                <ScalarProperty Name="CreateOn" ColumnName="CreateOn" />
+                <ScalarProperty Name="Status" ColumnName="Status" />
+                <ScalarProperty Name="ApplicantId" ColumnName="ApplicantId" />
+                <ScalarProperty Name="AppUserId" ColumnName="AppUserId" />
+                <ScalarProperty Name="AppUserRecordId" ColumnName="AppUserRecordId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="AppUserTestTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.AppUserTestTb">
+              <MappingFragment StoreEntitySet="AppUserTestTb">
+                <ScalarProperty Name="Remarks" ColumnName="Remarks" />
+                <ScalarProperty Name="RightQuestions" ColumnName="RightQuestions" />
+                <ScalarProperty Name="TestStartTime" ColumnName="TestStartTime" />
+                <ScalarProperty Name="Duration" ColumnName="Duration" />
+                <ScalarProperty Name="TestDate" ColumnName="TestDate" />
+                <ScalarProperty Name="CreatedBy" ColumnName="CreatedBy" />
+                <ScalarProperty Name="Questions" ColumnName="Questions" />
+                <ScalarProperty Name="IsCompleted" ColumnName="IsCompleted" />
+                <ScalarProperty Name="ApplicantId" ColumnName="ApplicantId" />
+                <ScalarProperty Name="CreatedDate" ColumnName="CreatedDate" />
+                <ScalarProperty Name="CourseId" ColumnName="CourseId" />
+                <ScalarProperty Name="TestId" ColumnName="TestId" />
+                <ScalarProperty Name="TestRecordId" ColumnName="TestRecordId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="CertificateInvoiceTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.CertificateInvoiceTb">
+              <MappingFragment StoreEntitySet="CertificateInvoiceTb">
+                <ScalarProperty Name="InvoiceId" ColumnName="InvoiceId" />
+                <ScalarProperty Name="Service" ColumnName="Service" />
+                <ScalarProperty Name="Amount" ColumnName="Amount" />
+                <ScalarProperty Name="CertificateInoviceId" ColumnName="CertificateInoviceId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="CertificationApplicantTBs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.CertificationApplicantTB">
+              <MappingFragment StoreEntitySet="CertificationApplicantTB">
+                <ScalarProperty Name="IsDeleted" ColumnName="IsDeleted" />
+                <ScalarProperty Name="CourseName" ColumnName="CourseName" />
+                <ScalarProperty Name="Specialty" ColumnName="Specialty" />
+                <ScalarProperty Name="CountryId" ColumnName="CountryId" />
+                <ScalarProperty Name="RegistrationDate" ColumnName="RegistrationDate" />
+                <ScalarProperty Name="CreatedOn" ColumnName="CreatedOn" />
+                <ScalarProperty Name="Email" ColumnName="Email" />
+                <ScalarProperty Name="Address" ColumnName="Address" />
+                <ScalarProperty Name="Mobile" ColumnName="Mobile" />
+                <ScalarProperty Name="LastName" ColumnName="LastName" />
+                <ScalarProperty Name="FirstName" ColumnName="FirstName" />
+                <ScalarProperty Name="CertifiedApplicantId" ColumnName="CertifiedApplicantId" />
+                <ScalarProperty Name="RecordId" ColumnName="RecordId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ChatTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.ChatTb">
+              <MappingFragment StoreEntitySet="ChatTb">
+                <ScalarProperty Name="IsRead" ColumnName="IsRead" />
+                <ScalarProperty Name="IsSender" ColumnName="IsSender" />
+                <ScalarProperty Name="Message" ColumnName="Message" />
+                <ScalarProperty Name="DateTime" ColumnName="DateTime" />
+                <ScalarProperty Name="ReceiverId" ColumnName="ReceiverId" />
+                <ScalarProperty Name="AppUserId" ColumnName="AppUserId" />
+                <ScalarProperty Name="ChatId" ColumnName="ChatId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ControllerPermissions">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.ControllerPermission">
+              <MappingFragment StoreEntitySet="ControllerPermissions">
+                <ScalarProperty Name="Permission" ColumnName="Permission" />
+                <ScalarProperty Name="UserNo" ColumnName="UserNo" />
+                <ScalarProperty Name="ControllerId" ColumnName="ControllerId" />
+                <ScalarProperty Name="CPermissionId" ColumnName="CPermissionId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="CountryTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.CountryTb">
+              <MappingFragment StoreEntitySet="CountryTb">
+                <ScalarProperty Name="CoutryName" ColumnName="CoutryName" />
+                <ScalarProperty Name="CountryId" ColumnName="CountryId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="CourseMaterialTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.CourseMaterialTb">
+              <MappingFragment StoreEntitySet="CourseMaterialTb">
+                <ScalarProperty Name="FileName" ColumnName="FileName" />
+                <ScalarProperty Name="MaterialType" ColumnName="MaterialType" />
+                <ScalarProperty Name="CourseUrl" ColumnName="CourseUrl" />
+                <ScalarProperty Name="CourseId" ColumnName="CourseId" />
+                <ScalarProperty Name="CourseMaterialId" ColumnName="CourseMaterialId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="CourseTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.CourseTb">
+              <MappingFragment StoreEntitySet="CourseTb">
+                <ScalarProperty Name="CourseUrl" ColumnName="CourseUrl" />
+                <ScalarProperty Name="IsActive" ColumnName="IsActive" />
+                <ScalarProperty Name="CourseName" ColumnName="CourseName" />
+                <ScalarProperty Name="CourseCode" ColumnName="CourseCode" />
+                <ScalarProperty Name="CourseId" ColumnName="CourseId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="DataFlowTransferTBs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.DataFlowTransferTB">
+              <MappingFragment StoreEntitySet="DataFlowTransferTB">
+                <ScalarProperty Name="Date" ColumnName="Date" />
+                <ScalarProperty Name="Remarks" ColumnName="Remarks" />
+                <ScalarProperty Name="DataFlowTransferred" ColumnName="DataFlowTransferred" />
+                <ScalarProperty Name="ApplicantId" ColumnName="ApplicantId" />
+                <ScalarProperty Name="DataFlowTransferredId" ColumnName="DataFlowTransferredId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="DataFlowVerificationTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.DataFlowVerificationTb">
+              <MappingFragment StoreEntitySet="DataFlowVerificationTb">
+                <ScalarProperty Name="IntermediateMarkSheet" ColumnName="IntermediateMarkSheet" />
+                <ScalarProperty Name="GoodStandingDocuments" ColumnName="GoodStandingDocuments" />
+                <ScalarProperty Name="DegreeMarkSheet" ColumnName="DegreeMarkSheet" />
+                <ScalarProperty Name="LicenseTransfer" ColumnName="LicenseTransfer" />
+                <ScalarProperty Name="DataFlowRemarks" ColumnName="DataFlowRemarks" />
+                <ScalarProperty Name="Others" ColumnName="Others" />
+                <ScalarProperty Name="AdditionalDocuments" ColumnName="AdditionalDocuments" />
+                <ScalarProperty Name="RegistrationCertificate" ColumnName="RegistrationCertificate" />
+                <ScalarProperty Name="ExperienceCertificate" ColumnName="ExperienceCertificate" />
+                <ScalarProperty Name="Degree" ColumnName="Degree" />
+                <ScalarProperty Name="MatricMarketSheet" ColumnName="MatricMarketSheet" />
+                <ScalarProperty Name="Passport" ColumnName="Passport" />
+                <ScalarProperty Name="Photo" ColumnName="Photo" />
+                <ScalarProperty Name="CNIC" ColumnName="CNIC" />
+                <ScalarProperty Name="ApplicantId" ColumnName="ApplicantId" />
+                <ScalarProperty Name="DataFlowVerificationId" ColumnName="DataFlowVerificationId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ExerciseTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.ExerciseTb">
+              <MappingFragment StoreEntitySet="ExerciseTb">
+                <ScalarProperty Name="EndFrom" ColumnName="EndFrom" />
+                <ScalarProperty Name="StartFrom" ColumnName="StartFrom" />
+                <ScalarProperty Name="Exercise" ColumnName="Exercise" />
+                <ScalarProperty Name="ExerciseRecordId" ColumnName="ExerciseRecordId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="QuestionOptionsTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.QuestionOptionsTb">
+              <MappingFragment StoreEntitySet="QuestionOptionsTb">
+                <ScalarProperty Name="IsRightAns" ColumnName="IsRightAns" />
+                <ScalarProperty Name="Options" ColumnName="Options" />
+                <ScalarProperty Name="JobsId" ColumnName="JobsId" />
+                <ScalarProperty Name="QuestionId" ColumnName="QuestionId" />
+                <ScalarProperty Name="QuestionJobOptionId" ColumnName="QuestionJobOptionId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="QuestionsTBs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.QuestionsTB">
+              <MappingFragment StoreEntitySet="QuestionsTB">
+                <ScalarProperty Name="StartDateTime" ColumnName="StartDateTime" />
+                <ScalarProperty Name="QuestionContent" ColumnName="QuestionContent" />
+                <ScalarProperty Name="DateTime" ColumnName="DateTime" />
+                <ScalarProperty Name="CourseId" ColumnName="CourseId" />
+                <ScalarProperty Name="QuestionId" ColumnName="QuestionId" />
+                <ScalarProperty Name="QuestionRecordId" ColumnName="QuestionRecordId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="TestQuestionOptionTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.TestQuestionOptionTb">
+              <MappingFragment StoreEntitySet="TestQuestionOptionTb">
+                <ScalarProperty Name="Answer" ColumnName="Answer" />
+                <ScalarProperty Name="isSelected" ColumnName="isSelected" />
+                <ScalarProperty Name="TestId" ColumnName="TestId" />
+                <ScalarProperty Name="IsRightAns" ColumnName="IsRightAns" />
+                <ScalarProperty Name="Options" ColumnName="Options" />
+                <ScalarProperty Name="JobsId" ColumnName="JobsId" />
+                <ScalarProperty Name="QuestionId" ColumnName="QuestionId" />
+                <ScalarProperty Name="TestQuestionOptionId" ColumnName="TestQuestionOptionId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="TestQuestionTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.TestQuestionTb">
+              <MappingFragment StoreEntitySet="TestQuestionTb">
+                <ScalarProperty Name="TestId" ColumnName="TestId" />
+                <ScalarProperty Name="QuestionContent" ColumnName="QuestionContent" />
+                <ScalarProperty Name="DateTime" ColumnName="DateTime" />
+                <ScalarProperty Name="CourseId" ColumnName="CourseId" />
+                <ScalarProperty Name="QuestionId" ColumnName="QuestionId" />
+                <ScalarProperty Name="TestQuestionRecordId" ColumnName="TestQuestionRecordId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="UserControllers">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.UserController">
+              <MappingFragment StoreEntitySet="UserControllers">
+                <ScalarProperty Name="MenuId" ColumnName="MenuId" />
+                <ScalarProperty Name="ControllerUrl" ColumnName="ControllerUrl" />
+                <ScalarProperty Name="ControllerName" ColumnName="ControllerName" />
+                <ScalarProperty Name="ControllerId" ColumnName="ControllerId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="UserInfoes">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.UserInfo">
+              <MappingFragment StoreEntitySet="UserInfo">
+                <ScalarProperty Name="UserToken" ColumnName="UserToken" />
+                <ScalarProperty Name="Email" ColumnName="Email" />
+                <ScalarProperty Name="UserType" ColumnName="UserType" />
+                <ScalarProperty Name="ExpireDate" ColumnName="ExpireDate" />
+                <ScalarProperty Name="CreatedDate" ColumnName="CreatedDate" />
+                <ScalarProperty Name="RoleId" ColumnName="RoleId" />
+                <ScalarProperty Name="Status" ColumnName="Status" />
+                <ScalarProperty Name="UserPassword" ColumnName="UserPassword" />
+                <ScalarProperty Name="UserName" ColumnName="UserName" />
+                <ScalarProperty Name="UserNo" ColumnName="UserNo" />
+                <ScalarProperty Name="UserId" ColumnName="UserId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="UserMenus">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.UserMenu">
+              <MappingFragment StoreEntitySet="UserMenu">
+                <ScalarProperty Name="icon" ColumnName="icon" />
+                <ScalarProperty Name="url" ColumnName="url" />
+                <ScalarProperty Name="MenuName" ColumnName="MenuName" />
+                <ScalarProperty Name="MenuId" ColumnName="MenuId" />
+                <ScalarProperty Name="RecordId" ColumnName="RecordId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="UserPages">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.UserPage">
+              <MappingFragment StoreEntitySet="UserPage">
+                <ScalarProperty Name="MenuId" ColumnName="MenuId" />
+                <ScalarProperty Name="icon" ColumnName="icon" />
+                <ScalarProperty Name="url" ColumnName="url" />
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="PageId" ColumnName="PageId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="UserPermissions">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.UserPermission">
+              <MappingFragment StoreEntitySet="UserPermission">
+                <ScalarProperty Name="EmpCode" ColumnName="EmpCode" />
+                <ScalarProperty Name="MenuId" ColumnName="MenuId" />
+                <ScalarProperty Name="PageId" ColumnName="PageId" />
+                <ScalarProperty Name="RoleId" ColumnName="RoleId" />
+                <ScalarProperty Name="PermissionId" ColumnName="PermissionId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="UserRoles">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.UserRole">
+              <MappingFragment StoreEntitySet="UserRole">
+                <ScalarProperty Name="RoleName" ColumnName="RoleName" />
+                <ScalarProperty Name="RoleId" ColumnName="RoleId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="AppUserTestDetailsTbs">
+            <EntityTypeMapping TypeName="MdLabScienceDbModel.AppUserTestDetailsTb">
+              <MappingFragment StoreEntitySet="AppUserTestDetailsTb">
+                <ScalarProperty Name="IsChooseRight" ColumnName="IsChooseRight" />
+                <ScalarProperty Name="Options" ColumnName="Options" />
+                <ScalarProperty Name="QuestionId" ColumnName="QuestionId" />
+                <ScalarProperty Name="AppUserId" ColumnName="AppUserId" />
+                <ScalarProperty Name="TestId" ColumnName="TestId" />
+                <ScalarProperty Name="TestRecordId" ColumnName="TestRecordId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          </EntityContainerMapping>
+      </Mapping>
+    </edmx:Mappings>
+  </edmx:Runtime>
+  <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <Connection>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="MetadataArtifactProcessing" Value="EmbedInOutputAssembly" />
+      </DesignerInfoPropertySet>
+    </Connection>
+    <Options>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="ValidateOnBuild" Value="true" />
+        <DesignerProperty Name="EnablePluralization" Value="true" />
+        <DesignerProperty Name="IncludeForeignKeysInModel" Value="true" />
+        <DesignerProperty Name="UseLegacyProvider" Value="false" />
+        <DesignerProperty Name="CodeGenerationStrategy" Value="None" />
+      </DesignerInfoPropertySet>
+    </Options>
+    <!-- Diagram content (shape and connector positions) -->
+    <Diagrams></Diagrams>
+  </Designer>
+</edmx:Edmx>

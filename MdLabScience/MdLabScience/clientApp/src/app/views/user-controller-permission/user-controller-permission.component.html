@@ -1,0 +1,69 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-9">
+          <h4 class="card-title mb-0">User Permission </h4>
+          <div class="small text-muted">Manage Manage User Permission on Operations</div>
+        </div><!--/.col-->
+        <div class="col-sm-3 d-none d-md-block text-right">
+          
+          <!-- <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button> -->
+          <select class="form-control" (change)="selectchangeUserList($event)" name="bracheslist" id="brancheslist">
+            <option value="0" selected="selected">Choose User</option>
+            <option *ngFor="let val of userinfo" value={{val.UserNo}}>
+              {{val.UserName}}
+            </option>
+          </select>
+        </div><!--/.col-->
+     <br>
+     <br>
+     <br>
+        <div class="container-fluid">
+            <div id="ui-view"><div>
+                <div class="animated fadeIn">
+            <div class="row">
+            <div class="col-md-12 col-md-4" *ngFor="let val of listData">
+            <div class="card card card border-success">
+            <div class="card-header">{{val.MenuName}}</div>
+            <div class="card-body">
+            <ul class="list-group" *ngFor="let vals of val.Controllers">
+              <li class="list-group-item d-flex list-group-item-action  justify-content-between align-items-center">{{vals.ControllerName}}
+                <label class="switch switch-label switch-pill switch-danger">
+                    <input class="switch-input" (change)="Changestatus(vals.ControllerId,vals.Permission,val)" type="checkbox" [checked]="vals.Permission">
+                    <span class="switch-slider" data-checked="On" data-unchecked="Off"></span>
+                    </label>
+                 </li></ul>
+            </div>
+            </div>
+            </div>
+            
+           
+            
+            </div>
+            
+            </div>
+            </div>
+        </div>
+    </div>
+      </div><!--/.row-->
+      
+    </div>
+    <div class="card-footer">
+      <div class="row">
+        <div class="col-md-9"></div>
+        <div class="col-md-3">
+          <button type="button" (click)="savePermissins()" class="btn btn-danger btn-block">
+            <li class="fa fa-save fa-1x  "></li> <span> </span>Save User Permissions
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+ 
+

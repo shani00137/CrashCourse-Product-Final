@@ -1,0 +1,175 @@
+<app-spinner-layout></app-spinner-layout>
+
+  <div class="col-md-12">
+    <div class="card">
+     
+      <div class="card-body">
+        <form [formGroup]="itemForm" >
+        <div class="row">
+          <div class="col-sm-8">
+            <h4 class="card-title mb-0">Add/Update Questions</h4>
+            <div class="small text-muted">Manage MCQ Question and Others</div>
+            <div class="small text-muted">Current Quesiton No. {{QuestionId}}</div>
+          </div>
+          <div class="col-sm-4">
+            <div class="row float-right">
+       
+              
+           
+            </div>
+          
+            <!-- <div class="row float-right">
+              <div class=" col-sm-10">
+              <input placeholder="Search"[(ngModel)]="searchText" id="search" name="search"  class="form-control float-right">
+            </div>
+            <div class="col-sm-2">
+              <button type="button" (click)="Create()"  class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button>
+            </div>
+       
+            
+         
+            </div> -->
+            <!-- <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button> -->
+            
+  
+            <!-- <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button> -->
+            
+          </div>
+        </div>
+        
+     <hr/>
+     
+        <div class="form-group">
+
+          <input type="hidden" class="form-control" [(ngModel)]="accountInfo.QuestionId" formControlName="QuestionId">
+          <div
+            *ngIf="itemForm.controls['QuestionId'].invalid && (itemForm.controls['QuestionId'].dirty || itemForm.controls['QuestionId'].touched)"
+            class="danger">
+            <span *ngIf="itemForm.controls['QuestionId'].errors.required">
+              <span style="color: red;">Please Enter .</span>
+            </span>
+          </div>
+
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="form-group">
+              <label>Course:</label>               
+              <ng-select [items]="courseList"   bindLabel="CourseName" bindValue="CourseId" labelForId="CourseId"
+                 placeholder="All Courses" clearAllText="Clear" formControlName="CourseId">
+                 <ng-template ng-option-tmp let-item="item">                 
+                  <span class="ng-value-label">{{item.CourseCode + ' ' + item.CourseName}}</span>
+               </ng-template>
+              </ng-select>
+              <div
+                *ngIf="itemForm.controls['CourseId'].invalid && (itemForm.controls['CourseId'].dirty || itemForm.controls['CourseId'].touched)"
+                class="danger">
+                <span *ngIf="itemForm.controls['CourseId'].errors.required">
+                  <span style="color: red;">Please Choose CourseId.</span>
+                </span>
+              </div>
+            </div>
+          </div>
+      
+        </div>
+        
+        <div class="form-group">
+          <angular-editor id="QuestionContent" name="QuestionContent" formControlName="QuestionContent" [(ngModel)]="QuestionContentHtml"
+          [config]="config"></angular-editor>
+        <div
+          *ngIf="itemForm.controls['QuestionContent'].invalid && (itemForm.controls['QuestionContent'].dirty || itemForm.controls['QuestionContent'].touched)"
+          class="danger">
+          <span *ngIf="itemForm.controls['QuestionContent'].errors.required">
+            <span style="color: red;">Please insert question contents.</span>
+            <span *ngIf="itemForm.controls['QuestionContent'].errors.minlength">
+              <span style="color: red;">Qustion Content are not complete . .</span>
+            </span>
+          </span>
+        </div>
+        </div>
+        <div class="form-group">
+        
+            <table  class="table table-responsive-sm table-hover table-outline mb-0">
+              <thead>
+                <tr>        
+    
+                  <th>Question</th>
+                    <th class="text-center">Is Correct                
+                      </th>
+                      <th class="text-center">Action                
+                      </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let val of optinsList ;index as i ">
+    
+                  <td>
+                    <div [innerHTML]="val.Options"></div>                      
+    
+                  </td>
+    
+                  <td class="text-center">
+            
+                    <label class="switch switch-label switch-pill switch-danger">
+                      <input class="switch-input" (change)="Changestatus(i,val.IsRightAns)" type="checkbox" [checked]="val.IsRightAns">
+                      <span class="switch-slider" data-checked="Yes" data-unchecked="No"></span>
+                      </label>
+                 
+                  </td>
+                  <td class="text-center">
+               
+                 
+                    <button (click)="deleteOption(i)" class="btn btn-square btn-danger" type="button"> <i class="fa fa-trash"></i></button>
+                </td>
+                </tr>
+    
+              </tbody>
+            </table>
+           
+        </div>
+      
+        <div class="row">
+          <div class="col-md-10">
+            <div class="form-group">
+             
+                <input placeholder="Add Question Option" class="form-control"   [(ngModel)]="accountInfo.QuestionOptions" formControlName="QuestionOptions">
+                <div *ngIf="itemForm.controls['QuestionOptions'].invalid && (itemForm.controls['QuestionOptions'].dirty || itemForm.controls['QuestionOptions'].touched)" class="ng-dirty" >
+                        <span *ngIf="itemForm.controls['QuestionOptions'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>                
+            </div>
+          </div>
+          <div class="col-md-2">
+            <button (click)="AddOtion()" class="btn btn-outline-danger  btn-block" type="button">Add Option</button>
+          </div>
+        </div>
+       
+   
+        <div  class="card-footer">
+          <div class="row">
+            <div class="col-md-1">
+              <button (click)="gotoLastQuestion()" type="reset" class="btn btn-info btn-block"><li class="fa fa-arrow-left"></li></button>
+            </div>
+            <div class="col-md-1">
+              <button (click)="gotoNextQuestion()" type="reset"  class="btn btn-info btn-block"><li class="fa fa-arrow-right"></li></button>
+            </div>
+            <div class="col-md-6"></div>
+            <div class="col-md-2">
+              <button  type="reset" (click)="reset()" class="btn btn-warning btn-block">Reset</button>
+            </div>
+            <div class="col-md-2">
+              <button type="submit"  (click)="submitQuestion()"  type="button" class="btn btn-danger btn-block">Submit</button>
+            </div>
+          </div>
+        </div>
+      </form>
+      </div>
+      
+      </div>
+  </div>
+ 
+
+
+
+

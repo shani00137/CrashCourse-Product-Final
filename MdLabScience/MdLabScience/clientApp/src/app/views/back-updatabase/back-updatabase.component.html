@@ -1,0 +1,110 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">Backup</h4>
+          <div class="small text-muted">Manage Backup of Database</div>
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          
+          <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button>
+          
+        </div><!--/.col-->
+        <table class="table table-responsive-sm table-hover table-outline mb-0">
+                <thead >
+                  <tr>
+                 
+                    <th class="text-left"> Description</th>               
+                   
+                    <th class="text-center">Action</th>
+                 
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let val of listData">
+               
+                   
+                    <td class="text-left">
+                        <strong>{{val.FileName}}</strong>
+                        <div  class="small text-muted">
+                            <li style="color: red;" class="fa fa-clock-o                                "></li>
+                            {{val.CreatedDate | date: 'dd-MMM-yyyy h:mm:ss a ' }}  </div>
+                    </td>
+               
+                    <td class="text-center">
+                   
+                      <button (click)="download(val)"   class="btn btn-square btn-warning" type="button"> <i class="fa fa-download"></i></button>
+                       
+                    </td>
+                   
+                  
+                   
+                  </tr>
+                
+                </tbody>
+              </table>
+ 
+      </div><!--/.row-->
+      
+    </div>
+    <div class="card-footer">
+      
+    </div>
+  </div>
+  </div>
+</div>
+  <div bsModal #myModal="bs-modal" [config]="{backdrop: 'static'}" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"> Backup Database</h4>
+          <button type="button" class="close" (click)="myModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <form [formGroup]="itemForm" (ngSubmit)="save()" >
+                 
+                <div class="form-group">
+                    
+                    <input type="hidden"  class="form-control"   [(ngModel)]="accountInfo.FileName" formControlName="FileName">
+                    <div *ngIf="itemForm.controls['FileName'].invalid && (itemForm.controls['FileName'].dirty || itemForm.controls['FileName'].touched)" class="danger" >
+                            <span *ngIf="itemForm.controls['FileName'].errors.required">
+                                <span style="color: red;">Please Enter .</span>  
+                            </span>
+                        </div>
+                  
+                </div>
+     
+            <div class="form-group">
+                <label >Description:</label>
+                  <input placeholder="Description" class="form-control"   [(ngModel)]="accountInfo.Description" formControlName="Description">
+                  <div *ngIf="itemForm.controls['Description'].invalid && (itemForm.controls['Description'].dirty || itemForm.controls['Description'].touched)" class="ng-dirty" >
+                          <span *ngIf="itemForm.controls['Description'].errors.required">
+                              <span style="color: red;">Please Enter .</span>  
+                          </span>
+                      </div>
+                
+              </div>
+       
+              
+              <br>
+              <div class="modal-footer">
+                  <button type="submit"[disabled]="!itemForm.valid"  class="btn btn-sm btn-primary" type="submit">
+                      <i class="fa fa-dot-circle-o"></i> Submit</button>
+                
+             
+              </div>
+            </form>
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+
+
+

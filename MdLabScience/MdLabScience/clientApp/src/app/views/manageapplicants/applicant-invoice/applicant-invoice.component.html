@@ -1,0 +1,261 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-5">
+                        <h4 class="card-title mb-0">Invoice of Ms/Mr. {{applicantMD.FirstName}} {{applicantMD.LastName}}</h4>
+                        <div class="small text-muted">Manage Account Transaction and Update etc </div>
+                    </div>
+                    <!--/.col-->
+                    <div class="col-sm-7  d-md-block">
+                       
+                        <div class="row ">
+                            <div class="col-sm-11"></div>                          
+                            <div class="col-sm-1 text-left">
+                                <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()"
+                                class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button>
+                            </div>
+                        </div>
+       
+  
+                           
+
+                    </div>
+                    <!--/.col-->
+                    <table class="table table-responsive-sm table-hover table-outline mb-0">
+                        <thead>
+                            <tr>
+
+
+                                <th class="text-center">Invoice#</th>
+                                <th class="text-center">Date</th>                               
+                                <th class="text-center">Service</th>
+                                <th class="text-center">Amount</th>
+                                <th class="text-center">Paid Amount</th>
+                                <th class="text-center">Balance</th>
+                                <th class="text-center">Action</th>
+
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                *ngFor="let val of invoiceList">
+
+
+                                <td class="text-center">
+                                    <strong>{{val.InvoiceNo}}</strong>
+                                    <div  class="small text-muted">{{val.Remarks}}</div>
+                                </td>
+                                <td class="text-center">
+                                    <div>{{val.DateTime | date:'dd-MMM-yyyy' }}</div>
+
+                                </td>
+                                <td class="text-left">
+                                    <li class="text-small" *ngFor="let d of val.ServiceList">{{d.Service}}</li>
+
+                                </td>
+                                <td class="text-center">
+                                    <div>{{ formatCurrency(val.Amount, val.Currency) }}</div>
+                                </td>
+                                
+                                <td class="text-center">
+                                    <div>{{ formatCurrency(val.PaidAmount, val.Currency) }}</div>
+
+                                </td>
+                                <td class="text-center">
+                                    <div>{{ formatCurrency(val.Balance, val.Currency) }}</div>
+
+                                </td>
+
+
+                                <td class="text-center">
+
+                                    <button class="btn btn-square btn-danger" (click)="deleteTransaction(val)"
+                                        type="button"> <i class="fa fa-trash"></i></button>
+                                        <button class="btn btn-square btn-info" (click)="printInvoice(val)"
+                                        type="button"> <i class="fa fa-print"></i></button>
+                                        <button class="btn btn-square btn-warning" (click)="editInvoice(val)"
+                                        type="button"> <i class="fa fa-pencil"></i></button>
+
+                                </td>
+
+
+
+                            </tr>
+
+                        </tbody>
+                    </table>
+                    <br />
+
+                </div>
+                <!--/.row-->
+              
+            </div>
+       
+        </div>
+    </div>
+</div>
+<div bsModal #myModal="bs-modal" [config]="{backdrop: 'static'}" class="modal fade bd-modal-lg" tabindex="-1" role="dialog"
+    aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title"> Invoice</h4>
+                <button type="button" class="close" (click)="myModal.hide()" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form [formGroup]="itemForm" >
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Date Time:</label>
+                                <input type="hidden" formControlName="ApplicantId">
+                                <input bsDatepicker type="text" min="0" placeholder="DateTime" class="form-control"
+                                    [(ngModel)]="accountInfo.DateTime" formControlName="DateTime">
+                                <div *ngIf="itemForm.controls['DateTime'].invalid && (itemForm.controls['DateTime'].dirty || itemForm.controls['DateTime'].touched)"
+                                    class="danger">
+                                    <span *ngIf="itemForm.controls['DateTime'].errors.required">
+                                        <span style="color: red;">Please Enter .</span>
+                                    </span>
+                                </div>
+        
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Currency:</label>               
+                                <ng-select [items]="currencyList"  [(ngModel)]="accountInfo.Currency"  bindLabel="CurrencyName" bindValue="CurrencyCode" labelForId="CurrencyCode"
+                                   placeholder="Choose Currency" clearAllText="Clear" formControlName="Currency">          
+                                </ng-select>
+                                <div
+                                  *ngIf="itemForm.controls['Currency'].invalid && (itemForm.controls['Currency'].dirty || itemForm.controls['Currency'].touched)"
+                                  class="danger">
+                                  <span *ngIf="itemForm.controls['Currency'].errors.required">
+                                    <span style="color: red;">Please Choose Currency.</span>
+                                  </span>
+                                </div>
+                              </div>
+                        </div>
+                    </div>
+                 
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Service:</label>
+                                        <ng-select [items]="AllServiceList"  [(ngModel)]="accountInfo.Service"  bindLabel="Name" bindValue="Name" labelForId="Name"
+                                        placeholder="Choose Service" clearAllText="Clear" formControlName="Service">          
+                                     </ng-select>
+                                     <div
+                                       *ngIf="itemForm.controls['Service'].invalid && (itemForm.controls['Service'].dirty || itemForm.controls['Service'].touched)"
+                                       class="danger">
+                                       <span *ngIf="itemForm.controls['Service'].errors.required">
+                                         <span style="color: red;">Please Choose Service.</span>
+                                       </span>
+                                     </div>
+                                 
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>Amount:</label>
+                                        <input type="number"  min="0" placeholder="Amount" class="form-control"
+                                            [(ngModel)]="accountInfo.AmountTable" formControlName="AmountTable">
+                                   
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <br>                       
+                                    <button (click)="AddToList()" class="btn btn-primary btn-block mt-2">Add</button>
+                                </div>
+                            </div>
+                            <table class="table table-responsive-sm table-hover table-outline mb-0">
+                                <thead>
+                                    <tr>
+                                <th class="text-left" style="width: 70%;">Service</th>
+                                <th class="text-center">Amount</th>
+                                <th class="text-center">Action</th>
+                                    </tr>
+
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let val of ServiceList">
+                                        <td class="text-left">{{val.Service}}</td>
+                                        <td  class="text-center" >{{val.Amount}}</td>
+                                        <td  class="text-center"><button class="btn btn-danger"> <li class="fa fa-trash"></li>    </button></td>
+
+                                    </tr>
+                                </tbody>
+                              </table>  
+                           
+                        </div>
+                    </div>
+                 
+                    <div class="form-group">
+                        <label>Sub-Amount:</label>
+                        <input disabled type="number"  min="0" placeholder="Amount" class="form-control"
+                            [(ngModel)]="accountInfo.Amount" formControlName="Amount">
+                        <div *ngIf="itemForm.controls['Amount'].invalid && (itemForm.controls['Amount'].dirty || itemForm.controls['Amount'].touched)"
+                            class="danger">
+                            <span *ngIf="itemForm.controls['Amount'].errors.required">
+                                <span style="color: red;">Please Enter .</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Paid Amount:</label>
+                        <input type="number" min="0"  (change)="calculateBalance()" placeholder="PaidAmount" class="form-control"
+                            [(ngModel)]="accountInfo.PaidAmount" formControlName="PaidAmount">
+                        <div *ngIf="itemForm.controls['PaidAmount'].invalid && (itemForm.controls['PaidAmount'].dirty || itemForm.controls['PaidAmount'].touched)"
+                            class="danger">
+                            <span *ngIf="itemForm.controls['PaidAmount'].errors.required">
+                                <span style="color: red;">Please Enter .</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Balance:</label>
+                        <input disabled type="number" min="0" placeholder="Balance" class="form-control"
+                            [(ngModel)]="accountInfo.Balance" formControlName="Balance">
+                        <div *ngIf="itemForm.controls['Balance'].invalid && (itemForm.controls['Balance'].dirty || itemForm.controls['Balance'].touched)"
+                            class="danger">
+                            <span *ngIf="itemForm.controls['Balance'].errors.required">
+                                <span style="color: red;">Please Enter .</span>
+                            </span>
+                        </div>
+                    </div>
+                 
+                    <div class="form-group">
+                        <label>Remarks:</label>
+                        <textarea rows="3" placeholder="Remarks" class="form-control" [(ngModel)]="accountInfo.Remarks"
+                            formControlName="Remarks"></textarea>
+                        <div *ngIf="itemForm.controls['Remarks'].invalid && (itemForm.controls['Remarks'].dirty || itemForm.controls['Remarks'].touched)"
+                            class="danger">
+                            <span *ngIf="itemForm.controls['Remarks'].errors.required">
+                                <span style="color: red;">Please Enter .</span>
+                            </span>
+                        </div>
+
+                    </div>
+
+
+                    <br>
+                    <div class="modal-footer">
+                        <button (click)="savePayment()" class="btn btn-sm btn-primary" type="submit">
+                            <i class="fa fa-dot-circle-o"></i> Submit</button>
+                        <button (click)="Reset()" class="btn btn-sm btn-danger" type="reset">
+                            <i class="fa fa-ban"></i> Reset</button>
+
+                    </div>
+                </form>
+            </div>
+
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

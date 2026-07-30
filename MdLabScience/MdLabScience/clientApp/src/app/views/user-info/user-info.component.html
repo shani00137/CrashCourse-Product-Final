@@ -1,0 +1,185 @@
+<ngx-spinner
+  bdColor="rgba(51,51,51,0.8)"
+  size="medium"
+  color="#fff"
+  type="ball-scale-multiple"
+>
+  <p style="font-size: 20px; color: white">Loading...</p>
+</ngx-spinner>
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">User Accounts</h4>
+          <div class="small text-muted">Manage User Accounts</div>
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          <button type="button"data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-success float-right"><i class="fa fa-plus-circle"></i></button>
+          
+        </div><!--/.col-->
+        <table class="table table-responsive-sm table-hover table-outline mb-0">
+                <thead>
+                  <tr>
+                  
+                    <th class="text-center"><i class="icon-key"></i></th>
+                   
+                    <th class="text-center">User Role</th>
+                  
+                    <th class="text-center">UserName</th>
+                    <th class="text-center">Email</th>
+                    <th class="text-center">Creation On</th>
+                   
+                    <th class="text-center">Assign</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Action</th>
+                 
+                  </tr>
+                </thead>
+                <tbody *ngFor="let val of userinfo">
+                  <tr>
+                  
+                        <td class="text-center">{{ val.UserNo }}</td>
+                       
+                        <td class="text-center">{{ val.RoleName }}</td>
+                    
+                        <td class="text-center">{{ val.UserName }}</td>
+                        <td class="text-center">{{ val.Email }}</td>
+                        <td class="text-center">{{ val.CreatedDate | date: 'dd-MMM-yyyy'}}</td>
+                        <td class="text-center">{{ val.Saleman }}</td>
+                        <td class="text-center">
+                            <label class="switch switch-label switch-pill switch-danger">
+                              <input class="switch-input" (change)="Changestatus(val.UserNo,val.Status)" type="checkbox" [checked]="val.Status">
+                              <span class="switch-slider" data-checked="On" data-unchecked="Off"></span>
+                              </label>
+                            </td>
+                    <td class="text-center">
+                        <button (click)="Edit(val)"  data-toggle="modal" (click)="myModal.show()" class="btn btn-square btn-warning" type="button"> <i class="fa fa-pencil-square-o"></i></button>
+                        <button (click)="editPassword(val)" data-toggle="modal" (click)="passwordModal.show()"  class="btn btn-square btn-danger" type="button"> <i class="fa fa-refresh"></i></button>
+                    </td>
+                  
+                  
+                   
+                  </tr>
+                
+                </tbody>
+        </table>
+ 
+      </div><!--/.row-->
+      
+    </div>
+    <div class="card-footer">
+      
+    </div>
+  </div>
+
+  <div bsModal #myModal="bs-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"> User Accounts Operations</h4>
+          <button type="button" class="close" (click)="myModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <form [formGroup]="itemForm" (ngSubmit)="save()" >
+                 
+              <div class="form-group">
+                    
+                <input type="hidden"  class="form-control"   [(ngModel)]="formModel.UserNo" formControlName="UserNo">
+               
+              
+            </div>
+                <div class="form-group">
+                    <label >User Name:</label>
+                      <input placeholder="User Name" class="form-control"   [(ngModel)]="formModel.UserName" formControlName="UserName">
+                      <div *ngIf="itemForm.controls['UserName'].invalid && (itemForm.controls['UserName'].dirty || itemForm.controls['UserName'].touched)" class="danger" >
+                              <span *ngIf="itemForm.controls['UserName'].errors.required">
+                                  <span style="color: red;">Please Enter  UserName.</span>  
+                              </span>
+                          </div>                    
+                  </div>
+                  <div class="form-group">
+                    <label >Email:</label>
+                      <input placeholder="Email" class="form-control"   [(ngModel)]="formModel.Email" formControlName="Email">
+                      <div *ngIf="itemForm.controls['Email'].invalid && (itemForm.controls['Email'].dirty || itemForm.controls['Email'].touched)" class="danger" >
+                              <span *ngIf="itemForm.controls['Email'].errors.required">
+                                  <span style="color: red;">Please Enter  Email.</span>  
+                              </span>
+                              <span *ngIf="itemForm.controls['Email'].errors.email">
+                                <span style="color: red;"> Email Not Valid .</span>  
+                            </span>
+                          </div>                    
+                  </div>
+                 
+                 
+                  <div class="form-group">
+                        <label >User Role:</label>                      
+                      <select (change)="selectchange($event)" class="form-control" id="RoleId" formControlName="RoleId">
+                        <option [value]="null" disabled>Choose Role</option>
+                        <option [value]="c.RoleId" *ngFor="let c of userRoles">{{ c.RoleName }}</option>
+                        </select>     
+                        <div *ngIf="itemForm.controls['RoleId'].invalid && (itemForm.controls['RoleId'].dirty || itemForm.controls['RoleId'].touched)" class="danger" >
+                          <span *ngIf="itemForm.controls['RoleId'].errors.required">
+                              <span style="color: red;">Please Choose Role.</span>  
+                          </span>
+                      </div>     
+                      </div>
+                      <div class="form-group">
+                        <label >Saleman:</label>                      
+                      <select (change)="selectchangeSaleman($event)" class="form-control" id="SalemanId" formControlName="SalemanId">
+                        <option [value]="null" disabled>Choose Saleman</option>
+                        <option [value]="c.SalemanId" *ngFor="let c of salemandList">{{ c.SalemanName }}</option>
+                        </select>     
+                        <div *ngIf="itemForm.controls['SalemanId'].invalid && (itemForm.controls['SalemanId'].dirty || itemForm.controls['SalemanId'].touched)" class="danger" >
+                          <span *ngIf="itemForm.controls['SalemanId'].errors.required">
+                              <span style="color: red;">Please Choose Role.</span>  
+                          </span>
+                      </div>     
+                      </div>
+                     
+              <br>
+              <div class="modal-footer">
+                  <button type="submit"[disabled]="!itemForm.valid"  class="btn btn-sm btn-primary" type="submit">
+                      <i class="fa fa-dot-circle-o"></i> Submit</button>
+                      <button (click)="Reset()" class="btn btn-sm btn-danger" type="reset">
+                          <i class="fa fa-ban"></i> Reset</button>
+             
+              </div>
+            </form>
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+
+  <div bsModal #passwordModal="bs-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"> Password Reset</h4>
+          <button type="button" class="close" (click)="passwordModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+        
+                <div class="form-group">
+                    <label >New Password:</label>
+                      <input type="password" placeholder="Password" class="form-control"   [(ngModel)]="passwordInfo.password">
+                                         
+                  </div>
+                 
+              <br>
+              <div class="modal-footer">
+                  <button (click)="resetPassword()"  class="btn btn-sm btn-primary">
+                      <i class="fa fa-dot-circle-o"></i> Reset</button>
+                     
+             
+              </div>
+         
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->

@@ -1,0 +1,137 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-5">
+                        <h4 class="card-title mb-0">Account of Ms/Mr. {{CustomerMD.Name}}</h4>
+                        <div class="small text-muted">Manage Account Transaction and Update etc </div>
+                    </div>
+                    <!--/.col-->
+                    <div class="col-sm-7  d-md-block">
+                       
+                                                
+
+                    </div>
+                    <!--/.col-->
+                    <table class="table table-responsive-sm table-hover table-outline mb-0">
+                        <thead>
+                            <tr>
+
+
+                                <th class="text-left">Reference#</th>
+                                <th class="text-center">Date</th>
+                                <th class="text-center">Debit</th>
+                                <th class="text-center">Credit</th>
+
+                                <th class="text-center">Action</th>
+
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                *ngFor="let val of transactionList | paginate: {itemsPerPage: 100, currentPage:page, id: '1'}">
+
+
+                                <td class="text-left">
+                                    <strong>{{val.Reference}}</strong>
+                               
+                                </td>
+                                <td class="text-center">
+                                    <div>{{val.DateTime | date:'dd-MMM-yyyy' }}</div>
+
+                                </td>
+                                <td class="text-center">
+                                    <div>
+                                        <div>{{ formatCurrency(val.Debit, val.Remarks) }}</div>
+                                    </div>
+
+                                </td>
+                                <td class="text-center">
+                                    <div>{{ formatCurrency(val.Credit, val.Remarks) }}</div>
+
+                                </td>
+
+
+                                <td class="text-center">
+
+                                    <button class="btn btn-square btn-danger" (click)="deleteTransaction(val)"
+                                        type="button"> <i class="fa fa-trash"></i></button>
+
+                                </td>
+
+
+
+                            </tr>
+
+                        </tbody>
+                    </table>
+                    <br />
+
+                </div>
+                <!--/.row-->
+                <br />
+                <div class="row">
+                    <div class="col-6 col-lg-4">
+                        <div class="card">
+                            <div class="card-body p-0 clearfix"><i
+                                    class="fa fa-money bg-danger p-4 font-2xl mr-3 float-left"></i>
+                                <div class="h5 text-danger mb-0 pt-3">{{TotalDebit| currency :' PKR '}}</div>
+                                <div class="text-muted text-uppercase font-weight-bold font-xs">Total Debit</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-4">
+                        <div class="card">
+                            <div class="card-body p-0 clearfix"><i
+                                    class="fa fa-money bg-success p-4 font-2xl mr-3 float-left"></i>
+                                <div class="h5 text-success mb-0 pt-3">{{TotalCredit| currency :' PKR '}}</div>
+                                <div class="text-muted text-uppercase font-weight-bold font-xs">Total Credit</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-4">
+                        <div *ngIf="Balance>0" class="card">
+                            <div class="card-body p-0 clearfix"><i
+                                    class="fa fa-money bg-warning p-4 font-2xl mr-3 float-left"></i>
+                                <div class="h5 text-bg-warning mb-0 pt-3">{{myMath.abs(Balance) }}</div>
+                                <div class="text-muted text-uppercase font-weight-bold font-xs">Balance(Receivable)</div>
+                            </div>
+                        </div>
+                        <div *ngIf="Balance<0" class="card">
+                            <div class="card-body p-0 clearfix"><i
+                                    class="fa fa-money bg-danger p-4 font-2xl mr-3 float-left"></i>
+                                <div class="h5 text-bg-danger mb-0 pt-3">{{myMath.abs(Balance) }}</div>
+                                <div class="text-muted text-uppercase font-weight-bold font-xs">Balance (Payable)</div>
+                            </div>
+                        </div>
+                        <div *ngIf="Balance==0" class="card">
+                            <div class="card-body p-0 clearfix"><i
+                                    class="fa fa-money bg-success p-4 font-2xl mr-3 float-left"></i>
+                                <div class="h5 text-bg-success mb-0 pt-3">{{myMath.abs(Balance)  }}</div>
+                                <div class="text-muted text-uppercase font-weight-bold font-xs">Balance</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="card-footer">
+                <!-- <div class="row">
+                    <div class="col-md-10">
+                        <pagination-controls (pageChange)="page = $event" id="1" maxSize="10" responsive="true"
+                            screenReaderPaginationLabel="Pagination" screenReaderPageLabel="page" directionLinks="true"
+                            autoHide="true">
+                        </pagination-controls>
+                    </div>
+                    <div class="col-md-2">
+                        <button (click)="myModalExport.show()" class="btn btn-block btn-success active">
+                            <i class="fa fa-print"></i> Export</button>
+                    </div>
+                </div> -->
+            </div>
+        </div>
+    </div>
+</div>

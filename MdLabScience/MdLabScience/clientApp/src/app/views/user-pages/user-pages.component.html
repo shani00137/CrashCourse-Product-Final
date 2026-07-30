@@ -1,0 +1,132 @@
+<ngx-spinner
+  bdColor="rgba(51,51,51,0.8)"
+  size="medium"
+  color="#fff"
+  type="ball-scale-multiple"
+>
+  <p style="font-size: 20px; color: white">Loading...</p>
+</ngx-spinner>
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">Pages</h4>
+          <div class="small text-muted">Manage Pages</div>
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          <button type="button"data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-success float-right"><i class="fa fa-plus-circle"></i></button>
+          
+        </div><!--/.col-->
+        <table class="table table-responsive-sm table-hover table-outline mb-0">
+                <thead class="thead-light">
+                  <tr>
+                  
+                    <th class="text-center"><i class="icon-key"></i></th>
+                            <th class="text-center">Page Name</th>
+                            <th class="text-center">Page Header</th>
+                            <th class="text-center">Page Icone</th>
+                            <th class="text-center">Menu Name</th>
+                            <th class="text-center">Action</th>
+                 
+                  </tr>
+                </thead>
+                <tbody *ngFor="let val of userPagedetail">
+                  <tr>
+                  
+                    <td class="text-center">{{ val.PageId }}</td>
+                    <td class="text-center">{{ val.url }}</td>
+                    <td class="text-center">{{ val.name }}</td>
+                    <td class="text-center">{{ val.icon }}</td>
+                    <td class="text-center">{{ val.MenuName }}</td>
+                    <td class="text-center">
+                        <button (click)="Edit(val)"  data-toggle="modal" (click)="myModal.show()" class="btn btn-square btn-warning" type="button"> <i class="fa fa-pencil-square-o"></i></button>
+                    </td>
+                   
+                  
+                   
+                  </tr>
+                
+                </tbody>
+              </table>
+ 
+      </div><!--/.row-->
+      
+    </div>
+    <div class="card-footer">
+      
+    </div>
+  </div>
+
+  <div bsModal #myModal="bs-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"> Pages</h4>
+          <button type="button" class="close" (click)="myModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <form [formGroup]="itemForm" (ngSubmit)="save()" >
+                 
+              <div class="form-group">
+                    
+                <input type="hidden"  class="form-control"   [(ngModel)]="formModel.PageId" formControlName="PageId">
+               
+              
+            </div>
+                <div class="form-group">
+                    <label >Page Header:</label>
+                      <input placeholder="Page Header" class="form-control"   [(ngModel)]="formModel.PageHeader" formControlName="PageHeader">
+                      <div *ngIf="itemForm.controls['PageHeader'].invalid && (itemForm.controls['PageHeader'].dirty || itemForm.controls['PageHeader'].touched)" class="danger" >
+                              <span *ngIf="itemForm.controls['PageHeader'].errors.required">
+                                  <span style="color: red;">Please Enter  Page Header.</span>  
+                              </span>
+                          </div>                    
+                  </div>
+                  <div class="form-group">
+                    <label >Page Icone:</label>
+                      <input placeholder="Page Icone" class="form-control"   [(ngModel)]="formModel.PageIcone" formControlName="PageIcone">
+                      <div *ngIf="itemForm.controls['PageIcone'].invalid && (itemForm.controls['PageIcone'].dirty || itemForm.controls['PageIcone'].touched)" class="danger" >
+                              <span *ngIf="itemForm.controls['PageIcone'].errors.required">
+                                  <span style="color: red;">Please Enter  Page Icone.</span>  
+                              </span>
+                          </div>                    
+                  </div>
+                  <div class="form-group">
+                    <label >Page Name:</label>
+                      <input placeholder="Page Header" class="form-control"   [(ngModel)]="formModel.PageName" formControlName="PageName">
+                      <div *ngIf="itemForm.controls['PageName'].invalid && (itemForm.controls['PageName'].dirty || itemForm.controls['PageName'].touched)" class="danger" >
+                              <span *ngIf="itemForm.controls['PageName'].errors.required">
+                                  <span style="color: red;">Please Enter  Page Name.</span>  
+                              </span>
+                          </div>                    
+                  </div>
+                  <div class="form-group">
+                    <label >Menu:</label>
+                  
+                  <select (change)="changeMenu($event)" class="form-control" id="Menu" formControlName="MenuId">
+                    <option [value]="null" disabled>Choose Menu</option>
+                    <option [value]="c.MenuId" *ngFor="let c of menulist">{{ c.MenuName }}</option>
+                    </select>     
+                    <div *ngIf="itemForm.controls['MenuId'].invalid && (itemForm.controls['MenuId'].dirty || itemForm.controls['MenuId'].touched)" class="danger" >
+                      <span *ngIf="itemForm.controls['MenuId'].errors.required">
+                          <span style="color: red;">Please Menu.</span>  
+                      </span>
+                  </div>     
+                  </div>
+              
+              <br>
+              <div class="modal-footer">
+                  <button type="submit"[disabled]="!itemForm.valid"  class="btn btn-sm btn-primary" type="submit">
+                      <i class="fa fa-dot-circle-o"></i> Submit</button>
+                      <button (click)="Reset()" class="btn btn-sm btn-danger" type="reset">
+                          <i class="fa fa-ban"></i> Reset</button>
+             
+              </div>
+            </form>
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->

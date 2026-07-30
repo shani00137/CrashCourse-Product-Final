@@ -1,0 +1,278 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+ 
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">Applicant Services</h4>
+          <div class="small text-muted">Manage Applicant Services.</div>
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          
+          <div class="row float-right">
+            <div class=" col-sm-12">
+            <input placeholder="Search"[(ngModel)]="searchText" class="form-control float-right">
+          </div>
+          </div>
+        </div><!--/.col-->
+         </div><!--/.row-->
+      <hr>
+   
+      <div class="row">
+        <div class="col-md-2 " >
+          <div  class="card" style="width: 10rem; height: 10rem">
+            <img *ngIf="photoUrl"class="card-img-top" src={{ServerName+photoUrl}} alt="Card image cap">     
+            <img *ngIf="!photoUrl" class="card-img-top" src="../../../../assets/userlogo.png" alt="Card image cap">           
+          </div>
+          
+        </div>
+        <div class="col-md-10 text-left">
+          <div class="row">
+            <div class="col-md-12 text-left">
+              <strong>ApplicantId</strong>: {{UpdatedId.ApplicantId}}
+            </div>           
+          </div>
+       
+          <div class="row">
+            <div class="col-md-12 text-left">
+              <strong>Applicant</strong>: {{UpdatedId.FirstName}} <span> </span> {{UpdatedId.LastName}}
+            </div>           
+          </div>
+          <div class="row">
+            <div class="col-md-12 text-left">
+              <strong>Mobile</strong>: {{UpdatedId.Mobile}}
+            </div>           
+          </div>
+          <div class="row">
+            <div class="col-md-12 text-left">
+              <strong>Country</strong>: {{UpdatedId.CoutryName}}
+            </div>           
+          </div>
+          <div class="row">
+            <div class="col-md-12 text-left">
+              <strong>Course</strong>:     <div *ngFor="let d of UpdatedId.CourseName">
+                <li> {{d.CourseName}}</li> 
+              </div>
+            </div>           
+          </div>
+        </div>
+      </div>
+      <form [formGroup]="itemForm" >
+        <div class="form-group">
+          <input type="hidden"  class="form-control"   [(ngModel)]="accountInfo.ApplicantId" formControlName="ApplicantId">
+      </div>
+
+      <div class="row">   
+          <div class="col-md-6">
+            <div    class="form-group">
+              <label >Photo</label>
+                <input  type="file" (change)="photoFileChange($event)" class="form-control" [(ngModel)]="accountInfo.Photo"   name="Photo"  formControlName="Photo"  id="Photo">
+              
+              </div>
+          </div>
+          
+          <div class="col-md-6">
+            <label style="color:white">Degree</label> 
+            <button *ngIf="photoUrl!=null" (click)="viewAttacment(photoUrl)"
+            class="col-md-3 btn btn-danger btn-block">
+           Download
+          </button>
+          </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div  class="form-group">
+            <label>Passport</label>
+              <input type="file" (change)="passportFileChange($event)"  class="form-control" [(ngModel)]="accountInfo.Passport" name="Passport"   formControlName="Passport"  id="Passport">
+           
+            </div>
+        </div>
+        <div class="col-md-6">
+          <label style="color:white">Degree</label> 
+          <button *ngIf="passportUrl!=null" (click)="viewAttacment(passportUrl)"
+          class="col-md-3 btn btn-danger btn-block">
+         Download
+        </button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div    class="form-group">
+            <label>Degree</label>  
+            <input  type="file" class="form-control" (change)="degreeFileChange($event)"  [(ngModel)]="accountInfo.Degree" name="Degree"  formControlName="Degree"  id="Degree">
+              
+            </div>
+        </div>
+        <div class="col-md-6">
+          <label style="color:white">Degree</label> 
+          <button *ngIf="DegreeUrl!=null" (click)="viewAttacment(DegreeUrl)"
+          class="col-md-3 btn btn-danger btn-block">
+         Download
+        </button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div    class="form-group">
+            <label> Matric Market Sheet</label> 
+            <input type="file" class="form-control" (change)="matricsheetdegreeFileChange($event)"  [(ngModel)]="accountInfo.MatricMarketSheet"  formControlName="MatricMarketSheet"     name="MatricMarketSheet" id="MatricMarketSheet">
+             
+            </div>
+        </div>
+        <div class="col-md-6">
+          <label style="color:white">Degree</label> 
+          <button *ngIf="matricsheetdegreeUrl!=null" (click)="viewAttacment(matricsheetdegreeUrl)"
+          class="col-md-3 btn btn-danger btn-block">
+         Download
+        </button>
+        </div>
+      </div>
+   
+      <div class="row">         
+             <div class="col-md-6">
+          <div    class="form-group">
+            <label> Intermediate Mark Sheet</label>  
+            <input type="file" class="form-control" (change)="intermediaesheetFileChange($event)" [(ngModel)]="accountInfo.IntermediateMarkSheet"  formControlName="IntermediateMarkSheet"     name="IntermediateMarkSheet" id="IntermediateMarkSheet">
+              
+            </div>
+        </div>
+        <div class="col-md-6">
+          <label style="color:white">Degree</label> 
+          <button *ngIf="intermediaesheetUrl!=null" (click)="viewAttacment(intermediaesheetUrl)"
+          class="col-md-3 btn btn-danger btn-block">
+         Download
+        </button>
+        </div>
+   
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <div    class="form-group">
+          <label>Experience Certificate</label>  
+          <input  type="file" class="form-control" (change)="experienceCertificateFileChange($event)"  [(ngModel)]="accountInfo.ExperienceCertificate"   formControlName="ExperienceCertificate"   name="ExperienceCertificate" id="ExperienceCertificate" >
+            
+          </div>
+      </div>
+      <div class="col-md-6">
+        <label style="color:white">Degree</label> 
+        <button *ngIf="experienceCertificateUrl!=null" (click)="viewAttacment(experienceCertificateUrl)"
+        class="col-md-3 btn btn-danger btn-block">
+       Download
+      </button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <div    class="form-group">
+          <label>Registration Certificate</label> 
+          <input type="file" class="form-control" (change)="registrationCertificateFileChange($event)" [(ngModel)]="accountInfo.RegistrationCertificate" formControlName="RegistrationCertificate"     name="RegistrationCertificate" id="RegistrationCertificate">
+           
+          </div>
+      </div>
+      <div class="col-md-6">
+        <label style="color:white">Degree</label> 
+        <button *ngIf="RegistrationCertificateUrl!=null" (click)="viewAttacment(RegistrationCertificateUrl)"
+        class="col-md-3 btn btn-danger btn-block">
+       Download
+      </button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <div    class="form-group">
+          <label>AdditionalDocuments</label> 
+          <input type="file" class="form-control" (change)="additionalDocumentFileChange($event)" [(ngModel)]="accountInfo.AdditionalDocuments" formControlName="AdditionalDocuments"    name="AdditionalDocuments" id="AdditionalDocuments">
+           
+          </div>
+      </div>
+      <div class="col-md-6">
+        <label style="color:white">Degree</label> 
+        <button *ngIf="AdditionalDocumentsUrl!=null" (click)="viewAttacment(AdditionalDocumentsUrl)"
+        class="col-md-2 btn btn-danger btn-block">
+       Download
+      </button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <div    class="form-group">
+          <label>GoodStanding Documents</label> 
+          <input type="file" class="form-control" (change)="goodStandingDocumentsChange($event)" [(ngModel)]="accountInfo.GoodStandingDocuments" formControlName="GoodStandingDocuments"    name="GoodStandingDocuments" id="GoodStandingDocuments">
+           
+          </div>
+      </div>
+      <div class="col-md-6">
+        <label style="color:white">Degree</label> 
+        <button *ngIf="GoodStandingDocumentsUrl!=null" (click)="viewAttacment(GoodStandingDocumentsUrl)"
+        class="col-md-3 btn btn-danger btn-block">
+       Download
+      </button>
+      </div>
+    </div>
+  
+    <div class="form-group">
+        <label >Data Flow Remarks:</label>
+          <textarea rows="2" [(ngModel)]="accountInfo.DataFlowRemarks"  formControlName="DataFlowRemarks" name="DataFlowRemarks" id="DataFlowRemarks" placeholder="Remarks"  class="form-control" ></textarea>                        
+      </div>
+      <!-- <div class="form-group">
+        <label >Others:</label>
+          <textarea rows="2" placeholder="Others" [(ngModel)]="accountInfo.Others" formControlName="Others" id="Others" class="form-control" ></textarea>                        
+      </div> -->
+
+      <!-- <h6>Data Flow Transfer</h6>
+     
+      <div class="row">         
+          <div class="col-md-3">
+            <div    class="form-group">
+                <input class="form-control" [(ngModel)]="accountInfo.DataFlowTransferred" formControlName="DataFlowTransferred"   name="DataFlowTransferred" id="DataFlowTransferred" >
+                <label>Data Flow Transferred</label>
+              </div>
+          </div> -->
+          <!-- <div class="col-md-9">
+            <div class="form-group">             
+                  <textarea rows="2" [(ngModel)]="accountInfo.DataFlowRemarks"  formControlName="DataFlowRemarks" id="DataFlowRemarks" placeholder="Remarks" class="form-control"  ></textarea>                        
+              </div>
+          </div> -->
+     
+      <!-- </div>
+      <br>
+      <h6>Addition Documents</h6>
+     
+      <div class="row">         
+          <div class="col-md-3">
+            <div    class="form-group">
+                <input class="form-control"  [(ngModel)]="accountInfo.AdditionalDocumentsDataflow" formControlName="AdditionalDocumentsDataflow"     name="AdditionalDocumentsDataflow" id="AdditionalDocumentsDataflow" value="Photo">
+                <label>Additional Documents Dataflow</label>
+              </div>
+          </div>
+          <div class="col-md-9">
+            <div class="form-group">             
+                  <textarea rows="2" id="AdditionalDocumentsDataflowRemarks"  [(ngModel)]="accountInfo.AdditionalDocumentsDataflowRemarks" formControlName="AdditionalDocumentsDataflowRemarks"  placeholder="Additional Documents Dataflow Remarks" class="form-control" ></textarea>                        
+              </div>
+          </div>
+     
+      </div>
+      <hr>
+    -->
+    <div class="row text-right">
+      <div class="col-md-2">
+          <button type="submit" (click)="save()" type="button" class="btn btn-danger btn-block" >Submit</button>
+      </div>
+  </div>
+    </form>
+    </div>
+
+    <div class="card-footer">
+      
+    </div>
+
+  </div>
+  </div>
+</div>
+
+
+
+

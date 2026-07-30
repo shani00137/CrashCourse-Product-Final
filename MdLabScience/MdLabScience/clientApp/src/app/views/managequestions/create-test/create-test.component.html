@@ -1,0 +1,237 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">Applicant Test</h4>
+          <div class="small text-muted">Manage Applicant Test</div>
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          
+          <div class="row float-right">
+            <div class=" col-sm-10">
+            <input placeholder="Search"[(ngModel)]="searchText" class="form-control float-right">
+          </div>
+          <div class="col-sm-2">
+            <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button>
+          </div>
+          
+       
+          </div>
+          
+        </div><!--/.col-->
+        <table class="table table-responsive-sm table-hover table-outline mb-0">
+                <thead >
+                  <tr>
+                
+                    <th class="text-center"><i class="icon-key"></i></th>
+                    <th class="text-center">Applicant</th>
+                    <th class="text-center">Course</th>
+                    <th class="text-center">Test Date</th>
+                    <th class="text-center">Questions</th>
+                    <th class="text-center">Result</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Action</th>
+                 
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let val of testList  |    filter : searchText">
+               
+                   
+                    <td class="text-center">
+                        <div>{{val.TestId}}</div>
+                    </td>
+                    <td class="text-center">
+                      <div>{{val.FirstName}}</div>
+                   
+                  </td>
+                    <td class="text-center">
+                        <div>{{val.CourseName}}</div>
+                     
+                    </td>
+                    <td class="text-center">
+                        <div>{{val.TestDate | date:'dd-MMM-yyyy'}}</div>
+                        <div class="small text-muted">
+                          Created On {{val.CreatedDate|date:'dd-MMM-yyyy'}}
+                        </div>
+                     
+                    </td>
+                    <td class="text-center">
+                        <div>{{val.Questions}}</div>
+                     
+                    </td>
+                    <td class="text-center">
+                      <span *ngIf="!val.IsCompleted" class="badge badge-warning">Pending</span>
+                      
+                      <span *ngIf="val.IsCompleted" class="badge badge-success">Complete</span>
+                       
+                     
+                    </td>
+                    <td style="width: 200px" class="text-center">
+                       <div class="clearfix">
+                        <div class="float-left"><div class="small text-muted">
+                          {{val.Remarks}}
+                        </div></div>
+                        <div class="float-right"><strong>
+                  
+                          {{val.RightQuestions}} <span>/</span>  {{val.Questions}}
+                        </strong></div>
+                       
+                      </div>
+                      <div class="progress progress-xs" >
+                        <div aria-valuemax="100" aria-valuemin="0" aria-valuenow="val.Percentage" [ngClass]=percentClass(val.Percentage)  role="progressbar" [style.width.%]="val.Percentage">
+                      </div>
+                    </div>
+                      
+                    </td>
+                   
+                   
+                 
+                  
+                    <td class="text-center">
+                      <button (click)="viewTestDetails(val)"   class="btn btn-square btn-info" type="button"> <i class="fa fa-list"></i></button>
+                      <button (click)="delete(val.TestId)"   class="btn btn-square btn-danger" type="button"> <i class="fa fa-trash"></i></button>
+                        <!-- <button (click)="Edit(val)"  data-toggle="modal" (click)="myModal.show()" class="btn btn-square btn-warning" type="button"> <i class="fa fa-pencil-square-o"></i></button> -->
+                    </td>
+                   
+                  
+                   
+                  </tr>
+                
+                </tbody>
+              </table>
+ 
+      </div><!--/.row-->
+      
+    </div>
+    <div class="card-footer">
+      
+    </div>
+  </div>
+  </div>
+</div>
+  <div bsModal #myModal="bs-modal" [config]="{backdrop: 'static'}" class="modal fade bd-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"> Courses</h4>
+          <button type="button" class="close" (click)="myModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <form [formGroup]="itemForm" (ngSubmit)="save()" >
+                 
+              <div class="form-group">
+                    
+                <input type="hidden"  class="form-control"   [(ngModel)]="accountInfo.TestId" formControlName="TestId">
+                <div *ngIf="itemForm.controls['TestId'].invalid && (itemForm.controls['TestId'].dirty || itemForm.controls['TestId'].touched)" class="danger" >
+                        <span *ngIf="itemForm.controls['TestId'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>
+              
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Course:</label>               
+                        <ng-select [items]="courseList" (change)="selectCourse($event)" bindLabel="CourseName" bindValue="CourseId" labelForId="CourseId"
+                           placeholder="All Courses" clearAllText="Clear" formControlName="CourseId">
+                           <ng-template ng-option-tmp let-item="item">                 
+                            <span class="ng-value-label">{{item.CourseCode + ' ' + item.CourseName}}</span>
+                         </ng-template>
+                        </ng-select>
+                        <div
+                          *ngIf="itemForm.controls['CourseId'].invalid && (itemForm.controls['CourseId'].dirty || itemForm.controls['CourseId'].touched)"
+                          class="danger">
+                          <span *ngIf="itemForm.controls['CourseId'].errors.required">
+                            <span style="color: red;">Please Choose CourseId.</span>
+                          </span>
+                        </div>
+                      </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label >Test Date:</label>
+                          <input [minDate]="dueDate" bsDatepicker placeholder="Test Date" class="form-control"   [(ngModel)]="accountInfo.TestDate" formControlName="TestDate">
+                          <div *ngIf="itemForm.controls['TestDate'].invalid && (itemForm.controls['TestDate'].dirty || itemForm.controls['TestDate'].touched)" class="ng-dirty" >
+                                  <span *ngIf="itemForm.controls['TestDate'].errors.required">
+                                      <span style="color: red;">Please Enter .</span>  
+                                  </span>
+                              </div>                
+                      </div>
+                </div>
+            
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label>Applicants:</label>               
+                        <ng-select [loading]="loading" [closeOnSelect]="false" [items]="applicantList" [multiple]="true"  bindLabel="FirstName" bindValue="ApplicantId" labelForId="ApplicantId"
+                           placeholder="All Applicants" clearAllText="Clear" formControlName="ApplicantId">
+                           <!-- <ng-template ng-option-tmp let-item="item" let-item$="item$" let-index="index">
+                            <input id="item-{{index}}" type="checkbox" [ngModel]="item$.selected"/> {{item.FirstName}} <span> </span> {{item.LastName}}<span>|</span>Mobile :{{item.Mobile}}
+                        </ng-template>   -->
+                        <ng-template ng-option-tmp let-item="item">                 
+                          <span class="ng-value-label">{{item.FirstName + ' ' + item.LastName}}</span>
+                       </ng-template>
+                         -->
+                        </ng-select>
+                        <div
+                          *ngIf="itemForm.controls['ApplicantId'].invalid && (itemForm.controls['ApplicantId'].dirty || itemForm.controls['ApplicantId'].touched)"
+                          class="danger">
+                          <span *ngIf="itemForm.controls['ApplicantId'].errors.required">
+                            <span style="color: red;">Please Choose .</span>
+                          </span>
+                        </div>
+                      </div>
+                </div>
+               
+                
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label >Questions:</label>
+                          <input minlength="0" maxlength="300" type="number" placeholder="Question Count" class="form-control"   [(ngModel)]="accountInfo.Questions" formControlName="Questions">
+                          <div *ngIf="itemForm.controls['Questions'].invalid && (itemForm.controls['Questions'].dirty || itemForm.controls['Questions'].touched)" class="ng-dirty" >
+                                  <span *ngIf="itemForm.controls['Questions'].errors.required">
+                                      <span style="color: red;">Please Enter .</span>  
+                                  </span>
+                              </div>                
+                      </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label >Duration:</label>
+                          <input placeholder="Total Minutes" class="form-control"   [(ngModel)]="accountInfo.Duration" formControlName="Duration">
+                          <div *ngIf="itemForm.controls['Duration'].invalid && (itemForm.controls['Duration'].dirty || itemForm.controls['Duration'].touched)" class="ng-dirty" >
+                                  <span *ngIf="itemForm.controls['Duration'].errors.required">
+                                      <span style="color: red;">Please Enter .</span>  
+                                  </span>
+                              </div>                
+                      </div>
+                </div>
+                
+            </div>
+              <br>
+              <div class="modal-footer">
+                  <button type="submit"[disabled]="!itemForm.valid"  class="btn btn-sm btn-primary" type="submit">
+                      <i class="fa fa-dot-circle-o"></i> Submit</button>
+                      <button (click)="Reset()" class="btn btn-sm btn-danger" type="reset">
+                          <i class="fa fa-ban"></i> Reset</button>
+             
+              </div>
+            </form>
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+
+

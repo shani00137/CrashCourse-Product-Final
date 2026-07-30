@@ -1,0 +1,64 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">Applicant Test Details</h4>
+         
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          
+          <div class="row float-right">
+         
+          </div>
+          
+        </div><!--/.col-->
+       
+ 
+      </div><!--/.row-->
+      <br>
+      <table class="table table-responsive-sm table-hover table-outline mb-0">
+        <thead >
+          <tr>
+        
+           
+            <th style="max-width: 10%;" >QuestionId</th>
+            <th>Question</th>
+          
+         
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let val of datalist  |    filter : searchText">
+       
+           
+            <td style="width: 10%;" class="text-center">
+                <div>{{val.QuestionId}}</div>
+            </td>
+            <td class="text-left">
+                <strong [innerHTML]="val.QuestionContent"> </strong>
+                <div class="small text-muted">
+                    <li *ngFor="let o of val.QuestionOptions">{{o.Options}}</li>
+                </div>
+                
+            </td>
+          
+           
+          </tr>
+        
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer">
+      
+    </div>
+  </div>
+  </div>
+</div>
+
+
+
+

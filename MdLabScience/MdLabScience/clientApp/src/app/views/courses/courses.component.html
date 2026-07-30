@@ -1,0 +1,283 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">Courses</h4>
+          <div class="small text-muted">Manage Courses</div>
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          
+          <div class="row float-right">
+            <div class=" col-sm-10">
+              <div class="input-group">
+                <input placeholder="Search"[(ngModel)]="searchMd.searchText" id="input2-group1" name="input2-group1" class="form-control">
+                <div class="input-group-append">
+                  <button (click)="search()" class="input-group-text btn btn-defalut"><i class="fa fa-search"></i></button>
+                </div>
+              </div>
+          </div>
+          <div class="col-sm-2">
+            <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button>
+          </div>
+          
+       
+          </div>
+          
+        </div><!--/.col-->
+        <table class="table table-responsive-sm table-hover table-CourseUrl mb-0">
+                <thead >
+                  <tr>
+                
+                    <th class="text-center"><i class="icon-key"></i></th>
+                    <th>Course Code</th>
+                    <th>Course Name</th>
+                    <th class="text-center">Attachment</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Action</th>
+                 
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let val of listData  |    filter : searchText">
+               
+                   
+                    <td class="text-center">
+                        <div>{{val.CourseId}}</div>
+                    </td>
+                    <td>
+                        <div>{{val.CourseCode}}</div>
+                     
+                    </td>
+                    <td>
+                        <div>{{val.CourseName}}</div>
+                     
+                    </td>
+                    <td class="text-center">
+               
+
+                      <button  (click)="viewAttachment(val)" class="btn btn-info btn-outline btn-sm" >Attachment</button>
+                      <!-- <button *ngIf="val.DoucumentUrl!=null" (click)="downloadImage(val.DoucumentUrl)" class="btn btn-link btn-sm" >Document</button> -->
+                  </td>
+                    <td class="text-center">
+                        <div> <label class="switch switch-label switch-pill switch-danger">
+                            <input class="switch-input" (change)="status(val.CourseId)" type="checkbox" [checked]="val.IsActive">
+                            <span class="switch-slider" data-checked="On" data-unchecked="Off"></span>
+                            </label></div>
+                    </td>
+                  
+                    <td class="text-center">
+                   
+                      <button (click)="delete(val)"   class="btn btn-square btn-danger" type="button"> <i class="fa fa-trash"></i></button>
+                        <button (click)="Edit(val)"  data-toggle="modal" (click)="myModal.show()" class="btn btn-square btn-warning" type="button"> <i class="fa fa-pencil-square-o"></i></button>
+                    </td>
+                   
+                  
+                   
+                  </tr>
+                
+                </tbody>
+        </table>
+ 
+      </div><!--/.row-->
+      
+    </div>
+    <div class="card-footer">
+      <div class="d-flex justify-content-center">
+       
+        <div class="col-xs-12 col-md-12 text-center d-flex justify-content-center">
+          <pagination [totalItems]="totalItems" [(ngModel)]="currentPage" (pageChanged)="pageChanged($event)" [maxSize]="10" class="pagination-sm"
+          previousText="&lsaquo;" nextText="&rsaquo;" [boundaryLinks]="true"></pagination>
+          <!-- <pagination [totalItems]="totalItems" [(ngModel)]="currentPage" (pageChanged)="pageChanged($event)"></pagination> -->
+        </div>
+    </div>
+    </div>
+  </div>
+  </div>
+</div>
+  <div bsModal #myModal="bs-modal" [config]="{backdrop: 'static'}" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"> Courses</h4>
+          <button type="button" class="close" (click)="myModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <form [formGroup]="itemForm" (ngSubmit)="save()" >
+                 
+              <div class="form-group">
+                    
+                <input type="hidden"  class="form-control"   [(ngModel)]="accountInfo.CourseId" formControlName="CourseId">
+                <div *ngIf="itemForm.controls['CourseId'].invalid && (itemForm.controls['CourseId'].dirty || itemForm.controls['CourseId'].touched)" class="danger" >
+                        <span *ngIf="itemForm.controls['CourseId'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>
+              
+            </div>
+          <div class="form-group">
+              <label >Course Code:</label>
+                <input placeholder="Course Code" class="form-control"   [(ngModel)]="accountInfo.CourseCode" formControlName="CourseCode">
+                <div *ngIf="itemForm.controls['CourseCode'].invalid && (itemForm.controls['CourseCode'].dirty || itemForm.controls['CourseCode'].touched)" class="ng-dirty" >
+                        <span *ngIf="itemForm.controls['CourseCode'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>
+              
+            </div>
+            <div class="form-group">
+                <label >Course Name:</label>
+                  <input placeholder="Course Name" class="form-control"   [(ngModel)]="accountInfo.CourseName" formControlName="CourseName">
+                  <div *ngIf="itemForm.controls['CourseName'].invalid && (itemForm.controls['CourseName'].dirty || itemForm.controls['CourseName'].touched)" class="ng-dirty" >
+                          <span *ngIf="itemForm.controls['CourseName'].errors.required">
+                              <span style="color: red;">Please Enter .</span>  
+                          </span>
+                      </div>
+                
+              </div>
+            
+         
+              
+              <br>
+              <div class="modal-footer">
+                  <button type="submit"[disabled]="!itemForm.valid"  class="btn btn-sm btn-primary" type="submit">
+                      <i class="fa fa-dot-circle-o"></i> Submit</button>
+                      <button (click)="Reset()" class="btn btn-sm btn-danger" type="reset">
+                          <i class="fa fa-ban"></i> Reset</button>
+             
+              </div>
+            </form>
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+<!-- //model for file upload -->
+  <div bsModal #materialModal="bs-modal" [config]="{backdrop: 'static'}" class="modal fade bd-modal-lg" tabindex="-1" role="dialog" aria-labelledby="materialModal" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"> Upload Course Material</h4>
+          <button type="button" class="close" (click)="materialModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <table class="table table-responsive-sm table-hover table-CourseUrl mb-0">
+            <thead >
+              <tr>
+            
+                <th class="text-left"> File Name</th>
+                <th class="text-center">Type</th>
+                <th class="text-center">Action</th>               
+             
+              </tr>
+            </thead>
+            <tbody *ngFor="let val of attachmentList ">
+              <tr *ngIf="val.MaterialType!='MCQS'" >           
+               
+                <td class="text-left">
+                    <div>{{val.FileName}}</div>
+                </td>
+                <td class="text-center">
+                    <div>{{val.MaterialType}}</div>
+                 
+                </td>
+                
+                <td class="text-center">
+           
+                  <button (click)="DeleteCourseMaterial(val)"   class="btn btn-square btn-danger" type="button"> <i class="fa fa-trash"></i></button>
+                  <button (click)="downloadOutline(val)"   class="btn btn-square btn-warning" type="button"> <i class="fa fa-download"></i></button>
+                  <!-- <button (click)="downloadOutline(val.CourseUrl)" class="btn btn-warning btn-outline btn-sm" >Download</button> -->
+                  <!-- <button *ngIf="val.DoucumentUrl!=null" (click)="downloadImage(val.DoucumentUrl)" class="btn btn-link btn-sm" >Document</button> -->
+              </td>
+              </tr>
+            
+            </tbody>
+        </table>
+        <div class="card">
+          <div class="card-header">
+            <h6>Add New Attachment</h6>
+          </div>
+          <div class="card-body">
+
+            <form [formGroup]="itemMaterialForm" (ngSubmit)="saveCourseMaterial()" >
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="yesno">Course Material</label>
+                      <ng-select labelForId="yesno"  placeholder="Course Material" [(ngModel)]="accountInfo.MaterialType"  formControlName="MaterialType" >
+                        <ng-option [value]="PDF">PDF</ng-option>
+                        <ng-option [value]="Video">Video</ng-option>
+                        <ng-option [value]="Audio">Audio</ng-option>
+                    </ng-select>
+                        <div *ngIf="itemMaterialForm.controls['MaterialType'].invalid && (itemMaterialForm.controls['MaterialType'].dirty || itemMaterialForm.controls['MaterialType'].touched)" class="ng-dirty" >
+                                <span *ngIf="itemMaterialForm.controls['MaterialType'].errors.required">
+                                    <span style="color: red;">Please Enter .</span>  
+                                </span>
+                            </div>
+                      
+                    </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Course File:</label>
+                    <input placeholder="Course File" accept=".pdf,video/*,audio/*" type="file" (change)="onCourseUrlFileChange($event)" class="form-control"
+                      [(ngModel)]="accountInfo.CourseUrl" formControlName="CourseUrl">
+                    <div
+                      *ngIf="itemMaterialForm.controls['CourseUrl'].invalid && (itemMaterialForm.controls['CourseUrl'].dirty || itemMaterialForm.controls['CourseUrl'].touched)"
+                      class="ng-dirty">
+                      <span *ngIf="itemMaterialForm.controls['CourseUrl'].errors.required">
+                        <span style="color: red;">Please Enter .</span>
+                      </span>
+                    </div>
+    
+                  </div>
+                </div>
+          
+              </div>
+              <br>
+              <div *ngIf="isUploading" class="row">
+                <div class="col-md-12">
+                  <progressbar [animate]="true" class="progress" [value]="progress" [max]="100">{{progress}}</progressbar>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <h6 *ngIf="IsProcessingStart" class="text-danger">
+                  Uploading data in progress... Please wait
+                </h6>
+                <h6 class="text-success">
+                  {{ResponseText}}
+                </h6>
+                <h6 class="text-danger">{{progressText}}</h6>
+                <br>
+               
+              </div>
+            <div class="form-group">                    
+              <input type="hidden"  class="form-control"   [(ngModel)]="accountInfo.CourseId" formControlName="CourseId">
+          </div>        
+          
+           
+       
+            
+            <br>
+            <div class="modal-footer">
+                <button type="submit"  class="btn btn-sm btn-primary" type="submit">
+                    <i class="fa fa-dot-circle-o"></i> Submit</button>
+                    <button (click)="Reset()" class="btn btn-sm btn-danger" type="reset">
+                        <i class="fa fa-ban"></i> Reset</button>
+           
+            </div>
+          </form>
+          </div>
+        </div>
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->

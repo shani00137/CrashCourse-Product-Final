@@ -1,0 +1,302 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">Applicant</h4>
+          <div class="small text-muted">Manage Applicants Information</div>
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          
+          <div class="row float-right">
+            <div class=" col-sm-12">
+            <input placeholder="Search"[(ngModel)]="searchMd.searchText" class="form-control float-right">
+          </div>
+          <!-- <div class="col-sm-2">
+            <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button>
+          </div> -->
+          
+       
+          </div>
+          
+        </div><!--/.col-->
+        <table class="table table-responsive-sm table-hover table-outline mb-0">
+                <thead >
+                  <tr>
+                    <th class="text-center"><i class="icon-lightbulb"></i></th>
+                    <th class="text-center"><i class="icon-key"></i></th>
+                    <th class="text-center">Registration No.</th>
+                    <th class="text-center">Applicant</th>
+                    <th class="text-center">Mobile</th>
+                    <th class="text-center">Country</th>
+                    <th class="text-center">Course</th>
+                    <th class="text-center">Status</th>
+                    <th style="max-width: 100;">Address</th>                   
+                    <th class="text-center">Action</th>
+                 
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let val of listData  |    filter : searchMd.searchText">
+               
+                    <td class="text-center">
+                        <div class="avatar">
+                          
+                          <img *ngIf="photoUrl" alt="No Image" class="img-avatar" src="{{photoUrl}}">
+                          <img *ngIf="!photoUrl" alt="No Image" class="img-avatar" src="../../../../assets/userlogo.png">
+                         
+                        </div>
+                        <!-- <div class="c-avatar"><img class="c-avatar-img"style="width:50px" src="{{ServerName + val.Picture}}" alt="No Image"><span class="c-avatar-status bg-success"></span></div> -->
+                        </td>
+                    <td class="text-center">
+                        <div>{{val.ApplicantId}}</div>
+                    </td>
+                    <td class="text-center">
+                        <strong>{{val.RegistrationNo}}</strong>
+                        <div class="small text-muted">
+                            <div>{{val.RegistrationDate| date:'dd-MMM-yyyy'}} To {{val.ExpiryDate| date:'dd-MMM-yyyy'}}</div>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <strong>{{val.FirstName}}{{val.LastName}}</strong>
+                        <div class="small text-muted">
+                            <div>{{val.Email}}</div>
+                        </div>
+                     
+                    </td>
+                    <td class="text-center">
+                        <div>{{val.Mobile}}</div>
+                        <div class="small text-muted">
+                            {{val.OtherMobile}}
+                        </div>
+                     
+                    </td>
+                    <td class="text-center">
+                        
+                     {{val.CoutryName}}
+                    </td>
+                    <td class="text-left">
+                       <div *ngFor="let d of val.CourseName">
+                         <li> {{d.CourseName}}</li> 
+                       </div>
+                     
+                    </td>
+                    <td class="text-center">
+                      <div> <label class="switch switch-label switch-pill switch-danger">
+                          <input class="switch-input" (change)="status(val.ApplicantId)" type="checkbox" [checked]="val.IsActive">
+                          <span class="switch-slider" data-checked="On" data-unchecked="Off"></span>
+                          </label></div>
+                  </td>
+                    <td class="text-center" style="max-width: 100;">
+                        <div>{{val.Address}}</div>
+                     
+                    </td>
+                  
+                    <td class="text-center">
+                   
+                      <button (click)="viewServices(val)"   class="btn btn-square btn-primary" type="button"> <i class="fa fa-book"></i></button>
+                        <button (click)="Edit(val)"  data-toggle="modal" (click)="myModal.show()" class="btn btn-square btn-warning" type="button"> <i class="fa fa-pencil-square-o"></i></button>
+                    </td>
+                   
+                  
+                   
+                  </tr>
+                
+                </tbody>
+              </table>
+ 
+      </div><!--/.row-->
+      
+    </div>
+    <div class="card-footer">
+      
+    </div>
+  </div>
+  </div>
+</div>
+<div bsModal #myModal="bs-modal" [config]="{backdrop: 'static'}" class="modal fade bd-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title"> Add & Update Applicant</h4>
+        <button type="button" class="close" (click)="myModal.hide()" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+          <form [formGroup]="itemForm" (ngSubmit)="save()" >
+               
+            <div class="form-group">
+              <input type="hidden"  class="form-control"   [(ngModel)]="accountInfo.UserNo" formControlName="UserNo">
+              <input type="hidden"  class="form-control"   [(ngModel)]="accountInfo.ApplicantId" formControlName="ApplicantId">
+              <div *ngIf="itemForm.controls['ApplicantId'].invalid && (itemForm.controls['ApplicantId'].dirty || itemForm.controls['ApplicantId'].touched)" class="danger" >
+                      <span *ngIf="itemForm.controls['ApplicantId'].errors.required">
+                          <span style="color: red;">Please Enter .</span>  
+                      </span>
+                  </div>
+            
+          </div>
+          <div class="row">
+              <div class="col-md-6">
+                  <div class="form-group">
+                      <label>Applied for country:</label>               
+                      <ng-select [items]="countryList"  bindLabel="CoutryName" bindValue="CountryId" labelForId="CountryId"
+                         placeholder="Choose Country Name" clearAllText="Clear" formControlName="CountryId">
+        
+                      </ng-select>
+                      <div
+                        *ngIf="itemForm.controls['CountryId'].invalid && (itemForm.controls['CountryId'].dirty || itemForm.controls['CountryId'].touched)"
+                        class="danger">
+                        <span *ngIf="itemForm.controls['CountryId'].errors.required">
+                          <span style="color: red;">Please Choose Country.</span>
+                        </span>
+                      </div>
+                    </div>
+              </div>
+              <div class="col-md-6">
+                  <div class="form-group">
+                      <label>Course:</label>               
+                      <ng-select [items]="courseList" [multiple]="true"  bindLabel="CourseName" bindValue="CourseId" labelForId="CourseId"
+                         placeholder="All Courses" clearAllText="Clear" formControlName="CourseId">
+                         <ng-template ng-option-tmp let-item="item">                 
+                          <span class="ng-value-label">{{item.CourseCode + ' ' + item.CourseName}}</span>
+                       </ng-template>
+                      </ng-select>
+                      <div
+                        *ngIf="itemForm.controls['CourseId'].invalid && (itemForm.controls['CourseId'].dirty || itemForm.controls['CourseId'].touched)"
+                        class="danger">
+                        <span *ngIf="itemForm.controls['CourseId'].errors.required">
+                          <span style="color: red;">Please Choose Course.</span>
+                        </span>
+                      </div>
+                    </div>
+              </div>
+          </div>
+          <div class="row">
+              <div class="col-md-6">
+                  <div class="form-group">
+                      <label >First Name:</label>
+                        <input placeholder="Fist Name" class="form-control"   [(ngModel)]="accountInfo.FirstName" formControlName="FirstName">
+                        <div *ngIf="itemForm.controls['FirstName'].invalid && (itemForm.controls['FirstName'].dirty || itemForm.controls['FirstName'].touched)" class="ng-dirty" >
+                                <span *ngIf="itemForm.controls['FirstName'].errors.required">
+                                    <span style="color: red;">Please Enter .</span>  
+                                </span>
+                            </div>
+                      
+                    </div>
+              </div>
+              <div class="col-md-6">
+                  <div class="form-group">
+                      <label >Last Name:</label>
+                        <input placeholder="Last Name" class="form-control"   [(ngModel)]="accountInfo.LastName" formControlName="LastName">
+                        <div *ngIf="itemForm.controls['LastName'].invalid && (itemForm.controls['LastName'].dirty || itemForm.controls['LastName'].touched)" class="ng-dirty" >
+                                <span *ngIf="itemForm.controls['LastName'].errors.required">
+                                    <span style="color: red;">Please Enter .</span>  
+                                </span>
+                            </div>                
+                    </div>
+              </div>
+          </div>
+          <!-- <div class="row">
+              <div class="col-md-6">
+                  <div class="form-group">
+                      <label >Mobile:</label>
+                        <input placeholder="Mobile" class="form-control"   [(ngModel)]="accountInfo.Mobile" formControlName="Mobile">
+                        <div *ngIf="itemForm.controls['Mobile'].invalid && (itemForm.controls['Mobile'].dirty || itemForm.controls['Mobile'].touched)" class="ng-dirty" >
+                                <span *ngIf="itemForm.controls['Mobile'].errors.required">
+                                    <span style="color: red;">Please Enter .</span>  
+                                </span>
+                            </div>                
+                    </div>
+              </div>
+              <div class="col-md-6">
+                  <div class="form-group">
+                      <label >Other Mobile:</label>
+                        <input placeholder="Other Mobile" class="form-control"   [(ngModel)]="accountInfo.OtherMobile" formControlName="OtherMobile">
+                        <div *ngIf="itemForm.controls['OtherMobile'].invalid && (itemForm.controls['OtherMobile'].dirty || itemForm.controls['OtherMobile'].touched)" class="ng-dirty" >
+                                <span *ngIf="itemForm.controls['OtherMobile'].errors.required">
+                                    <span style="color: red;">Please Enter .</span>  
+                                </span>
+                            </div>                
+                    </div>
+              </div>
+          </div> -->
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                  <label >Registration Date:</label>
+                    <input bsDatepicker placeholder="Registration Date" class="form-control"   [(ngModel)]="accountInfo.RegistrationDate" formControlName="RegistrationDate">
+                    <div *ngIf="itemForm.controls['RegistrationDate'].invalid && (itemForm.controls['RegistrationDate'].dirty || itemForm.controls['RegistrationDate'].touched)" class="ng-dirty" >
+                            <span *ngIf="itemForm.controls['RegistrationDate'].errors.required">
+                                <span style="color: red;">Please Enter .</span>  
+                            </span>
+                        </div>                
+                </div>
+          </div>
+              <div class="col-md-6">
+                  <!-- <div class="form-group">
+                      <label >Email:</label>
+                        <input placeholder="Email" class="form-control"   [(ngModel)]="accountInfo.Email" formControlName="Email">
+                        <div *ngIf="itemForm.controls['Email'].invalid && (itemForm.controls['Email'].dirty || itemForm.controls['Email'].touched)" class="ng-dirty" >
+                                <span *ngIf="itemForm.controls['Email'].errors.required">
+                                    <span style="color: red;">Please Enter .</span>  
+                                </span>
+                                <span *ngIf="itemForm.controls['Email'].errors.email">
+                                  <span style="color: red;">Email not valid..</span>  
+                              </span>
+                            </div>                
+                    </div> -->
+                    <div class="form-group">
+                
+                      <label >Expiry Date:</label>
+                        <input bsDatepicker placeholder="Expiry Date" class="form-control"   [(ngModel)]="accountInfo.ExpiryDate" formControlName="ExpiryDate">
+                        <div *ngIf="itemForm.controls['ExpiryDate'].invalid && (itemForm.controls['ExpiryDate'].dirty || itemForm.controls['ExpiryDate'].touched)" class="ng-dirty" >
+                                <span *ngIf="itemForm.controls['ExpiryDate'].errors.required">
+                                    <span style="color: red;">Please Enter .</span>  
+                                </span>
+                            </div>                
+                    </div>
+              </div>
+         
+          </div>
+          <div class="row">
+          
+              <div class="col-md-6">
+                <br>
+                  <div class="form-group">                        
+                      <label >Photo:</label>
+                      <input #myInputVariable  accept="image/*" type="file" #myInput id="exampleInputFile" name="PhotoUrl" name="myfiles" formControlName="PhotoUrl" ngModel (change)="getFiles($event)">
+                    </div>
+              </div>
+          </div>
+          <div class="row">
+              <div class="col-md-12">
+                  <div class="form-group">
+                      <label >Address:</label>
+                        <textarea rows="2" placeholder="Address" class="form-control"   [(ngModel)]="accountInfo.Address" formControlName="Address"></textarea>
+                        <div *ngIf="itemForm.controls['Address'].invalid && (itemForm.controls['Address'].dirty || itemForm.controls['Address'].touched)" class="ng-dirty" >
+                                <span *ngIf="itemForm.controls['Address'].errors.required">
+                                    <span style="color: red;">Please Enter .</span>  
+                                </span>
+                            </div>                
+                    </div>
+              </div>
+             
+          </div>
+            <br>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-sm btn-primary" type="submit">
+                    <i class="fa fa-dot-circle-o"></i> Submit</button>
+                    <button (click)="Reset()" class="btn btn-sm btn-danger" type="reset">
+                        <i class="fa fa-ban"></i> Reset</button>
+           
+            </div>
+          </form>
+      </div>
+     
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->

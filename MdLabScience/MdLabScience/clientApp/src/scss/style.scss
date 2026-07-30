@@ -1,0 +1,51 @@
+// If you want to override variables do it here
+@import "variables";
+
+// Import styles/
+@import "~@coreui/coreui/scss/coreui";
+
+// If you want to add something do it here
+@import "custom";
+@import "~@ng-select/ng-select/themes/default.theme.css";
+@import '~ng-wizard/themes/ng_wizard.min.css';
+ 
+/* Optional */
+/* If a theme other than default is used, the css file for that theme is required. */
+@import '~ng-wizard/themes/ng_wizard_theme_arrows.min.css';
+@import '~ng-wizard/themes/ng_wizard_theme_circles.min.css';
+@import '~ng-wizard/themes/ng_wizard_theme_dots.min.css';
+
+// ... or 
+
+.myclass
+{
+    background-color: rgb(172, 166, 157);
+    color:white;
+}
+.dispatch
+{
+    background-color: rgb(42, 188, 214);
+    color: white;
+}
+.paid
+{
+    background-color: white;
+    color:green
+}
+.isReturn
+{
+    background-color:white;
+    color:orangered;
+
+}
+.pending
+{
+    background-color:white;
+    color:red;
+
+}
+.promise
+{
+  background: green;
+  color:white;
+}

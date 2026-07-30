@@ -1,0 +1,144 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">Certificates</h4>
+          <div class="small text-muted">Manage Certificates</div>
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          
+          <div class="row float-right">
+            <div class=" col-sm-10">
+           
+          </div>
+          <div class="col-sm-2">
+            <!-- <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button> -->
+          </div>
+          
+       
+          </div>
+          
+        </div><!--/.col-->
+      
+ 
+      </div><!--/.row-->
+      <form [formGroup]="itemForm" (ngSubmit)="export()" >
+      <div class="row">
+        <div class="col-md-4">
+            <div class="form-group"> 
+                <label >Name</label>       
+                <input  placeholder="Name" class="form-control"   [(ngModel)]="accountInfo.Name" formControlName="Name">
+                <div *ngIf="itemForm.controls['Name'].invalid && (itemForm.controls['Name'].dirty || itemForm.controls['Name'].touched)" class="danger" >
+                        <span *ngIf="itemForm.controls['Name'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>
+              
+            </div>
+        </div>
+          <div class="col-md-4">
+              <div class="form-group">
+                  <label >Serial No</label>
+                    <input  placeholder="Serial No" class="form-control"   [(ngModel)]="accountInfo.SerialNo" formControlName="SerialNo">
+                    <div *ngIf="itemForm.controls['SerialNo'].invalid && (itemForm.controls['SerialNo'].dirty || itemForm.controls['SerialNo'].touched)" class="ng-dirty" >
+                            <span *ngIf="itemForm.controls['SerialNo'].errors.required">
+                                <span style="color: red;">Please Enter .</span>  
+                            </span>
+                        </div>
+                  
+                </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-group">
+                <label >Course Name</label>
+                  <input  placeholder="Course Name if any" class="form-control"   [(ngModel)]="accountInfo.CourseName" formControlName="CourseName">
+                  <div *ngIf="itemForm.controls['CourseName'].invalid && (itemForm.controls['CourseName'].dirty || itemForm.controls['CourseName'].touched)" class="ng-dirty" >
+                          <span *ngIf="itemForm.controls['CourseName'].errors.required">
+                              <span style="color: red;">Please Enter .</span>  
+                          </span>
+                      </div>
+                
+              </div>
+        </div>
+        
+      </div>
+    
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+              <label >Start Date:</label>
+                <input  bsDatepicker placeholder="Start Date" class="form-control"   [(ngModel)]="accountInfo.StartDate" formControlName="StartDate">
+                <div *ngIf="itemForm.controls['StartDate'].invalid && (itemForm.controls['StartDate'].dirty || itemForm.controls['StartDate'].touched)" class="ng-dirty" >
+                        <span *ngIf="itemForm.controls['StartDate'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>                
+            </div>
+      </div>
+        <div class="col-md-6">
+          <div class="form-group">
+              <label >End Date:</label>
+                <input bsDatepicker placeholder="End Date" class="form-control"   [(ngModel)]="accountInfo.EndDate" formControlName="EndDate">
+                <div *ngIf="itemForm.controls['EndDate'].invalid && (itemForm.controls['EndDate'].dirty || itemForm.controls['EndDate'].touched)" class="ng-dirty" >
+                        <span *ngIf="itemForm.controls['EndDate'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>                
+            </div>
+      </div>
+   
+      
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="form-group">
+              <label >Export Certificate:</label>
+                <select class="form-control"  [(ngModel)]="accountInfo.Export" formControlName="Export">
+                  <option value="null" >Select Certificate</option>
+                  <option value="ACLSC" >ACLSC</option>
+                  <option value="ACTTrauma" >ACTTrauma</option>
+                  <option value="AHSC" >AHSC</option>
+                  <option value="AlliedHealth" >AlliedHealth</option>
+                  <option value="BLS" >BLS</option>
+                  
+                  <option value="PALS" >PALS</option>
+                </select>
+                <div *ngIf="itemForm.controls['Export'].invalid && (itemForm.controls['Export'].dirty || itemForm.controls['Export'].touched)" class="ng-dirty" >
+                        <span *ngIf="itemForm.controls['Export'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>                
+            </div>
+      </div>
+      </div>
+    
+   
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-sm btn-primary" type="submit">
+                <i class="fa fa-dot-circle-o"></i> Submit</button>
+                <button (click)="Reset()" class="btn btn-sm btn-danger" type="reset">
+                    <i class="fa fa-ban"></i> Reset</button>
+       
+        </div>
+      </form>
+    </div>
+    <div class="card-footer">
+      <div class="row text-center">
+        <!-- <div class="col-md-2">
+          <button (click)="getActiveApplicants()" class="btn btn-success btn-block">Active Applicants</button>
+        </div>
+      
+        <div class="col-md-2">
+          <button  (click)="getAllApplicants()"  class="btn btn-dark btn-block">All Applicants</button>
+        </div> -->
+   
+      </div>
+  
+    </div>
+  </div>
+  </div>
+</div>

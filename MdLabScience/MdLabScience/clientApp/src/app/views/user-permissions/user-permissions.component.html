@@ -1,0 +1,110 @@
+
+<ngx-spinner
+bdColor="rgba(51,51,51,0.8)"
+size="medium"
+color="#fff"
+type="ball-scale-multiple"
+>
+<p style="font-size: 20px; color: white">Loading...</p>
+</ngx-spinner>
+
+<div class="card">
+    
+  <div class="card-body">
+      
+    <div class="row">
+      <div class="col-sm-5">
+        <h4 class="card-title mb-0">Page Permission</h4>
+        <div class="small text-muted">Manage User Page Permission</div>
+      </div><!--/.col-->
+      <div class="col-sm-7 d-none d-md-block">
+        <div class="row float-right">
+          <div class=" col-sm-12">
+          <input placeholder="Search"[(ngModel)]="searchText" class="form-control float-right">
+        </div>
+     
+       
+     
+        </div>
+      
+      </div><!--/.col-->
+    
+
+    </div><!--/.row-->
+    <hr>
+   
+    <div class="row">
+      <div class="col-md-5">
+        
+          
+              <select class="form-control" (change)="selectchangeRoleList($event)" name="rolelist" id="rolelist">
+                  <option value="0" selected="selected">Choose Role</option>
+                  <option *ngFor="let role of userRoles" value={{role.RoleId}}>
+                    {{role.RoleName}}
+                  </option>
+                </select>
+              
+      </div>
+      <div class="col-md-5">
+         
+            
+              <select class="form-control" (change)="selectchangePageList($event)" name="bracheslist" id="brancheslist">
+                  <option value="0" selected="selected">Choose Page</option>
+                  <option *ngFor="let page of pages" value={{page.PageId}}>
+                    {{page.PageHeader}}
+                  </option>
+                </select>
+          
+      </div>
+      <div class="col-md-2">
+         
+        
+              <button type="button" class="btn btn-success btn-block"  (click)="savePermission()">Submit</button>
+          
+      </div>
+     
+      
+     
+    </div>
+<hr>
+    <table class="table table-responsive-sm table-hover table-outline mb-0">
+      <thead>
+        <tr>
+        
+          <th class="text-center"><i class="icon-key"></i></th>
+         
+          <th class="text-center">Role Name</th>
+          <th class="text-center">Page Name</th>
+          <th class="text-center">Page Heading</th>
+          <th class="text-center">Page Icon</th>
+          <th class="text-center">Action</th>
+       
+        </tr>
+      </thead>
+      <tbody *ngFor="let val of userpermissioninfo |   filter : searchText ">
+        <tr>
+        
+            <td class="text-center">{{ val.PermissionId }}</td>
+            <td class="text-center">{{ val.RoleName }}</td>
+            <td class="text-center">{{ val.url }}</td>
+            <td class="text-center">{{ val.name }}</td>
+            <td class="text-center">{{ val.icon }}</td>
+          <td class="text-center">
+              <button  data-toggle="modal" (click)="deletePermission(val.PermissionId)" class="btn btn-square btn-danger" type="button"> <i class="fa fa-trash-o"></i></button>
+          </td>
+         
+        
+         
+        </tr>
+      
+      </tbody>
+    </table>
+  
+     
+    
+  </div>
+  <div class="card-footer">
+    
+  </div>
+</div>
+

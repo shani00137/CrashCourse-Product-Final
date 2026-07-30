@@ -1,0 +1,295 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">Mobile User</h4>
+          <div class="small text-muted">Manage Applicant Users Information</div>
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          
+          <div class="row float-right">
+            <!-- <div class="col-sm-10">
+              <input  value="" type="number" name="Mobile User" rows="0" id="" class="form-control"/>
+              <div class="input-group">
+                
+          
+                <div class="input-group-append">
+                  <button (click)="search()" class="input-group-text btn btn-default"><i class="fa fa-search"></i></button>
+                </div>
+              </div>
+            </div> -->
+            <div class="col-sm-6"></div>
+            <div class="col-sm-2">
+              
+              <button type="button" data-toggle="modal" (click)="searchModal.show()" class="btn btn-default float-right"><i class="fa fa-search"></i></button>
+            </div>
+            <div class="col-sm-1"></div>
+            <div class="col-sm-2">
+              
+              <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button>
+            </div>
+          </div>
+          
+          
+        </div><!--/.col-->
+        <table class="table table-responsive-sm table-hover table-outline mb-0">
+                <thead >
+                  <tr>
+                    <th class="text-center"><i class="icon-lightbulb"></i></th>
+                    <th class="text-center"><i class="icon-key"></i></th>
+                    <th class="text-center">Applicant.</th>
+                    <th class="text-center">User Name</th>
+                    <th class="text-center">Created On</th>
+                   
+                    
+                    <th class="text-center">Status/Device Id</th>
+                                
+                    <th class="text-center">Action</th>
+                 
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let val of listData  |    filter : searchText">
+               
+                    <td class="text-center">
+                        <div class="avatar">
+                          
+                          <img (click)="viewScreenShot(val)" *ngIf="val.PhotoUrl" alt="No Image" class="img-avatar" src="{{ServerName + val.PhotoUrl}}">
+                          <img (click)="viewScreenShot(val)" *ngIf="!val.PhotoUrl" alt="No Image" class="img-avatar" src="../../../assets/userlogo.png">
+                         
+                        </div>
+                        <!-- <div class="c-avatar"><img class="c-avatar-img"style="width:50px" src="{{ServerName + val.Picture}}" alt="No Image"><span class="c-avatar-status bg-success"></span></div> -->
+                        </td>
+                    <td class="text-center">
+                        <div>{{val.AppUserId}}</div>
+                    </td>
+                    <td class="text-center">
+                        <strong>{{val.FirstName}}{{val.LastName}}</strong>
+                        <div class="small text-muted">
+                            <div>{{val.Mobile}}</div>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <strong>{{val.UserName}}</strong>
+                        <div class="small text-muted">
+                            <div>{{val.Email}}</div>
+                        </div>
+                     
+                    </td>
+                    <td class="text-center">
+                        <div>{{val.CreateOn| date :'dd-MMM-yyyy hh:mm a'}}</div>
+                       <div class="small text muted">Login On {{val.LoginOn | date :'dd-MMM-yyyy hh:mm a'}}</div>
+                     
+                    </td>
+                
+                 
+                    <td class="text-center">
+                      <span *ngIf="val.Status" class="badge badge-success ng-star-inserted">Active</span>
+                      <span *ngIf="!val.Status"  class="badge badge-danger ng-star-inserted">In Active</span>
+                     <br><span><li style="color:green
+                      " *ngIf="val.DeviceId" class="fa fa-check-circle-o fa-1x"></li>  </span> 
+                      <!-- <div> <label class="switch switch-label switch-pill switch-danger">
+                          <input class="switch-input" (change)="status(val.AppUserId)" type="checkbox" [checked]="val.Status">
+                          <span class="switch-slider" data-checked="On" data-unchecked="Off"></span>
+                          </label></div> -->
+                  </td>
+                  
+                    <td class="text-center">
+                      <button (click)="resetDeviceId(val)"   class="btn btn-square btn-primary" type="button"> <i class="fa fa-exchange"></i></button>
+                      <button (click)="delete(val)"   class="btn btn-square btn-danger" type="button"> <i class="fa fa-trash"></i></button>
+                      <button (click)="editPassword(val)" data-toggle="modal" (click)="passwordModal.show()"  class="btn btn-square btn-warning" type="button"> <i class="fa fa-refresh"></i></button>
+                    </td>
+                   
+                  
+                   
+                  </tr>
+                
+                </tbody>
+              </table>
+ 
+      </div><!--/.row-->
+      
+    </div>
+    <div class="card-footer">
+      <div class="d-flex justify-content-center">
+       
+        <div class="col-xs-12 col-md-12 text-center d-flex justify-content-center">
+          <pagination [totalItems]="totalItems" [(ngModel)]="currentPage" (pageChanged)="pageChanged($event)" [maxSize]="10" class="pagination-sm"
+          previousText="&lsaquo;" nextText="&rsaquo;" [boundaryLinks]="true"></pagination>
+          <!-- <pagination [totalItems]="totalItems" [(ngModel)]="currentPage" (pageChanged)="pageChanged($event)"></pagination> -->
+        </div>
+    </div>
+  </div>
+  </div>
+</div>
+  <div bsModal #myModal="bs-modal" [config]="{backdrop: 'static'}" class="modal fade bd-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"> Add & Update Users</h4>
+          <button type="button" class="close" (click)="myModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <form [formGroup]="itemForm" (ngSubmit)="save()" >
+                 
+              <div class="form-group">
+                
+                <input type="hidden"  class="form-control"   [(ngModel)]="accountInfo.AppUserId" formControlName="AppUserId">
+                <div *ngIf="itemForm.controls['AppUserId'].invalid && (itemForm.controls['AppUserId'].dirty || itemForm.controls['AppUserId'].touched)" class="danger" >
+                        <span *ngIf="itemForm.controls['AppUserId'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>
+              
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label>Applicant:</label>               
+                        <ng-select [items]="appList" (change)="selectApplicant($event)"  bindLabel="FirstName" bindValue="ApplicantId" labelForId="ApplicantId"
+                           placeholder="Choose Applicant" clearAllText="Clear" formControlName="ApplicantId">
+                           <ng-template ng-option-tmp let-item="item">
+                         
+                            <span class="ng-value-label">{{item.FirstName + ' ' + item.LastName}} <span>|</span> {{item.Mobile}}<span>|</span> {{item.Address}}</span>
+                         </ng-template>
+                        </ng-select>
+                        <div
+                          *ngIf="itemForm.controls['ApplicantId'].invalid && (itemForm.controls['ApplicantId'].dirty || itemForm.controls['ApplicantId'].touched)"
+                          class="danger">
+                          <span *ngIf="itemForm.controls['ApplicantId'].errors.required">
+                            <span style="color: red;">Please Choose.</span>
+                          </span>
+                        </div>
+                      </div>
+                </div>
+                <div class="col-md-6">
+                
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label >User Name:</label>
+                          <input placeholder="Fist Name" class="form-control"   [(ngModel)]="accountInfo.UserName" formControlName="UserName">
+                          <div *ngIf="itemForm.controls['UserName'].invalid && (itemForm.controls['UserName'].dirty || itemForm.controls['UserName'].touched)" class="ng-dirty" >
+                                  <span *ngIf="itemForm.controls['UserName'].errors.required">
+                                      <span style="color: red;">Please Enter .</span>  
+                                  </span>
+                                  <span style="color: red;" *ngIf="itemForm.controls['UserName'].errors.minlength">
+                                    User Name must be at least 5 characters
+                                  </span>
+                                  <span style="color: red;" *ngIf="itemForm.controls['UserName'].errors.maxlength">
+                                    User Name must not exceed 30 characters
+                                  </span>
+                               
+                              </div>
+                        
+                      </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label >Password:</label>
+                          <input type="password" placeholder="Password" class="form-control"   [(ngModel)]="accountInfo.Password" formControlName="Password">
+                          <div *ngIf="itemForm.controls['Password'].invalid && (itemForm.controls['Password'].dirty || itemForm.controls['Password'].touched)" class="ng-dirty" >
+                                  <span *ngIf="itemForm.controls['Password'].errors.required">
+                                      <span style="color: red;">Please Enter .</span>  
+                                  </span>
+                                  <span style="color: red;" *ngIf="itemForm.controls['Password'].errors.minlength">
+                                    Password must be at least 5 characters
+                                  </span>
+                                  <span style="color: red;" *ngIf="itemForm.controls['Password'].errors.maxlength">
+                                    Password must not exceed 8 characters
+                                  </span>
+                              </div>                
+                      </div>
+                </div>
+            </div>
+    
+              <br>
+              <div class="modal-footer">
+                  <button type="submit"[disabled]="!itemForm.valid"  class="btn btn-sm btn-primary" type="submit">
+                      <i class="fa fa-dot-circle-o"></i> Submit</button>
+                      <button (click)="Reset()" class="btn btn-sm btn-danger" type="reset">
+                          <i class="fa fa-ban"></i> Reset</button>
+             
+              </div>
+            </form>
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+
+  <div bsModal #passwordModal="bs-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"> Password Reset</h4>
+          <button type="button" class="close" (click)="passwordModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+        
+                <div class="form-group">
+                    <label >New Password:</label>
+                      <input type="password" placeholder="Password" class="form-control"   [(ngModel)]="passwordInfo.password">
+                                         
+                  </div>
+                 
+              <br>
+              <div class="modal-footer">
+                  <button (click)="resetPassword()"  class="btn btn-sm btn-primary">
+                      <i class="fa fa-dot-circle-o"></i> Reset</button>
+                     
+             
+              </div>
+         
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+
+
+
+  <div bsModal #searchModal="bs-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title">Filter User</h4>
+          <button type="button" class="close" (click)="searchModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+        
+                <div class="form-group">
+                    <label >Search:</label>
+                      <input type="text" placeholder="Mobile User Name" class="form-control"   [(ngModel)]="searchMD">
+                                         
+                  </div>
+                 
+              <br>
+              <div class="modal-footer">
+                <div class="row">
+                  <button (click)="resetFilter()"   class="btn btn-sm btn-warning">
+                    <i class="fa fa-dot-circle-o"></i> Reset</button>
+                </div>
+                  <button (click)="search()"   class="btn btn-sm btn-primary">
+                      <i class="fa fa-dot-circle-o"></i> Search</button>
+                     
+             
+              </div>
+         
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->

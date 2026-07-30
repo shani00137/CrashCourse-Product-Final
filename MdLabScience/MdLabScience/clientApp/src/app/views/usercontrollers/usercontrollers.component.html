@@ -1,0 +1,149 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">User Controllers</h4>
+          <div class="small text-muted">Manage User Controllers</div>
+        </div><!--/.col-->
+        <div class="col-sm-7">
+          <div class="row float-right">
+            <div class=" col-sm-10">
+            <input placeholder="Search"[(ngModel)]="searchText" class="form-control float-right">
+          </div>
+          <div class="col-sm-2">
+            <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button>
+          </div>
+       
+          </div>
+          <!-- <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button> -->
+          
+
+          <!-- <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button> -->
+          
+        </div>
+       <!--/.col-->
+        <table class="table table-responsive-sm table-hover table-outline mb-0">
+                <thead class="thead-light">
+                  <tr>
+                    <th class="text-center"><i class="icon-key"></i></th>
+                    <th>Name</th>
+                    <th>URL</th>
+                    <th>Menu</th>
+                    <th class="text-center">Action</th>
+                 
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let val of listData |   filter : searchText">
+                    <td class="text-center">
+                        <div>{{val.ControllerId}}</div>
+                    </td>
+                    <td>
+                        <div>{{val.ControllerName}}</div>
+                     
+                    </td>
+                    <td>
+                        <div>{{val.ControllerUrl}}</div>
+                     
+                    </td>
+                    <td>
+                      <div>{{val.MenuName}}</div>
+                   
+                  </td>
+                  
+                    <td class="text-center">
+                                       
+                        <button (click)="Edit(val)"  data-toggle="modal" (click)="myModal.show()" class="btn btn-square btn-warning" type="button"> <i class="fa fa-pencil-square-o"></i></button>
+                        <button  (click)="deleteController(val.ControllerId)" class="btn btn-square btn-danger" type="button"> <i class="fa fa-trash-o"></i></button>
+                    </td>
+                   
+                  
+                   
+                  </tr>
+                
+                </tbody>
+              </table>
+ 
+      </div><!--/.row-->
+      
+    </div>
+    <div class="card-footer">
+      
+    </div>
+  </div>
+  </div>
+</div>
+  <div bsModal #myModal="bs-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"> User Controllers</h4>
+          <button type="button" class="close" (click)="myModal.hide()" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <form [formGroup]="itemForm" (ngSubmit)="save()" >
+                 
+              <div class="form-group">
+                    
+                <input type="hidden"  class="form-control"   [(ngModel)]="accountInfo.ControllerId" formControlName="ControllerId">
+                <div *ngIf="itemForm.controls['ControllerId'].invalid && (itemForm.controls['ControllerId'].dirty || itemForm.controls['ControllerId'].touched)" class="danger" >
+                        <span *ngIf="itemForm.controls['ControllerId'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>
+              
+            </div>
+          <div class="form-group">
+              <label >Controller Name:</label>
+                <input placeholder="Controller Name" class="form-control"   [(ngModel)]="accountInfo.ControllerName" formControlName="ControllerName">
+                <div *ngIf="itemForm.controls['ControllerName'].invalid && (itemForm.controls['ControllerName'].dirty || itemForm.controls['ControllerName'].touched)" class="danger" >
+                        <span *ngIf="itemForm.controls['ControllerName'].errors.required">
+                            <span style="color: red;">Please Enter .</span>  
+                        </span>
+                    </div>
+              
+            </div>
+            <div class="form-group">
+                <label >Controller URL:</label>
+                  <input placeholder="Controller URL" class="form-control"   [(ngModel)]="accountInfo.ControllerUrl" formControlName="ControllerUrl">
+                  <div *ngIf="itemForm.controls['ControllerUrl'].invalid && (itemForm.controls['ControllerUrl'].dirty || itemForm.controls['ControllerUrl'].touched)" class="danger" >
+                          <span *ngIf="itemForm.controls['ControllerUrl'].errors.required">
+                              <span style="color: red;">Please Enter .</span>  
+                          </span>
+                      </div>
+                
+              </div>
+              <div class="form-group">
+                <label >Menu:</label>
+              
+              <select (change)="changeMenu($event)" class="form-control" id="MenuId" formControlName="MenuId">
+                <option [value]="null" disabled>Choose Menu</option>
+                <option [value]="c.MenuId" *ngFor="let c of menulist">{{ c.MenuName }}</option>
+                </select>     
+                <div *ngIf="itemForm.controls['MenuId'].invalid && (itemForm.controls['MenuId'].dirty || itemForm.controls['MenuId'].touched)" class="danger" >
+                  <span *ngIf="itemForm.controls['MenuId'].errors.required">
+                      <span style="color: red;">Please Menu.</span>  
+                  </span>
+              </div>     
+              </div>
+              <br>
+              <div class="modal-footer">
+                  <button type="submit"[disabled]="!itemForm.valid"  class="btn btn-sm btn-primary" type="submit">
+                      <i class="fa fa-dot-circle-o"></i> Submit</button>
+                      <button (click)="Reset()" class="btn btn-sm btn-danger" type="reset">
+                          <i class="fa fa-ban"></i> Reset</button>
+             
+              </div>
+            </form>
+        </div>
+       
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
+

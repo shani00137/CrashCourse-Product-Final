@@ -1,0 +1,378 @@
+<app-spinner-layout></app-spinner-layout>
+
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body">
+
+        <div class="row">
+          <div class="col-sm-5">
+            <h4 class="card-title mb-0">MCQ Questions</h4>
+            <div class="small text-muted">Manage MCQ Question and Others</div>
+          </div>
+          <div class="col-sm-7">
+            <div class="row float-right">
+              <div class=" col-sm-10">
+              <input placeholder="Search"[(ngModel)]="searchText" id="search" name="search"  class="form-control float-right">
+            </div>
+            <div class="col-sm-2">
+              <button type="button" (click)="Create()"  class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button>
+            </div>
+       
+            
+         
+            </div>
+            <!-- <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button> -->
+            
+  
+            <!-- <button type="button" data-toggle="modal" (click)="create()" (click)="myModal.show()" class="btn btn-primary float-right"><i class="fa fa-plus-circle"></i></button> -->
+            
+          </div>
+        </div>
+        
+     <hr/>
+          <form [formGroup]="courseForm" (ngSubmit)="search()">
+            <div class="row">
+              <div *ngIf="filterItemList.length" class="col-md-2">
+                <ng-select [items]="exerciseList" (change)="onChangeExcercise($event)" [(ngModel)]="selectedExcerise"  bindLabel="Exercise" bindValue="ExerciseRecordId" labelForId="ExerciseRecordId"
+                placeholder="All Excercise" clearAllText="Clear" formControlName="ExerciseRecordId">
+             
+             </ng-select>
+              </div>
+             
+              <div class="col-md-8">
+                <div class="form-group">
+                   
+                  <ng-select [items]="courseList"  bindLabel="CourseName" bindValue="CourseId" labelForId="CourseIdList"
+                     placeholder="All Courses" clearAllText="Clear" formControlName="CourseIdList">
+                     <ng-template ng-option-tmp let-item="item">                 
+                      <span class="ng-value-label">{{item.CourseCode + ' ' + item.CourseName}}</span>
+                   </ng-template>
+                  </ng-select>
+                  <div
+                    *ngIf="courseForm.controls['CourseIdList'].invalid && (courseForm.controls['CourseIdList'].dirty || courseForm.controls['CourseIdList'].touched)"
+                    class="danger">
+                    <span *ngIf="courseForm.controls['CourseIdList'].errors.required">
+                      <span style="color: red;">Please Choose Course.</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <button type="button" type="submit" class="btn btn-success btn-block">
+                  <li class="fa fa-search
+                  fa-1x  "></li> <span> </span>Search
+                </button>
+              </div>
+            </div>
+       
+          </form>
+          
+      <div *ngIf="listData.length" class="row">
+        <table class="table table-responsive-sm table-hover table-outline mb-0">
+          <thead>
+            <tr>
+              <th class="text-left">
+                <div *ngIf="!searchText"  >
+                  <label class="switch switch-sm switch-label switch-pill switch-primary">
+                    <input checked="" [checked]="false" class="switch-input" type="checkbox" (change)="selectAll($event)" >
+                    <span class="switch-slider" data-checked="✓" data-unchecked="✕"></span>
+                  </label> 
+                </div>
+              </th>
+                <!-- <button   class="btn btn-square btn-danger" type="button"> <i class="fa fa-trash"></i></button> -->
+             
+               
+            
+              <th style="width: 5%;" class="text-center" class="text-center">Sr#</th>
+              <th  style="width: 10%;" class="text-center" class="text-center">QuestionId</th>
+              <th>Question</th>
+  
+            
+             
+                <th class="text-center">Action
+                
+                  </th>
+               
+                  
+               
+            
+            </tr>
+          </thead>
+          <tbody>
+   
+          <tr *ngFor="let val of listData |    filter : searchText | paginate: {itemsPerPage: 500, currentPage:page, id: '1'}; let i = index">
+  
+              <td style="width: 5%;" class="text-left">
+                <label class="switch switch-label switch-pill switch-primary">
+                  <input  class="switch-input" (change)="addFordelete($event,val)" type="checkbox" [checked]="val.IsSelected">
+                  <span class="switch-slider" data-checked="✓" data-unchecked="✕"></span>
+                </label>              
+              </td>
+              <td style="width: 5%;" class="text-center">
+                {{i+1}}
+              </td>
+              <td style="width: 10%;" class="text-center" class="text-center">
+                <div>
+                  {{val.QuestionId}}</div>
+              </td>
+            
+  
+              <td>
+                <div [innerHTML]="val.QuestionContent"></div> 
+                <!-- <div class="small text-muted">
+                  <span>  {{val.CourseName }}</span>|<span> {{   val.DateTime |date:"dd-MMM-yyyy h:mm:ss a"}}</span>
+                 
+                
+                </div> -->
+              </td>
+  
+              <td class="text-center">
+  
+                <div class="btn-group" dropdown placement="top right">
+                  <button aria-controls="dropdown-alignment" dropdownToggle type="button"
+                    class="btn btn-square btn-warning" type="button"> <i class="fa fa-list"></i>
+  
+                  </button>
+                  <ul id="dropdown-alignment" *dropdownMenu class="dropdown-menu dropdown-menu-right" role="menu"
+                    aria-labelledby="top-alignment">
+                    <li role="menuitem"><a (click)="myModal.show()" (click)="editQuestion(val)" class="dropdown-item">Edit Question</a></li>
+                   
+  
+                   
+                    <li role="menuitem"><a (click)="deleteQuestion(val)"class="dropdown-item">Delete</a></li>
+                  </ul>
+                </div>
+              </td>
+  
+  
+  
+            </tr>
+  
+          </tbody>
+        </table>
+      </div>
+   
+  
+      <div class="row text-center">
+        <div class="col-md-12 text-center">
+        <!-- <button *ngIf="!isFilterApplied" (click)="MoreRecords()" class="btn btn-block btn-link" type="button">More Record</button> -->
+      </div>
+    </div>
+      </div>
+        <div  class="card-footer">
+     
+          <div class="row text-right">
+            <div class="col-lg-2">
+              <div *ngIf="selectedForDelete"  class="form-group">
+                <button type="button" (click)="deleteMultiselection()"  class="btn btn-danger btn-block">
+                  <li class="fa fa-trash
+                  fa-1x  "></li> <span> </span>Delete
+                </button>
+              </div>
+            </div>
+            <div class="col-lg-6 text-center">
+              <pagination-controls (pageChange)="page = $event" id="1"
+              maxSize="500"
+              responsive="true"
+              screenReaderPaginationLabel="Pagination"
+                              screenReaderPageLabel="page"
+              directionLinks="true"
+              autoHide="true">
+          </pagination-controls>
+            </div>
+            <div class="col-lg-2">
+              <div class="form-group">
+               
+                <button *ngIf="listData.length" type="button"(click)=" exportExcel()" class="btn btn-success btn-block">
+                  <li class="fa fa-file-excel-o
+                  fa-1x  "></li> <span> </span>Export Excel
+                </button>
+              </div>
+            </div>
+            <div class="col-lg-2">
+              <div class="form-group">
+                <button type="button" (click)="importQuestionCreate()"  class="btn btn-warning btn-block">
+                  <li class="fa fa-cloud-upload
+                  fa-1x  "></li> <span> </span>Import Excel
+                </button>
+              </div>
+            </div>
+       
+          
+          </div>
+        </div>
+      </div>
+  </div>
+ 
+
+<div bsModal #myModal="bs-modal"[config]="{backdrop: 'static'}" class="modal fade bd-modal-lg" tabindex="-1" role="dialog"
+  aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Manage Question</h4>
+        <button type="button" class="close" (click)="myModal.hide()" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+  
+        
+     
+        <ng-wizard [config]="configWiz" (stepChanged)="stepChanged($event)">
+ 
+          <ng-wizard-step [title]="'Step 1'" [description]="'Question Content'">
+            <form [formGroup]="itemForm" (ngSubmit)="save()">
+              <div class="form-group">
+    
+                <input type="hidden" class="form-control" [(ngModel)]="accountInfo.QuestionId" formControlName="QuestionId">
+                <div
+                  *ngIf="itemForm.controls['QuestionId'].invalid && (itemForm.controls['QuestionId'].dirty || itemForm.controls['QuestionId'].touched)"
+                  class="danger">
+                  <span *ngIf="itemForm.controls['QuestionId'].errors.required">
+                    <span style="color: red;">Please Enter .</span>
+                  </span>
+                </div>
+    
+              </div>
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="form-group">
+                    <label>Course:</label>               
+                    <ng-select [items]="courseList"   bindLabel="CourseName" bindValue="CourseId" labelForId="CourseId"
+                       placeholder="All Courses" clearAllText="Clear" formControlName="CourseId">
+                       <ng-template ng-option-tmp let-item="item">                 
+                        <span class="ng-value-label">{{item.CourseCode + ' ' + item.CourseName}}</span>
+                     </ng-template>
+                    </ng-select>
+                    <div
+                      *ngIf="itemForm.controls['CourseId'].invalid && (itemForm.controls['CourseId'].dirty || itemForm.controls['CourseId'].touched)"
+                      class="danger">
+                      <span *ngIf="itemForm.controls['CourseId'].errors.required">
+                        <span style="color: red;">Please Choose CourseId.</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+            
+              </div>
+              
+             
+              <angular-editor id="QuestionContent" formControlName="QuestionContent" [(ngModel)]="QuestionContentHtml"
+                [config]="config2"></angular-editor>
+              <div
+                *ngIf="itemForm.controls['QuestionContent'].invalid && (itemForm.controls['QuestionContent'].dirty || itemForm.controls['QuestionContent'].touched)"
+                class="danger">
+                <span *ngIf="itemForm.controls['QuestionContent'].errors.required">
+                  <span style="color: red;">Please insert question contents.</span>
+                  <span *ngIf="itemForm.controls['QuestionContent'].errors.minlength">
+                    <span style="color: red;">Qustion Content are not complete . .</span>
+                  </span>
+                </span>
+              </div>
+             
+            </form>
+          </ng-wizard-step>
+       
+          <ng-wizard-step [title]="'Step 2'" [description]="'Question Options'">
+            <div class="row">
+              <div class="col-md-6">
+                <angular-editor id="QuestionContenthtmlContentOptions"  [(ngModel)]="htmlContentOptions"
+                [config]="config"></angular-editor>
+                <br>
+                <button (click)="AddOtion()" class="btn btn-outline-danger  btn-block" type="button">Add Option</button>
+                <br>
+              </div>
+              <div class="col-md-6">
+                <table  class="table table-responsive-sm table-hover table-outline mb-0">
+                  <thead>
+                    <tr>        
+        
+                      <th>Question</th>
+                        <th class="text-center">Is Correct                
+                          </th>
+                          <th class="text-center">Action                
+                          </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let val of optinsList ;index as i ">
+        
+                      <td>
+                        <div [innerHTML]="val.Options"></div>                      
+        
+                      </td>
+        
+                      <td class="text-center">
+                
+                        <label class="switch switch-label switch-pill switch-danger">
+                          <input class="switch-input" (change)="Changestatus(i,val.IsRightAns)" type="checkbox" [checked]="val.IsRightAns">
+                          <span class="switch-slider" data-checked="Yes" data-unchecked="No"></span>
+                          </label>
+                     
+                      </td>
+                      <td class="text-center">
+                   
+                     
+                        <button (click)="deleteOption(i)" class="btn btn-square btn-danger" type="button"> <i class="fa fa-trash"></i></button>
+                    </td>
+        
+        
+        
+                    </tr>
+        
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          
+          </ng-wizard-step>
+       
+      
+       
+      </ng-wizard>
+      
+
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- update question Modal -->
+<div bsModal #myModalUpdate="bs-modal"  [config]="{backdrop: 'static'}"  class="modal fade" tabindex="-1" role="dialog"
+  aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog " role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Import Questions</h4>
+        <button type="button" class="close" (click)="myModalUpdate.hide()" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+     <div class="modal-body">
+      <form>
+        <div class="form-group">
+       
+          <input type="file"  #myInput id="file" (change)="fileChange($event)" class="form-control-file" id="exampleFormControlFile1">
+
+      
+        </div>
+        <div class="form-group">
+          <button (click)="downloadsample()" class="btn btn-square btn-success" type="submit">
+            <i class="fa fa-download"></i> Download Sample Template</button>
+        </div>
+        <div class="form-group">
+          <p style="color: red;">*Note Only upload CSV file (without any "COMMA")</p>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button (click)="importQuestions()" class="btn btn-sm btn-primary" type="submit">
+          <i class="fa fa-dot-circle-o"></i> Submit</button>
+      </div>
+     </div>
+   
+     
+
+    </div>
+  </div>
+</div>
+

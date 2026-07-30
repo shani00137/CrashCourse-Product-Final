@@ -1,0 +1,61 @@
+<app-spinner-layout></app-spinner-layout>
+<div class="row">
+    <div class="col-md-12">
+    
+<div class="card">
+ 
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-5">
+          <h4 class="card-title mb-0">{{userObj.FirstName}} {{userObj.LastName}}</h4>
+          <div class="small text-muted">Manage Applicant Services.</div>
+        </div><!--/.col-->
+        <div class="col-sm-7 d-none d-md-block">
+          
+          <div class="row float-right">
+          
+          </div>
+        </div><!--/.col-->
+         </div><!--/.row-->
+         <hr>
+     <div class="container">
+ 
+      <div class="row">
+      
+        <div class="row">
+          <div class="col-md-3" *ngFor="let img of listData">
+            <div class="card" style="width: 18rem;">
+              <img height="200" width="100%"  (click)="viewAttacment(ServerName + img)" src="{{ServerName + img.ImageUrl}}" class="card-img-top" alt="...">
+              <div class="card-body">
+                <h5 class="card-title text-center">{{img.DateTime | date: 'hh:mm:aa'}}</h5>
+            
+              </div>
+            </div>
+
+        </div>
+        </div>
+        
+  
+      </div>
+     </div>
+  
+    </div>
+
+    <div class="card-footer">
+      <div class="d-flex justify-content-center">
+       
+        <div class="col-xs-12 col-md-12 text-center d-flex justify-content-center">
+          <pagination [totalItems]="totalItems" [(ngModel)]="currentPage" (pageChanged)="pageChanged($event)" [maxSize]="5" class="pagination-sm"
+          previousText="&lsaquo;" nextText="&rsaquo;" [boundaryLinks]="true"></pagination>
+          <!-- <pagination [totalItems]="totalItems" [(ngModel)]="currentPage" (pageChanged)="pageChanged($event)"></pagination> -->
+        </div>
+    </div>
+    </div>
+
+  </div>
+  </div>
+</div>
+
+
+
+
