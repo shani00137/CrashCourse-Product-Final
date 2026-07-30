@@ -1,0 +1,6 @@
+@MdLabScience.WebAPI_HostAddress = http://localhost:5049
+
+GET {{MdLabScience.WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
