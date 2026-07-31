@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace MdLabScience.Controllers
 {
+    //app user controller for managing app users, their status, chat messages, and screenshots
     [ApiController]
     [Route("api/[controller]")]
     public class AppUserController : ControllerBase
