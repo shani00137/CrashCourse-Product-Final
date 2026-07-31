@@ -12,6 +12,7 @@ namespace MdLabScience.Controllers
     [Route("api/[controller]")]
     public class UserPermissionController : ControllerBase
     {
+        [HttpGet]
         public IEnumerable<string> detailGet()
         {
             return new string[] { "value1", "value2" };

@@ -21,11 +21,13 @@ namespace MdLabScience.Controllers
     {
         private static TimeZoneInfo Pakistan_Standard_Time = TimeZoneInfo.FindSystemTimeZoneById("Pakistan Standard Time");
 
+        [HttpGet]
         public IEnumerable<string> Get()
         {
             return new string[] { "value1", "value2" };
         }
 
+        [HttpGet("{id}")]
         public string Get(int id)
         {
             return "value";
@@ -211,10 +213,12 @@ namespace MdLabScience.Controllers
             return cipherText;
         }
 
+        [HttpPut]
         public void Put(int id, [FromBody] string value)
         {
         }
 
+        [NonAction]
         public bool ValidateLicence()
         {
             DateTime Today = DateTime.Today;
@@ -348,6 +352,7 @@ namespace MdLabScience.Controllers
             return PasswordChanged;
         }
 
+        [NonAction]
         public string SendEmail(String email, String Message)
         {
             string ResponseMessage = "";

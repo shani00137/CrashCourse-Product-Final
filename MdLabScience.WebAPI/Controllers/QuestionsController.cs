@@ -201,6 +201,7 @@ namespace MdLabScience.Controllers
             return Ok(Query);
         }
 
+        [NonAction]
         public string StripHTMLConvert(string html)
         {
             var regex = new Regex("<[^>]+>", RegexOptions.IgnoreCase);
@@ -358,6 +359,7 @@ namespace MdLabScience.Controllers
             return ResponseMessage;
         }
 
+        [NonAction]
         public string StripHTML(string html)
         {
             var regex = new Regex("<[^>]+>", RegexOptions.IgnoreCase);
@@ -447,6 +449,7 @@ namespace MdLabScience.Controllers
             }
         }
 
+        [NonAction]
         public bool ValidateIdentity(String CourseId, String RightOption)
         {
             bool IsValid = false;
