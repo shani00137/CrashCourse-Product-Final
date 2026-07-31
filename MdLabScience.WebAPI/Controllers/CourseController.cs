@@ -10,6 +10,7 @@ using System.Linq;
 
 namespace MdLabScience.Controllers
 {
+    //course controller for managing courses, course materials, and related operations
     [ApiController]
     [Route("api/[controller]")]
     public class CourseController : ControllerBase
