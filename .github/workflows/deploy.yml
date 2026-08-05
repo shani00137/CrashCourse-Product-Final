@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -43,7 +43,7 @@ jobs:
         working-directory: frontend
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -76,15 +76,38 @@ jobs:
           name: webapi-publish
           path: api-publish/
 
+      - name: Take API offline (upload app_offline.htm)
+        run: |
+          SERVER="${{ secrets.FTP_SERVER }}"
+          DIR="${{ secrets.FTP_SERVER_DIR }}"
+          [[ "$DIR" != /* ]] && DIR="/$DIR"
+          [[ "$DIR" != */ ]] && DIR="$DIR/"
+          printf '<html><body><h1>Deployment in progress...</h1><p>Please wait.</p></body></html>' > app_offline.htm
+          curl -sS --ftp-create-dirs -T app_offline.htm "ftp://$SERVER$DIR"app_offline.htm --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}"
+          sleep 10
+
       - name: FTP Deploy API to SmarterASP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_SERVER_DIR }}
           local-dir: ./api-publish/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            app_offline.htm
           dangerous-clean-slate: false
+
+      - name: Bring API back online (remove app_offline.htm)
+        run: |
+          SERVER="${{ secrets.FTP_SERVER }}"
+          DIR="${{ secrets.FTP_SERVER_DIR }}"
+          [[ "$DIR" != /* ]] && DIR="/$DIR"
+          [[ "$DIR" != */ ]] && DIR="$DIR/"
+          curl -sS --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" -Q "DELE app_offline.htm" "ftp://$SERVER$DIR" || true
 
       - name: Download frontend dist artifact
         uses: actions/download-artifact@v4
@@ -93,7 +116,7 @@ jobs:
           path: frontend-dist/
 
       - name: FTP Deploy React frontend to SmarterASP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
