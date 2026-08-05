@@ -8,34 +8,8 @@ on:
 env:
   DOTNET_VERSION: '10.0.x'
   NODE_VERSION: '20'
-  API_SUBDIR: api
 
 jobs:
-  build-api:
-    name: Build and publish API
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Restore dependencies
-        run: dotnet restore MdLabScience.WebAPI/MdLabScience.WebAPI.csproj
-
-      - name: Publish
-        run: dotnet publish MdLabScience.WebAPI/MdLabScience.WebAPI.csproj -c Release -o published --no-restore
-
-      - name: Upload publish artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: webapi-publish
-          path: published/
-          if-no-files-found: error
-
   build-frontend:
     name: Build React frontend
     runs-on: ubuntu-latest
@@ -66,9 +40,46 @@ jobs:
           path: frontend/dist/
           if-no-files-found: error
 
+  build-api:
+    name: Build and publish API (with frontend in wwwroot)
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist/
+
+      - name: Copy frontend into API wwwroot
+        run: |
+          mkdir -p MdLabScience.WebAPI/wwwroot
+          cp -R frontend-dist/. MdLabScience.WebAPI/wwwroot/
+
+      - name: Restore dependencies
+        run: dotnet restore MdLabScience.WebAPI/MdLabScience.WebAPI.csproj
+
+      - name: Publish
+        run: dotnet publish MdLabScience.WebAPI/MdLabScience.WebAPI.csproj -c Release -o published --no-restore
+
+      - name: Upload publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapi-publish
+          path: published/
+          if-no-files-found: error
+
   deploy:
     name: Deploy to SmarterASP (FTP)
-    needs: [build-api, build-frontend]
+    needs: build-api
     runs-on: ubuntu-latest
     steps:
       - name: Download API publish artifact
@@ -80,55 +91,32 @@ jobs:
       - name: Take API offline (upload app_offline.htm)
         run: |
           SERVER="${{ secrets.FTP_SERVER }}"
-          API_DIR="${{ secrets.FTP_SERVER_DIR }}/${{ env.API_SUBDIR }}"
-          [[ "$API_DIR" != /* ]] && API_DIR="/$API_DIR"
-          [[ "$API_DIR" != */ ]] && API_DIR="$API_DIR/"
+          DIR="${{ secrets.FTP_SERVER_DIR }}"
+          [[ "$DIR" != */ ]] && DIR="$DIR/"
           printf '<html><body><h1>Deployment in progress...</h1><p>Please wait.</p></body></html>' > app_offline.htm
-          curl -sS --ftp-create-dirs -T app_offline.htm "ftp://$SERVER$API_DIR"app_offline.htm --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}"
+          curl -sS --ftp-create-dirs -T app_offline.htm "ftp://$SERVER$DIR"app_offline.htm --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}"
           sleep 10
 
-      - name: FTP Deploy API to SmarterASP (/api subfolder)
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}/${{ env.API_SUBDIR }}
-          local-dir: ./api-publish/
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            app_offline.htm
-          dangerous-clean-slate: false
-
-      - name: Bring API back online (remove app_offline.htm)
-        run: |
-          SERVER="${{ secrets.FTP_SERVER }}"
-          API_DIR="${{ secrets.FTP_SERVER_DIR }}/${{ env.API_SUBDIR }}"
-          [[ "$API_DIR" != /* ]] && API_DIR="/$API_DIR"
-          [[ "$API_DIR" != */ ]] && API_DIR="$API_DIR/"
-          curl -sS --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" -Q "DELE app_offline.htm" "ftp://$SERVER$API_DIR" || true
-
-      - name: Download frontend dist artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend-dist/
-
-      - name: FTP Deploy React frontend to SmarterASP (site root)
+      - name: FTP Deploy to SmarterASP
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_SERVER_DIR }}
-          local-dir: ./frontend-dist/
+          local-dir: ./api-publish/
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
-            **/api/**
+            app_offline.htm
             **/Images/**
             **/Uploads/**
           dangerous-clean-slate: false
+
+      - name: Bring API back online (remove app_offline.htm)
+        run: |
+          SERVER="${{ secrets.FTP_SERVER }}"
+          DIR="${{ secrets.FTP_SERVER_DIR }}"
+          [[ "$DIR" != */ ]] && DIR="$DIR/"
+          curl -sS --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" -Q "DELE app_offline.htm" "ftp://$SERVER$DIR" || true

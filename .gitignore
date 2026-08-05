@@ -5,3 +5,6 @@ obj/
 # Node modules
 node_modules/
 dist/
+
+# React build copied into the API by CI
+MdLabScience.WebAPI/wwwroot/

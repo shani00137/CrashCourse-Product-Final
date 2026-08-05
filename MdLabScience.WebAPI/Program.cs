@@ -19,8 +19,12 @@ if (!string.IsNullOrEmpty(connectionString))
 var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
- app.MapOpenApi();
- //swagger UI finalzed
+app.MapOpenApi();
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 app.Run();
