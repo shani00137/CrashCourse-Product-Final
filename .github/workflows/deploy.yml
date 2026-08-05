@@ -8,6 +8,7 @@ on:
 env:
   DOTNET_VERSION: '10.0.x'
   NODE_VERSION: '20'
+  API_SUBDIR: api
 
 jobs:
   build-api:
@@ -79,20 +80,20 @@ jobs:
       - name: Take API offline (upload app_offline.htm)
         run: |
           SERVER="${{ secrets.FTP_SERVER }}"
-          DIR="${{ secrets.FTP_SERVER_DIR }}"
-          [[ "$DIR" != /* ]] && DIR="/$DIR"
-          [[ "$DIR" != */ ]] && DIR="$DIR/"
+          API_DIR="${{ secrets.FTP_SERVER_DIR }}/${{ env.API_SUBDIR }}"
+          [[ "$API_DIR" != /* ]] && API_DIR="/$API_DIR"
+          [[ "$API_DIR" != */ ]] && API_DIR="$API_DIR/"
           printf '<html><body><h1>Deployment in progress...</h1><p>Please wait.</p></body></html>' > app_offline.htm
-          curl -sS --ftp-create-dirs -T app_offline.htm "ftp://$SERVER$DIR"app_offline.htm --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}"
+          curl -sS --ftp-create-dirs -T app_offline.htm "ftp://$SERVER$API_DIR"app_offline.htm --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}"
           sleep 10
 
-      - name: FTP Deploy API to SmarterASP
+      - name: FTP Deploy API to SmarterASP (/api subfolder)
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}/${{ env.API_SUBDIR }}
           local-dir: ./api-publish/
           exclude: |
             **/.git*
@@ -104,10 +105,10 @@ jobs:
       - name: Bring API back online (remove app_offline.htm)
         run: |
           SERVER="${{ secrets.FTP_SERVER }}"
-          DIR="${{ secrets.FTP_SERVER_DIR }}"
-          [[ "$DIR" != /* ]] && DIR="/$DIR"
-          [[ "$DIR" != */ ]] && DIR="$DIR/"
-          curl -sS --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" -Q "DELE app_offline.htm" "ftp://$SERVER$DIR" || true
+          API_DIR="${{ secrets.FTP_SERVER_DIR }}/${{ env.API_SUBDIR }}"
+          [[ "$API_DIR" != /* ]] && API_DIR="/$API_DIR"
+          [[ "$API_DIR" != */ ]] && API_DIR="$API_DIR/"
+          curl -sS --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" -Q "DELE app_offline.htm" "ftp://$SERVER$API_DIR" || true
 
       - name: Download frontend dist artifact
         uses: actions/download-artifact@v4
@@ -115,12 +116,19 @@ jobs:
           name: frontend-dist
           path: frontend-dist/
 
-      - name: FTP Deploy React frontend to SmarterASP
+      - name: FTP Deploy React frontend to SmarterASP (site root)
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_SERVER_DIR_FRONTEND || '/staging' }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
           local-dir: ./frontend-dist/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/api/**
+            **/Images/**
+            **/Uploads/**
           dangerous-clean-slate: false
