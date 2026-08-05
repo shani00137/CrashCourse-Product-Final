@@ -7,10 +7,11 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '20'
 
 jobs:
-  build:
-    name: Build and publish
+  build-api:
+    name: Build and publish API
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -34,23 +35,69 @@ jobs:
           path: published/
           if-no-files-found: error
 
+  build-frontend:
+    name: Build React frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          if-no-files-found: error
+
   deploy:
     name: Deploy to SmarterASP (FTP)
-    needs: build
+    needs: [build-api, build-frontend]
     runs-on: ubuntu-latest
     steps:
-      - name: Download publish artifact
+      - name: Download API publish artifact
         uses: actions/download-artifact@v4
         with:
           name: webapi-publish
-          path: published/
+          path: api-publish/
 
-      - name: FTP Deploy to SmarterASP
+      - name: FTP Deploy API to SmarterASP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: ${{ secrets.FTP_SERVER_DIR }}
-          local-dir: ./published/
+          local-dir: ./api-publish/
+          dangerous-clean-slate: false
+
+      - name: Download frontend dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist/
+
+      - name: FTP Deploy React frontend to SmarterASP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR_FRONTEND || '/staging' }}
+          local-dir: ./frontend-dist/
           dangerous-clean-slate: false
