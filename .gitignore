@@ -1,3 +1,7 @@
 # Build results
 bin/
 obj/
+
+# Node modules
+node_modules/
+dist/
