@@ -20,11 +20,8 @@ var app = builder.Build();
 
 app.UseSwagger();
 app.UseSwaggerUI();
+ app.MapOpenApi();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 app.MapControllers();
 
