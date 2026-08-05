@@ -217,7 +217,7 @@ namespace MdLabScience.Controllers
                 {
                     int ApplicantId = Query.ApplicantId;
                     var ApplicantInformation = db.ApplicantsTbs.Where(x => x.ApplicantId == ApplicantId).FirstOrDefault();
-                    bool CheckCourseExpiry = AppUserValidation.CheckCourseExpire(ApplicantInformation.RegistrationDate, ApplicantInformation.ExpiryDate, ApplicantInformation.IsActive);
+                    bool CheckCourseExpiry = AppUserValidation.CheckCourseExpire(ApplicantInformation.RegistrationDate ?? default, ApplicantInformation.ExpiryDate ?? DateTime.MaxValue, ApplicantInformation.IsActive ?? false);
                     if (CheckCourseExpiry == true)
                     {
                         var UpdateUser = db.ApplicantsTbs.Where(x => x.ApplicantId == ApplicantId).FirstOrDefault();

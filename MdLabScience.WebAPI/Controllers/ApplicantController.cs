@@ -33,7 +33,7 @@ namespace MdLabScience.Controllers
             {
                 var query = (from c in db.ApplicantsTbs
                              join m in db.CountryTbs on c.CountryId equals m.CountryId
-                             where (string.IsNullOrEmpty(filter.SearchTerm) || c.FirstName.Contains(filter.SearchTerm) || c.LastName.Contains(filter.SearchTerm))
+                             where (string.IsNullOrEmpty(filter.SearchTerm) || (c.FirstName ?? "").Contains(filter.SearchTerm) || (c.LastName ?? "").Contains(filter.SearchTerm))
                              select new
                              {
                                  c.FirstName,
@@ -64,20 +64,20 @@ namespace MdLabScience.Controllers
                 var applicantModels = pagedData.Select(q => new ApplicantModel
                 {
                     ApplicantId = (int)q.ApplicantId,
-                    RegistrationDate = q.RegistrationDate,
+                    RegistrationDate = q.RegistrationDate ?? default,
                     RegistrationNo = q.RegistrationNo,
                     Email = q.Email,
                     Address = q.Address,
-                    CreatedOn = q.CreatedOn,
+                    CreatedOn = q.CreatedOn ?? default,
                     PhotoUrl = q.PhotoUrl,
                     Mobile = q.Mobile,
                     OtherMobile = q.OtherMobile,
                     FirstName = q.FirstName,
                     LastName = q.LastName,
                     CoutryName = q.CoutryName,
-                    CountryId = q.CountryId,
-                    ExpiryDate = q.ExpiryDate,
-                    IsActive = q.IsActive,
+                    CountryId = q.CountryId ?? 0,
+                    ExpiryDate = q.ExpiryDate ?? default,
+                    IsActive = q.IsActive ?? false,
                     CourseMD = GetCourseOfApplicant(q.ApplicantId)
                 }).ToList();
 
@@ -126,7 +126,7 @@ namespace MdLabScience.Controllers
                              }).ToList();
                 foreach (var q in Query)
                 {
-                    bool CheckCourseExpiry = AppUserValidation.CheckCourseExpire(q.RegistrationDate, q.ExpiryDate, q.IsActive);
+                    bool CheckCourseExpiry = AppUserValidation.CheckCourseExpire(q.RegistrationDate ?? default, q.ExpiryDate ?? DateTime.MaxValue, q.IsActive ?? false);
                     if (CheckCourseExpiry == true)
                     {
                         var UpdateUser = db.ApplicantsTbs.Where(x => x.ApplicantId == q.ApplicantId).FirstOrDefault();
@@ -144,20 +144,20 @@ namespace MdLabScience.Controllers
                     list.Add(new ApplicantModel
                     {
                         ApplicantId = (int)q.ApplicantId,
-                        RegistrationDate = q.RegistrationDate,
+                        RegistrationDate = q.RegistrationDate ?? default,
                         RegistrationNo = q.RegistrationNo,
                         Email = q.Email,
                         Address = q.Address,
-                        CreatedOn = q.CreatedOn,
+                        CreatedOn = q.CreatedOn ?? default,
                         PhotoUrl = q.PhotoUrl,
                         Mobile = q.Mobile,
                         OtherMobile = q.OtherMobile,
                         FirstName = q.FirstName,
                         LastName = q.LastName,
                         CoutryName = q.CoutryName,
-                        CountryId = q.CountryId,
-                        ExpiryDate = q.ExpiryDate,
-                        IsActive = q.IsActive
+                        CountryId = q.CountryId ?? 0,
+                        ExpiryDate = q.ExpiryDate ?? default,
+                        IsActive = q.IsActive ?? false
                     });
                 }
                 return Ok(list);
@@ -209,18 +209,18 @@ namespace MdLabScience.Controllers
                     list.Add(new ApplicantModel
                     {
                         ApplicantId = (int)q.ApplicantId,
-                        RegistrationDate = q.RegistrationDate,
+                        RegistrationDate = q.RegistrationDate ?? default,
                         RegistrationNo = q.RegistrationNo,
                         Email = q.Email,
                         Address = q.Address,
-                        CreatedOn = q.CreatedOn,
+                        CreatedOn = q.CreatedOn ?? default,
                         PhotoUrl = q.PhotoUrl,
                         Mobile = q.Mobile,
                         OtherMobile = q.OtherMobile,
                         FirstName = q.FirstName,
                         LastName = q.LastName,
                         CoutryName = q.CoutryName,
-                        CountryId = q.CountryId,
+                        CountryId = q.CountryId ?? 0,
                         CourseName = courseList
                     });
                 }
