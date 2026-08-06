@@ -56,10 +56,14 @@ if (!string.IsNullOrEmpty(connectionString))
 var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
- app.MapOpenApi();
- //swagger UI finalzed
+app.MapOpenApi();
+//swagger UI finalzed
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 app.Run();
