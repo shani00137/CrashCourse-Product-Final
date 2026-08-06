@@ -1,6 +1,7 @@
 using MdLabScience.DbContext;
 using MdLabScience.Models;
 using MdLabScience.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -13,6 +14,7 @@ namespace MdLabScience.Controllers
     //app user controller for managing app users, their status, chat messages, and screenshots
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class AppUserController : ControllerBase
     {
         private static TimeZoneInfo Pakistan_Standard_Time = TimeZoneInfo.FindSystemTimeZoneById("Pakistan Standard Time");

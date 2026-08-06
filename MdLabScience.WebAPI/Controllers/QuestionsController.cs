@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using EMCQWebApi.Models;
 using ExcelDataReader;
 using MdLabScience.DbContext;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -17,6 +18,7 @@ namespace MdLabScience.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class QuestionsController : ControllerBase
     {
         private static TimeZoneInfo Pakistan_Standard_Time = TimeZoneInfo.FindSystemTimeZoneById("Pakistan Standard Time");

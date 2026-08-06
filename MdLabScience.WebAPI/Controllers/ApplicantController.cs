@@ -1,6 +1,7 @@
 using MdLabScience.DbContext;
 using MdLabScience.Models;
 using MdLabScience.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -15,6 +16,7 @@ namespace MdLabScience.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ApplicantController : ControllerBase
     {
         private readonly IWebHostEnvironment _env;

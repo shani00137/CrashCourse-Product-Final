@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MdLabScience.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class HomeController : ControllerBase
     {
         [HttpGet]

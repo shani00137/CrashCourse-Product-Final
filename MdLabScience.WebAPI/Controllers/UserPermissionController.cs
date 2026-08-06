@@ -1,5 +1,6 @@
 using IMS_WebApp.Models;
 using MdLabScience.DbContext;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PayrollManagementSystem.Models;
 using System;
@@ -10,6 +11,7 @@ namespace MdLabScience.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class UserPermissionController : ControllerBase
     {
         [HttpGet]

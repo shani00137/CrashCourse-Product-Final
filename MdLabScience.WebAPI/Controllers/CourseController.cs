@@ -1,6 +1,7 @@
 using MdLabScience.DbContext;
 using MdLabScience.Models;
 using MdLabScience.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StudentCertificateManagement.Models;
 using System;
@@ -13,6 +14,7 @@ namespace MdLabScience.Controllers
     //course controller for managing courses, course materials, and related operations
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class CourseController : ControllerBase
     {
         private readonly IWebHostEnvironment _env;

@@ -1,6 +1,8 @@
 using HotelManagement.Models;
 using IMS_WebApp.Models;
 using MdLabScience.DbContext;
+using MdLabScience.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using System;
@@ -9,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,9 +20,17 @@ namespace MdLabScience.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class LoginController : ControllerBase
     {
         private static TimeZoneInfo Pakistan_Standard_Time = TimeZoneInfo.FindSystemTimeZoneById("Pakistan Standard Time");
+
+        private readonly IConfiguration _configuration;
+
+        public LoginController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
 
         [HttpGet]
         public IEnumerable<string> Get()
@@ -34,6 +45,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [Route("api/login/Details")]
         public IEnumerable<UserInofMD> Details([FromBody] LoginModel loginInfo)
         {
@@ -49,21 +61,40 @@ namespace MdLabScience.Controllers
                                  where c.Status == true && c.UserName == loginInfo.Username && c.UserPassword == pwd
                                  select new
                                  {
-                                     c.UserName,
-                                     c.UserPassword,
-                                     c.UserNo,
-                                     c.Email,
-                                     c.UserToken,
+                                     UserName = (c.UserName ?? ""),
+                                     UserPassword = (c.UserPassword ?? ""),
+                                     UserNo = (int?)c.UserNo,
+                                     Email = (c.Email ?? ""),
+                                     c.RoleId
                                  }).ToList();
 
                     if (query.Count > 0)
                     {
                         bool Licence = ValidateLicence();
+                        int userNo = query[0].UserNo ?? 0;
+                        string roleName = db.UserRoles
+                            .Where(x => x.RoleId == query[0].RoleId)
+                            .Select(x => x.RoleName)
+                            .FirstOrDefault() ?? "User";
+
+                        var claims = new List<Claim>
+                        {
+                            new Claim(ClaimTypes.NameIdentifier, userNo.ToString()),
+                            new Claim(ClaimTypes.Name, query[0].UserName),
+                            new Claim(ClaimTypes.Email, query[0].Email ?? ""),
+                            new Claim("UserType", "Admin"),
+                            new Claim(ClaimTypes.Role, roleName)
+                        };
+
+                        string token = JwtTokenGenerator.GenerateToken(_configuration, claims);
+
                         UserList.Add(new UserInofMD
                         {
                             UserName = query[0].UserName,
-                            UserNo = query[0].UserNo,
+                            UserNo = userNo,
                             Email = query[0].Email,
+                            RoleName = roleName,
+                            UserToken = token,
                             Licence = Licence
                         });
                     }
@@ -81,6 +112,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [Route("api/login/AppUserDetails")]
         public IActionResult AppUserDetails([FromBody] LoginModel loginInfo)
         {
@@ -95,21 +127,34 @@ namespace MdLabScience.Controllers
                                  where c.Status == true && c.UserName == loginInfo.Username && c.Password == pwd
                                  select new
                                  {
-                                     c.ApplicantId,
-                                     c.UserName,
-                                     c.AppUserId,
+                                     ApplicantId = (int?)c.ApplicantId,
+                                     UserName = (c.UserName ?? ""),
+                                     AppUserId = (int?)c.AppUserId,
                                      c.Status,
                                      a.FirstName,
                                      a.LastName,
                                      a.Mobile,
                                      a.OtherMobile,
-                                     c.DeviceId,
+                                     DeviceId = (c.DeviceId ?? ""),
                                      a.Address,
                                      a.Email,
                                      c.LoginOn
                                  }).FirstOrDefault();
                     if (query != null)
                     {
+                        int appUserId = query.AppUserId ?? 0;
+                        int applicantId = query.ApplicantId ?? 0;
+                        var claims = new List<Claim>
+                        {
+                            new Claim(ClaimTypes.NameIdentifier, appUserId.ToString()),
+                            new Claim(ClaimTypes.Name, query.UserName),
+                            new Claim("ApplicantId", applicantId.ToString()),
+                            new Claim("UserType", "AppUser"),
+                            new Claim(ClaimTypes.Role, "AppUser")
+                        };
+
+                        string token = JwtTokenGenerator.GenerateToken(_configuration, claims);
+
                         if (query.DeviceId != "")
                         {
                             LoginModelList.Add(new LoginModel
@@ -117,17 +162,18 @@ namespace MdLabScience.Controllers
                                 IsValid = true,
                                 Response = "Welcome",
                                 Username = query.UserName,
-                                AppUserId = query.AppUserId,
+                                AppUserId = appUserId,
                                 Name = query.FirstName + query.LastName,
                                 Mobile = query.Mobile,
                                 Email = query.Email,
                                 Address = query.Address,
-                                ApplicantId = query.ApplicantId
+                                ApplicantId = applicantId,
+                                UserToken = token
                             });
                         }
                         else
                         {
-                            var UpdateDeviceId = db.AppUserTbs.Where(x => x.AppUserId == query.AppUserId).FirstOrDefault();
+                            var UpdateDeviceId = db.AppUserTbs.Where(x => x.AppUserId == appUserId).FirstOrDefault();
                             UpdateDeviceId.DeviceId = loginInfo.DeviceId;
                             db.SaveChanges();
                             LoginModelList.Add(new LoginModel
@@ -135,18 +181,19 @@ namespace MdLabScience.Controllers
                                 IsValid = true,
                                 Response = "Welcome",
                                 Username = query.UserName,
-                                AppUserId = query.AppUserId,
+                                AppUserId = appUserId,
                                 Name = query.FirstName + query.LastName,
                                 Mobile = query.Mobile,
                                 Email = query.Email,
                                 Address = query.Address,
-                                ApplicantId = query.ApplicantId
+                                ApplicantId = applicantId,
+                                UserToken = token
                             });
                         }
 
                         if (query.LoginOn == null)
                         {
-                            int UserNo = query.AppUserId;
+                            int UserNo = appUserId;
                             var UpdateLogin = db.AppUserTbs.Where(x => x.AppUserId == UserNo).FirstOrDefault();
                             UpdateLogin.LoginOn = TimeZoneInfo.ConvertTime(DateTime.Now, Pakistan_Standard_Time);
                             db.SaveChanges();

@@ -1,5 +1,6 @@
 using MdLabScience.DbContext;
 using MdLabScience.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Linq;
@@ -9,6 +10,7 @@ namespace MdLabScience.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class CertificateController : ControllerBase
     {
         [HttpPost]

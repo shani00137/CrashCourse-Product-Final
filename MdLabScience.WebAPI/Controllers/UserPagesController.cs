@@ -1,5 +1,6 @@
 using IMS_WebApp.Models;
 using MdLabScience.DbContext;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -9,6 +10,7 @@ namespace MdLabScience.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class UserPagesController : ControllerBase
     {
         [HttpGet]

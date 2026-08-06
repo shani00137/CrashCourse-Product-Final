@@ -2,6 +2,7 @@ using EMCQWebApi.Models;
 using MdLabScience.DbContext;
 using MdLabScience.Models;
 using MdLabScience.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ namespace MdLabScience.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class TakeTestController : ControllerBase
     {
         private static object Lock = new object();
