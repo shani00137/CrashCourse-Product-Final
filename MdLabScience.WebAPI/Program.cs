@@ -1,14 +1,25 @@
 using MdLabScience.DbContext;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -60,6 +71,20 @@ app.MapOpenApi();
 //swagger UI finalzed
 app.UseDefaultFiles();
 app.UseStaticFiles();
+var staticDirs = new[] { "Uploads", "Images" };
+foreach (var dir in staticDirs)
+{
+    var dirPath = Path.Combine(app.Environment.ContentRootPath, dir);
+    if (Directory.Exists(dirPath))
+    {
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(dirPath),
+            RequestPath = "/" + dir
+        });
+    }
+}
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 

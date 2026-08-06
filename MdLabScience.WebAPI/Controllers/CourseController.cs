@@ -81,7 +81,9 @@ namespace MdLabScience.Controllers
                         var fileName = Path.GetFileName(file.FileName);
                         if (fileName.StartsWith("Course") == true)
                         {
-                            var path = Path.Combine(_env.ContentRootPath, "Uploads", fileName);
+                            var dirPath = Path.Combine(_env.ContentRootPath, "Uploads");
+                            Directory.CreateDirectory(dirPath);
+                            var path = Path.Combine(dirPath, fileName);
                             using (var stream = new FileStream(path, FileMode.Create))
                             {
                                 file.CopyTo(stream);
@@ -124,7 +126,9 @@ namespace MdLabScience.Controllers
                 {
                     Guid id = Guid.NewGuid();
                     var fileName = id.ToString() + "-" + Path.GetFileName(file.FileName);
-                    var path = Path.Combine(_env.ContentRootPath, "Uploads", fileName);
+                    var dirPath = Path.Combine(_env.ContentRootPath, "Uploads");
+                    Directory.CreateDirectory(dirPath);
+                    var path = Path.Combine(dirPath, fileName);
                     using (var stream = new FileStream(path, FileMode.Create))
                     {
                         file.CopyTo(stream);

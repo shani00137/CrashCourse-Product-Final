@@ -33,27 +33,67 @@ namespace MdLabScience.Controllers
         {
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
-                var query = (from c in db.ApplicantsTbs
-                             join m in db.CountryTbs on c.CountryId equals m.CountryId
-                             where (string.IsNullOrEmpty(filter.SearchTerm) || (c.FirstName ?? "").Contains(filter.SearchTerm) || (c.LastName ?? "").Contains(filter.SearchTerm))
-                             select new
-                             {
-                                 c.FirstName,
-                                 c.LastName,
-                                 c.Mobile,
-                                 c.OtherMobile,
-                                 c.PhotoUrl,
-                                 c.RegistrationDate,
-                                 c.CreatedOn,
-                                 c.Address,
-                                 c.Email,
-                                 c.RegistrationNo,
-                                 m.CoutryName,
-                                 c.ApplicantId,
-                                 c.CountryId,
-                                 c.ExpiryDate,
-                                 c.IsActive
-                             }).OrderByDescending(x => x.ApplicantId);
+                string status = string.IsNullOrEmpty(filter.Status) ? "All" : filter.Status;
+                string searchTerm = filter.SearchTerm ?? "";
+                string[] tokens = searchTerm.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+                var baseQuery = from c in db.ApplicantsTbs
+                                join m in db.CountryTbs on c.CountryId equals m.CountryId
+                                select new { c, m };
+
+                foreach (string token in tokens)
+                {
+                    baseQuery = baseQuery.Where(x =>
+                        (x.c.FirstName ?? "").Contains(token)
+                        || (x.c.LastName ?? "").Contains(token)
+                        || (x.c.RegistrationNo ?? "").Contains(token)
+                        || (x.c.Mobile ?? "").Contains(token)
+                        || (x.c.Email ?? "").Contains(token)
+                        || x.m.CoutryName.Contains(token)
+                        || db.ApplicantCourseSelectionTbs.Any(ac =>
+                               ac.ApplicantId == x.c.ApplicantId
+                               && db.CourseTbs.Any(ct => ct.CourseId == ac.CourseId && (ct.CourseName ?? "").Contains(token))));
+                }
+
+                if (status == "Active")
+                {
+                    baseQuery = baseQuery.Where(x => x.c.IsActive == true);
+                }
+                else if (status == "Expired")
+                {
+                    baseQuery = baseQuery.Where(x => x.c.IsActive == false);
+                }
+
+                if (filter.CountryId.HasValue)
+                {
+                    int countryId = filter.CountryId.Value;
+                    baseQuery = baseQuery.Where(x => x.c.CountryId == countryId);
+                }
+
+                if (filter.CourseId.HasValue)
+                {
+                    int courseId = filter.CourseId.Value;
+                    baseQuery = baseQuery.Where(x => db.ApplicantCourseSelectionTbs.Any(ac => ac.ApplicantId == x.c.ApplicantId && ac.CourseId == courseId));
+                }
+
+                var query = baseQuery.Select(x => new
+                {
+                    FirstName = x.c.FirstName,
+                    LastName = x.c.LastName,
+                    Mobile = x.c.Mobile,
+                    OtherMobile = x.c.OtherMobile,
+                    PhotoUrl = x.c.PhotoUrl,
+                    RegistrationDate = x.c.RegistrationDate,
+                    CreatedOn = x.c.CreatedOn,
+                    Address = x.c.Address,
+                    Email = x.c.Email,
+                    RegistrationNo = x.c.RegistrationNo,
+                    CoutryName = x.m.CoutryName,
+                    ApplicantId = x.c.ApplicantId,
+                    CountryId = x.c.CountryId,
+                    ExpiryDate = x.c.ExpiryDate,
+                    IsActive = x.c.IsActive
+                });
 
                 var totalRecords = await query.CountAsync();
 
@@ -62,6 +102,17 @@ namespace MdLabScience.Controllers
                     .Skip((filter.PageNumber - 1) * filter.PageSize)
                     .Take(filter.PageSize)
                     .ToListAsync();
+
+                List<int> applicantIds = pagedData.Select(q => (int)q.ApplicantId).ToList();
+
+                var courseMap = applicantIds.Count == 0
+                    ? new Dictionary<int, CourseModel>()
+                    : (from ac in db.ApplicantCourseSelectionTbs
+                       join c in db.CourseTbs on ac.CourseId equals c.CourseId
+                       where applicantIds.Contains(ac.ApplicantId)
+                       select new { ac.ApplicantId, ac.CourseId, c.CourseName }).ToList()
+                       .GroupBy(x => x.ApplicantId)
+                       .ToDictionary(g => g.Key, g => new CourseModel { CourseId = g.First().CourseId, CourseName = g.First().CourseName });
 
                 var applicantModels = pagedData.Select(q => new ApplicantModel
                 {
@@ -80,21 +131,10 @@ namespace MdLabScience.Controllers
                     CountryId = q.CountryId ?? 0,
                     ExpiryDate = q.ExpiryDate ?? default,
                     IsActive = q.IsActive ?? false,
-                    CourseMD = GetCourseOfApplicant(q.ApplicantId)
+                    CourseMD = courseMap.TryGetValue((int)q.ApplicantId, out var course) ? course : null
                 }).ToList();
 
                 return Ok(new PagedResponse<List<ApplicantModel>>(applicantModels, filter.PageNumber, filter.PageSize, totalRecords));
-            }
-        }
-
-        private CourseModel GetCourseOfApplicant(int? Id)
-        {
-            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
-            {
-                return (from a in db.ApplicantCourseSelectionTbs
-                        join c in db.CourseTbs on a.CourseId equals c.CourseId
-                        where a.ApplicantId == Id
-                        select new CourseModel { CourseId = a.CourseId, CourseName = c.CourseName }).FirstOrDefault();
             }
         }
 
@@ -263,7 +303,9 @@ namespace MdLabScience.Controllers
                     if (!String.IsNullOrEmpty(value.PhotoUrl))
                     {
                         byte[] ImageBytes = Convert.FromBase64String(value.PhotoUrl);
-                        var path = Path.Combine(_env.ContentRootPath, "Images", "Applicant", MaxId + ".png");
+                        string folder = Path.Combine(_env.ContentRootPath, "Images", "Applicant");
+                        Directory.CreateDirectory(folder);
+                        var path = Path.Combine(folder, MaxId + ".png");
                         System.IO.File.WriteAllBytes(path, ImageBytes);
                         applicantsTb.PhotoUrl = "Images/Applicant/" + MaxId.ToString() + ".png";
                     }
@@ -271,7 +313,7 @@ namespace MdLabScience.Controllers
 
                     ApplicantCourseSelectionTb course = new ApplicantCourseSelectionTb();
                     course.ApplicantId = MaxId;
-                    course.CourseId = value.CountryId;
+                    course.CourseId = value.CourseId;
                     course.Date = value.RegistrationDate;
                     db.ApplicantCourseSelectionTbs.Add(course);
 
@@ -327,7 +369,9 @@ namespace MdLabScience.Controllers
                                 System.IO.File.Delete(oldPath);
                             }
                             byte[] ImageBytes = Convert.FromBase64String(value.PhotoUrl);
-                            var path = Path.Combine(_env.ContentRootPath, "Images", "Applicant", value.ApplicantId + ".png");
+                            string folder = Path.Combine(_env.ContentRootPath, "Images", "Applicant");
+                            Directory.CreateDirectory(folder);
+                            var path = Path.Combine(folder, value.ApplicantId + ".png");
                             System.IO.File.WriteAllBytes(path, ImageBytes);
                             Query.PhotoUrl = "Images/Applicant/" + value.ApplicantId.ToString() + ".png";
                         }
@@ -541,14 +585,20 @@ namespace MdLabScience.Controllers
                     if (Query.IsActive == true)
                     {
                         Query.IsActive = false;
-                        String _message = "Dear Mr/Mrs " + AppInformaiton.UserName + "Dear Customer your account has been suspended, please contact to Administrator..";
-                        PushNotification.PushNotificationTOuser(AppInformaiton.Token, _message, "Account Block");
-                        AppInformaiton.Status = false;
+                        if (AppInformaiton != null)
+                        {
+                            String _message = "Dear Mr/Mrs " + (AppInformaiton.UserName ?? "") + "Dear Customer your account has been suspended, please contact to Administrator..";
+                            PushNotification.PushNotificationTOuser(AppInformaiton.Token, _message, "Account Block");
+                            AppInformaiton.Status = false;
+                        }
                     }
                     else
                     {
                         Query.IsActive = true;
-                        AppInformaiton.Status = true;
+                        if (AppInformaiton != null)
+                        {
+                            AppInformaiton.Status = true;
+                        }
                     }
                     db.SaveChanges();
                 }

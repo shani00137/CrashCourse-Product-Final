@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, Users, BookOpen, ClipboardList, FileText, Award,
   Settings, Shield, Smartphone, Database, Camera, Lock, ChevronLeft,
@@ -13,6 +13,16 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend
 } from "recharts";
+import * as auth from "../services/authService";
+import type { LoginUser } from "../services/authService";
+import {
+  getApplicants, saveApplicant, updateApplicant, changeApplicantStatus, getCountries, getActiveCourses,
+  type Applicant, type ApplicantPayload, type Country, type Course,
+} from "../services/applicantService";
+import { CoursesScreen } from "./components/views/courses/Courses";
+import {
+  StatusBadge, Avatar, Btn, Input, Select, Card, BouncingDots, SearchableSelect, Modal,
+} from "./components/shared/ui";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Screen =
@@ -42,14 +52,6 @@ const monthlyData = [
   { month: "Jun", registrations: 95, revenue: 190000 },
   { month: "Jul", registrations: 112, revenue: 224000 },
   { month: "Aug", registrations: 87, revenue: 174000 },
-];
-
-const courses = [
-  { code: "MDS-101", name: "Medical Dental Science Foundation", attachments: ["PDF", "Video"], status: "Active" },
-  { code: "HCM-201", name: "Healthcare Management & Leadership", attachments: ["PDF", "Audio"], status: "Active" },
-  { code: "NRS-301", name: "Nursing Administration & Practice", attachments: ["PDF"], status: "Active" },
-  { code: "PHM-101", name: "Pharmacy & Clinical Practice", attachments: ["Video", "Audio"], status: "Inactive" },
-  { code: "RAD-201", name: "Radiology & Diagnostic Imaging", attachments: ["PDF", "Video"], status: "Active" },
 ];
 
 const questions = [
@@ -118,105 +120,6 @@ const backups = [
   { file: "backup_2024_10_18_0300.sql.gz", created: "2024-10-18 03:00", size: "135 MB" },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    Active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    Passed: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    Paid: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    Pending: "bg-amber-50 text-amber-700 border border-amber-200",
-    Partial: "bg-blue-50 text-blue-700 border border-blue-200",
-    Uploaded: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    Review: "bg-blue-50 text-blue-700 border border-blue-200",
-    Expired: "bg-red-50 text-red-700 border border-red-200",
-    Failed: "bg-red-50 text-red-700 border border-red-200",
-    Unpaid: "bg-red-50 text-red-700 border border-red-200",
-    Blocked: "bg-red-50 text-red-700 border border-red-200",
-    Inactive: "bg-gray-100 text-gray-600 border border-gray-200",
-  };
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${map[status] ?? "bg-gray-100 text-gray-600"}`}>
-      {status}
-    </span>
-  );
-}
-
-function Avatar({ initials, size = "sm" }: { initials: string; size?: "sm" | "md" | "lg" }) {
-  const sizes = { sm: "w-7 h-7 text-xs", md: "w-9 h-9 text-sm", lg: "w-14 h-14 text-lg" };
-  return (
-    <div className={`${sizes[size]} rounded-full bg-teal-100 text-teal-700 font-semibold flex items-center justify-center flex-shrink-0`}>
-      {initials}
-    </div>
-  );
-}
-
-function Btn({ children, variant = "primary", onClick, className = "", icon }: {
-  children?: React.ReactNode; variant?: "primary" | "secondary" | "danger" | "ghost" | "outline";
-  onClick?: () => void; className?: string; icon?: React.ReactNode;
-}) {
-  const styles = {
-    primary: "bg-[#0E7C7B] text-white hover:bg-[#0a6665] shadow-sm",
-    secondary: "bg-[#F4A425] text-[#1A202C] hover:bg-[#e09520] shadow-sm",
-    danger: "bg-red-500 text-white hover:bg-red-600 shadow-sm",
-    ghost: "bg-transparent text-[#718096] hover:bg-gray-100",
-    outline: "border border-[#0E7C7B] text-[#0E7C7B] hover:bg-[#E6F4F4] bg-white",
-  };
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${styles[variant]} ${className}`}
-    >
-      {icon}{children}
-    </button>
-  );
-}
-
-function Input({ label, type = "text", placeholder }: { label: string; type?: string; placeholder?: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">{label}</label>
-      <input
-        type={type}
-        placeholder={placeholder}
-        className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
-      />
-    </div>
-  );
-}
-
-function Select({ label, options }: { label: string; options: string[] }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">{label}</label>
-      <select className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition appearance-none">
-        {options.map(o => <option key={o}>{o}</option>)}
-      </select>
-    </div>
-  );
-}
-
-function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.07)] border border-[rgba(0,0,0,0.06)] ${className}`}>
-      {children}
-    </div>
-  );
-}
-
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(0,0,0,0.08)]">
-          <h3 className="text-base font-semibold text-[#1A202C]">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition"><X size={18} /></button>
-        </div>
-        <div className="px-6 py-4">{children}</div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Sidebar Nav ─────────────────────────────────────────────────────────────
 const navGroups = [
   {
@@ -261,7 +164,30 @@ const navGroups = [
 
 // ─── Screens ─────────────────────────────────────────────────────────────────
 
-function LoginScreen({ onLogin }: { onLogin: () => void }) {
+function LoginScreen({ onLogin }: { onLogin: (user: LoginUser) => void }) {
+  const [username, setUsername] = useState("admin@dhcc.ae");
+  const [password, setPassword] = useState("password");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim() || !password) {
+      setError("Please enter your username and password.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const user = await auth.login(username.trim(), password);
+      onLogin(user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex font-['Inter',sans-serif]">
       {/* Left brand panel */}
@@ -310,7 +236,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           <p className="text-[#718096] text-sm mb-8">Sign in to your admin account</p>
 
           <Card className="p-6">
-            <div className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Username</label>
                 <div className="relative">
@@ -318,7 +244,8 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                   <input
                     type="text"
                     placeholder="admin@dhcc.ae"
-                    defaultValue="admin@dhcc.ae"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
                     className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
                   />
                 </div>
@@ -330,11 +257,18 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                   <input
                     type="password"
                     placeholder="••••••••"
-                    defaultValue="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
                     className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
                   />
                 </div>
               </div>
+              {error && (
+                <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  <AlertCircle size={14} className="flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-sm">
                 <label className="flex items-center gap-2 text-[#718096] cursor-pointer">
                   <input type="checkbox" className="rounded" />Remember me
@@ -342,12 +276,13 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
                 <a href="#" className="text-[#0E7C7B] hover:underline">Forgot password?</a>
               </div>
               <button
-                onClick={onLogin}
-                className="h-11 w-full rounded-lg bg-[#0E7C7B] text-white font-semibold text-sm hover:bg-[#0a6665] transition-all shadow-sm mt-1"
+                type="submit"
+                disabled={loading}
+                className="h-11 w-full rounded-lg bg-[#0E7C7B] text-white font-semibold text-sm hover:bg-[#0a6665] transition-all shadow-sm mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Sign In
+                {loading ? "Signing in…" : "Sign In"}
               </button>
-            </div>
+            </form>
           </Card>
           <p className="text-center text-[#718096] text-xs mt-6">
             © 2024 HealthEdu Pro · Dubai Healthcare City Authority
@@ -506,46 +441,138 @@ function DashboardScreen({ setScreen }: { setScreen: (s: Screen) => void }) {
   );
 }
 
-function ApplicantsScreen({ setScreen }: { setScreen: (s: Screen) => void }) {
+function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAddApplicant }: {
+  setScreen: (s: Screen) => void;
+  onSelectApplicant: (a: Applicant) => void;
+  onEditApplicant: (a: Applicant) => void;
+  onAddApplicant: () => void;
+}) {
+  const pageSize = 20;
+  const [rows, setRows] = useState<Applicant[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const filtered = applicants.filter(a =>
-    (statusFilter === "All" || a.status === statusFilter) &&
-    (a.name.toLowerCase().includes(search.toLowerCase()) || a.id.includes(search))
-  );
+  const [countryId, setCountryId] = useState<number | null>(null);
+  const [courseId, setCourseId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+
+  useEffect(() => {
+    getCountries().then(setCountries).catch(() => {});
+    getActiveCourses().then(setCourses).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getApplicants({
+      pageNumber: page,
+      pageSize,
+      searchTerm: debouncedSearch,
+      status: statusFilter,
+      countryId,
+      courseId,
+    })
+      .then(res => {
+        if (cancelled) return;
+        setRows(res.data ?? []);
+        setTotalRecords(res.totalRecords ?? 0);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load applicants.");
+        setRows([]);
+        setTotalRecords(0);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [page, debouncedSearch, statusFilter, countryId, courseId]);
+
+  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * pageSize;
+  const hasActiveFilters = search.trim() !== "" || statusFilter !== "All" || countryId !== null || courseId !== null;
+
+  const initials = (a: Applicant) => ((a.firstName?.[0] ?? "") + (a.lastName?.[0] ?? "")).toUpperCase() || "NA";
+
+  const goToPage = (p: number) => setPage(Math.max(1, Math.min(p, totalPages)));
+
+  const clearFilters = () => {
+    setSearch("");
+    setDebouncedSearch("");
+    setStatusFilter("All");
+    setCountryId(null);
+    setCourseId(null);
+    setPage(1);
+  };
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-[#1A202C]">Applicants</h1>
-        <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setScreen("registration")}>Add Applicant</Btn>
+        <Btn variant="primary" icon={<Plus size={14} />} onClick={onAddApplicant}>Add Applicant</Btn>
       </div>
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap items-center">
           <div className="relative flex-1 min-w-48">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search by name or reg. no…"
-              className="h-9 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search name, reg. no, mobile, email…"
+              className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
             />
+            {search && (
+              <button onClick={() => setSearch("")} title="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition">
+                <X size={13} />
+              </button>
+            )}
           </div>
-          {["All", "Active", "Pending", "Expired"].map(s => (
-            <button key={s} onClick={() => setStatusFilter(s)}
-              className={`px-3.5 h-9 rounded-lg text-sm font-medium transition ${statusFilter === s ? "bg-[#0E7C7B] text-white" : "bg-[#EDF2F7] text-[#718096] hover:bg-[#E2E8F0]"}`}>
-              {s}
+          <div className="flex rounded-lg overflow-hidden border border-[rgba(0,0,0,0.12)]">
+            {["All", "Active", "Expired"].map(s => (
+              <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
+                className={`px-3.5 h-9 text-sm font-medium transition ${statusFilter === s ? "bg-[#0E7C7B] text-white" : "bg-white text-[#718096] hover:bg-[#EDF2F7]"}`}>
+                {s}
+              </button>
+            ))}
+          </div>
+          <SearchableSelect
+            options={countries.map(c => ({ id: c.countryId, label: c.coutryName }))}
+            value={countryId}
+            onSelect={id => { setCountryId(id); setPage(1); }}
+            allLabel="All Countries"
+            placeholder="Search country…"
+          />
+          <SearchableSelect
+            options={courses.map(c => ({ id: c.courseId, label: c.courseName }))}
+            value={courseId}
+            onSelect={id => { setCourseId(id); setPage(1); }}
+            allLabel="All Courses"
+            placeholder="Search course…"
+          />
+          {hasActiveFilters && (
+            <button onClick={clearFilters} className="h-9 px-3 rounded-lg text-sm font-medium text-[#0E7C7B] hover:bg-teal-50 transition flex items-center gap-1.5">
+              <X size={13} /> Clear
             </button>
-          ))}
-          <select className="h-9 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#718096] focus:outline-none focus:border-[#0E7C7B] transition">
-            <option>All Countries</option>
-            <option>UAE</option><option>India</option><option>Philippines</option>
-          </select>
-          <select className="h-9 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#718096] focus:outline-none focus:border-[#0E7C7B] transition">
-            <option>All Courses</option>
-            <option>MDS-101</option><option>HCM-201</option><option>NRS-301</option>
-          </select>
+          )}
         </div>
       </Card>
 
@@ -560,46 +587,64 @@ function ApplicantsScreen({ setScreen }: { setScreen: (s: Screen) => void }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(a => (
-                <tr key={a.id} className="border-b border-[rgba(0,0,0,0.04)] hover:bg-[#F7FAFC] transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-[#718096]">{a.id}</td>
+              {rows.map(a => (
+                <tr key={a.applicantId} className="border-b border-[rgba(0,0,0,0.04)] hover:bg-[#F7FAFC] transition-colors">
+                  <td className="px-4 py-3 font-mono text-xs text-[#718096]">{a.registrationNo ?? a.applicantId}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Avatar initials={a.avatar} />
-                      <span className="font-medium text-[#1A202C] whitespace-nowrap">{a.name}</span>
+                      <Avatar initials={initials(a)} />
+                      <span className="font-medium text-[#1A202C] whitespace-nowrap">{a.firstName} {a.lastName}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-[#718096] whitespace-nowrap">{a.mobile}</td>
-                  <td className="px-4 py-3 text-[#718096]">{a.country}</td>
-                  <td className="px-4 py-3 text-[#718096] max-w-36 truncate">{a.course}</td>
-                  <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
-                  <td className="px-4 py-3 text-[#718096] whitespace-nowrap">{a.address}</td>
+                  <td className="px-4 py-3 text-[#718096] whitespace-nowrap">{a.mobile ?? "—"}</td>
+                  <td className="px-4 py-3 text-[#718096]">{a.coutryName ?? "—"}</td>
+                  <td className="px-4 py-3 text-[#718096] max-w-36 truncate">{a.courseMD?.courseName ?? "—"}</td>
+                  <td className="px-4 py-3"><StatusBadge status={a.isActive ? "Active" : "Expired"} /></td>
+                  <td className="px-4 py-3 text-[#718096] whitespace-nowrap">{a.address ?? "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => setScreen("applicant-detail")} className="p-1.5 rounded-lg text-[#718096] hover:text-[#0E7C7B] hover:bg-teal-50 transition"><Eye size={14} /></button>
-                      <button className="p-1.5 rounded-lg text-[#718096] hover:text-blue-600 hover:bg-blue-50 transition"><Edit2 size={14} /></button>
-                      <button className="p-1.5 rounded-lg text-[#718096] hover:text-red-600 hover:bg-red-50 transition"><Trash2 size={14} /></button>
+                      <button title="View details" onClick={() => onSelectApplicant(a)} className="p-1.5 rounded-lg text-[#718096] hover:text-[#0E7C7B] hover:bg-teal-50 transition"><Eye size={14} /></button>
+                      <button title="Edit applicant" onClick={() => onEditApplicant(a)} className="p-1.5 rounded-lg text-[#718096] hover:text-blue-600 hover:bg-blue-50 transition"><Edit2 size={14} /></button>
+                      <button title="Delete is not available" disabled className="p-1.5 rounded-lg text-[#718096] opacity-40 cursor-not-allowed"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {filtered.length === 0 && (
+          {loading && <BouncingDots label={rows.length ? "Refreshing results…" : "Loading applicants…"} />}
+          {!loading && error && (
+            <div className="py-10 text-center">
+              <AlertCircle size={28} className="mx-auto text-red-400 mb-2" />
+              <p className="text-sm text-red-600 font-medium">{error}</p>
+              <p className="text-xs text-gray-400 mt-1">Make sure you are logged in and the API is running.</p>
+            </div>
+          )}
+          {!loading && !error && totalRecords === 0 && (
             <div className="py-16 text-center">
               <Users size={36} className="mx-auto text-gray-300 mb-3" />
               <p className="text-[#718096] font-medium">No applicants found</p>
-              <p className="text-xs text-gray-400 mt-1">Try adjusting your search or filters</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {hasActiveFilters ? "Try clearing your search or filters" : "No applicants registered yet"}
+              </p>
             </div>
           )}
         </div>
         {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-[rgba(0,0,0,0.06)]">
-          <span className="text-xs text-[#718096]">Showing {filtered.length} of {applicants.length} applicants</span>
-          <div className="flex gap-1">
-            {[1, 2, 3, "...", 12].map((p, i) => (
-              <button key={i} className={`w-7 h-7 rounded-md text-xs font-medium transition ${p === 1 ? "bg-[#0E7C7B] text-white" : "text-[#718096] hover:bg-gray-100"}`}>{p}</button>
-            ))}
+          <span className="text-xs text-[#718096]">
+            {loading ? "Loading…" : totalRecords === 0 ? "No results" : `Showing ${start + 1}–${Math.min(start + pageSize, totalRecords)} of ${totalRecords} applicant${totalRecords === 1 ? "" : "s"}`}
+          </span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => goToPage(safePage - 1)} disabled={safePage <= 1}
+              className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronLeft size={14} className="mx-auto" />
+            </button>
+            <span className="px-2 text-xs text-[#718096] whitespace-nowrap">Page {safePage} of {totalPages}</span>
+            <button onClick={() => goToPage(safePage + 1)} disabled={safePage >= totalPages}
+              className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronRight size={14} className="mx-auto" />
+            </button>
           </div>
         </div>
       </Card>
@@ -607,8 +652,14 @@ function ApplicantsScreen({ setScreen }: { setScreen: (s: Screen) => void }) {
   );
 }
 
-function ApplicantDetailScreen() {
+function ApplicantDetailScreen({ applicant, onBack, onEdit, onToggleActive }: {
+  applicant: Applicant | null;
+  onBack: () => void;
+  onEdit: (a: Applicant) => void;
+  onToggleActive: (a: Applicant) => Promise<void>;
+}) {
   const [activeTab, setActiveTab] = useState("documents");
+  const [toggling, setToggling] = useState(false);
   const docs = [
     { name: "Degree Certificate", status: "Uploaded" },
     { name: "Matric Certificate", status: "Uploaded" },
@@ -619,26 +670,46 @@ function ApplicantDetailScreen() {
     { name: "Good Standing Letter", status: "Uploaded" },
   ];
 
+  const name = applicant ? `${applicant.firstName} ${applicant.lastName}` : "Applicant";
+  const initials = applicant
+    ? ((applicant.firstName?.[0] ?? "") + (applicant.lastName?.[0] ?? "")).toUpperCase() || "NA"
+    : "NA";
+  const fmt = (d?: string) => (d ? new Date(d).toLocaleDateString() : "—");
+
+  const handleToggle = async () => {
+    if (!applicant || toggling) return;
+    setToggling(true);
+    try {
+      await onToggleActive(applicant);
+    } finally {
+      setToggling(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-xl font-semibold text-[#1A202C]">Applicant Detail</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-[#1A202C]">Applicant Detail</h1>
+        <Btn variant="outline" icon={<ArrowRight size={14} className="rotate-180" />} onClick={onBack}>Back to list</Btn>
+      </div>
 
       <div className="grid grid-cols-3 gap-5">
         {/* Left profile card */}
         <Card className="p-6 flex flex-col items-center text-center gap-4">
-          <Avatar initials="ZA" size="lg" />
+          <Avatar initials={initials} size="lg" />
           <div>
-            <h2 className="text-base font-semibold text-[#1A202C]">Zara Ahmed</h2>
-            <p className="font-mono text-xs text-[#718096] mt-0.5">MDS-2024-0123</p>
+            <h2 className="text-base font-semibold text-[#1A202C]">{name}</h2>
+            <p className="font-mono text-xs text-[#718096] mt-0.5">{applicant?.registrationNo ?? applicant?.applicantId ?? "—"}</p>
           </div>
-          <StatusBadge status="Active" />
+          <StatusBadge status={applicant?.isActive ? "Active" : "Expired"} />
           <div className="w-full border-t border-[rgba(0,0,0,0.06)] pt-4 flex flex-col gap-3 text-sm text-left">
             {[
-              { icon: Phone, value: "+971 50 234 5678" },
-              { icon: Mail, value: "zara.ahmed@email.com" },
-              { icon: MapPin, value: "Dubai, UAE" },
-              { icon: Hash, value: "UAE · MDS-101" },
-              { icon: Calendar, value: "Registered: 01 Oct 2024" },
+              { icon: Phone, value: applicant?.mobile ?? "—" },
+              { icon: Mail, value: applicant?.email ?? "—" },
+              { icon: MapPin, value: applicant?.address ?? "—" },
+              { icon: Hash, value: `${applicant?.coutryName ?? "—"} · ${applicant?.courseMD?.courseName ?? "—"}` },
+              { icon: Calendar, value: `Registered: ${fmt(applicant?.registrationDate)}` },
+              { icon: Clock, value: `Expires: ${fmt(applicant?.expiryDate)}` },
             ].map(({ icon: Icon, value }) => (
               <div key={value} className="flex items-center gap-2.5 text-[#718096]">
                 <Icon size={13} className="text-[#0E7C7B] flex-shrink-0" />
@@ -647,8 +718,10 @@ function ApplicantDetailScreen() {
             ))}
           </div>
           <div className="flex gap-2 w-full">
-            <Btn variant="outline" className="flex-1 justify-center text-xs">Edit</Btn>
-            <Btn variant="danger" className="flex-1 justify-center text-xs">Block</Btn>
+            <Btn variant="outline" className="flex-1 justify-center text-xs" onClick={() => applicant && onEdit(applicant)}>Edit</Btn>
+            <Btn variant={applicant?.isActive ? "danger" : "primary"} className="flex-1 justify-center text-xs" onClick={handleToggle} disabled={!applicant || toggling}>
+              {toggling ? "…" : applicant?.isActive ? "Block" : "Activate"}
+            </Btn>
           </div>
         </Card>
 
@@ -756,32 +829,176 @@ function ApplicantDetailScreen() {
   );
 }
 
-function RegistrationScreen() {
+function RegistrationScreen({ applicant, onDone }: { applicant: Applicant | null; onDone: () => void }) {
+  const isEdit = !!applicant;
+  const [fullName, setFullName] = useState(applicant ? `${applicant.firstName} ${applicant.lastName}`.trim() : "");
+  const [mobile, setMobile] = useState(applicant?.mobile ?? "");
+  const [otherMobile, setOtherMobile] = useState(applicant?.otherMobile ?? "");
+  const [email, setEmail] = useState(applicant?.email ?? "");
+  const [address, setAddress] = useState(applicant?.address ?? "");
+  const [countryId, setCountryId] = useState(applicant?.countryId ?? 0);
+  const [courseId, setCourseId] = useState(applicant?.courseMD?.courseId ?? 0);
+  const [registrationDate, setRegistrationDate] = useState(applicant?.registrationDate?.slice(0, 10) ?? "");
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    getCountries().then(setCountries).catch(() => {});
+    getActiveCourses().then(setCourses).catch(() => {});
+  }, []);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setPhoto(dataUrl.split(",")[1] ?? dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] ?? "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+    if (!firstName) { setError("Please enter the applicant's full name."); return; }
+    if (!mobile.trim()) { setError("Please enter a mobile number."); return; }
+    if (!email.trim()) { setError("Please enter an email address."); return; }
+    if (!countryId) { setError("Please select a country."); return; }
+    if (!courseId) { setError("Please select a course."); return; }
+
+    const regDate = registrationDate ? new Date(registrationDate) : new Date();
+    const expiry = new Date(regDate);
+    expiry.setFullYear(expiry.getFullYear() + 1);
+
+    const payload: ApplicantPayload = {
+      applicantId: applicant?.applicantId ?? 0,
+      registrationNo: applicant?.registrationNo ?? "",
+      firstName,
+      lastName,
+      mobile: mobile.trim(),
+      otherMobile: otherMobile.trim(),
+      email: email.trim(),
+      address: address.trim(),
+      photoUrl: photo,
+      registrationDate: regDate.toISOString(),
+      expiryDate: expiry.toISOString(),
+      isActive: applicant?.isActive ?? true,
+      countryId,
+      courseId,
+    };
+
+    setSaving(true);
+    try {
+      const res = isEdit ? await updateApplicant(payload) : await saveApplicant(payload);
+      if (res.startsWith("System.")) {
+        setError("Server error while saving. Please try again.");
+      } else {
+        setSuccess(res);
+        if (!isEdit) {
+          setFullName(""); setMobile(""); setOtherMobile(""); setEmail(""); setAddress("");
+          setCountryId(0); setCourseId(0); setRegistrationDate(""); setPhoto(null);
+        } else {
+          onDone();
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save applicant.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fieldCls = "h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition";
+  const labelCls = "text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide";
+
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-xl font-semibold text-[#1A202C]">Student Registration</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-[#1A202C]">{isEdit ? "Edit Applicant" : "Student Registration"}</h1>
+        <Btn variant="ghost" onClick={onDone}>Back to Applicants</Btn>
+      </div>
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-[#1A202C] mb-5">Applicant Information</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <Input label="Full Name" placeholder="e.g. Zara Ahmed" />
-          <Input label="Mobile Number" type="tel" placeholder="+971 50 000 0000" />
-          <Input label="Other Mobile" type="tel" placeholder="+971 55 000 0000" />
-          <Input label="Email Address" type="email" placeholder="applicant@email.com" />
-          <div className="col-span-2"><Input label="Address" placeholder="Full address" /></div>
-          <Select label="Country" options={["Select Country", "UAE", "India", "Philippines", "Pakistan", "Egypt", "Oman", "Saudi Arabia"]} />
-          <Select label="Course" options={["Select Course", "MDS-101 Medical Dental Science", "HCM-201 Healthcare Management", "NRS-301 Nursing Administration"]} />
-          <Input label="Registration Date" type="date" />
-          <div className="flex flex-col gap-1">
-            <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Applicant Photo</label>
-            <div className="h-10 border-2 border-dashed border-[rgba(0,0,0,0.15)] rounded-lg flex items-center gap-2 px-3 text-[#718096] text-sm cursor-pointer hover:border-[#0E7C7B] hover:text-[#0E7C7B] transition">
-              <Upload size={14} /><span>Click to upload photo</span>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-base font-semibold text-[#1A202C]">Applicant Information</h3>
+          {isEdit && <span className="text-xs text-[#718096] font-mono">Editing #{applicant?.registrationNo}</span>}
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className={labelCls}>Full Name</label>
+              <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="e.g. Zara Ahmed" className={fieldCls} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelCls}>Mobile Number</label>
+              <input type="tel" value={mobile} onChange={e => setMobile(e.target.value)} placeholder="+971 50 000 0000" className={fieldCls} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelCls}>Other Mobile</label>
+              <input type="tel" value={otherMobile} onChange={e => setOtherMobile(e.target.value)} placeholder="+971 55 000 0000" className={fieldCls} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelCls}>Email Address</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="applicant@email.com" className={fieldCls} />
+            </div>
+            <div className="col-span-2 flex flex-col gap-1">
+              <label className={labelCls}>Address</label>
+              <input type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="Full address" className={fieldCls} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelCls}>Country</label>
+              <select value={countryId} onChange={e => setCountryId(Number(e.target.value))} className={`${fieldCls} appearance-none`}>
+                <option value={0}>Select Country</option>
+                {countries.map(c => <option key={c.countryId} value={c.countryId}>{c.coutryName}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelCls}>Course</label>
+              <select value={courseId} onChange={e => setCourseId(Number(e.target.value))} className={`${fieldCls} appearance-none`}>
+                <option value={0}>Select Course</option>
+                {courses.map(c => <option key={c.courseId} value={c.courseId}>{c.courseName}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelCls}>Registration Date</label>
+              <input type="date" value={registrationDate} onChange={e => setRegistrationDate(e.target.value)} className={fieldCls} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelCls}>Applicant Photo</label>
+              <label className="h-10 border-2 border-dashed border-[rgba(0,0,0,0.15)] rounded-lg flex items-center gap-2 px-3 text-[#718096] text-sm cursor-pointer hover:border-[#0E7C7B] hover:text-[#0E7C7B] transition">
+                <Upload size={14} /><span>{photo ? "Photo selected" : "Click to upload photo"}</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+              </label>
             </div>
           </div>
-        </div>
-        <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-[rgba(0,0,0,0.06)]">
-          <Btn variant="ghost">Cancel</Btn>
-          <Btn variant="primary">Register Applicant</Btn>
-        </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <AlertCircle size={14} className="flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+          {success && (
+            <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+              <CheckCircle size={14} className="flex-shrink-0" />
+              <span>{success}</span>
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end mt-2 pt-4 border-t border-[rgba(0,0,0,0.06)]">
+            <Btn variant="ghost" onClick={onDone}>Cancel</Btn>
+            <Btn variant="primary" disabled={saving}>{saving ? "Saving…" : isEdit ? "Update Applicant" : "Register Applicant"}</Btn>
+          </div>
+        </form>
       </Card>
     </div>
   );
@@ -847,75 +1064,6 @@ function InvoiceScreen() {
             <div className="flex gap-2 justify-end mt-2">
               <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
               <Btn variant="primary" onClick={() => setShowModal(false)}>Create Invoice</Btn>
-            </div>
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-function CoursesScreen() {
-  const [showModal, setShowModal] = useState(false);
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[#1A202C]">Courses</h1>
-        <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setShowModal(true)}>Add Course</Btn>
-      </div>
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[rgba(0,0,0,0.06)] bg-[#F7FAFC]">
-                {["Course Code", "Course Name", "Attachments", "Status", "Actions"].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {courses.map(c => (
-                <tr key={c.code} className="border-b border-[rgba(0,0,0,0.04)] hover:bg-[#F7FAFC] transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-[#0E7C7B] font-medium">{c.code}</td>
-                  <td className="px-4 py-3 font-medium text-[#1A202C]">{c.name}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1.5">
-                      {c.attachments.map(a => (
-                        <span key={a} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium
-                          ${a === "PDF" ? "bg-red-50 text-red-600" : a === "Video" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"}`}>
-                          {a === "PDF" ? <File size={10} /> : a === "Video" ? <Video size={10} /> : <Mic size={10} />}
-                          {a}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <button className="p-1.5 text-[#718096] hover:text-[#0E7C7B] hover:bg-teal-50 rounded-lg transition"><Edit2 size={14} /></button>
-                      <button className="p-1.5 text-[#718096] hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-      {showModal && (
-        <Modal title="Add New Course" onClose={() => setShowModal(false)}>
-          <div className="flex flex-col gap-4">
-            <Input label="Course Code" placeholder="e.g. PHY-401" />
-            <Input label="Course Name" placeholder="Full course name" />
-            <div className="border-2 border-dashed border-[rgba(0,0,0,0.12)] rounded-xl p-8 text-center">
-              <Upload size={24} className="mx-auto text-gray-300 mb-2" />
-              <p className="text-sm text-[#718096]">Drag & drop files or <span className="text-[#0E7C7B] font-medium cursor-pointer">browse</span></p>
-              <p className="text-xs text-gray-400 mt-1">PDF, MP4, MP3 up to 500MB</p>
-            </div>
-            <Select label="Status" options={["Active", "Inactive"]} />
-            <div className="flex gap-2 justify-end mt-2">
-              <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
-              <Btn variant="primary">Create Course</Btn>
             </div>
           </div>
         </Modal>
@@ -1411,7 +1559,14 @@ function SettingsScreen() {
 }
 
 // ─── Shell (Sidebar + Header) ─────────────────────────────────────────────────
-function AdminShell({ screen, setScreen }: { screen: Screen; setScreen: (s: Screen) => void }) {
+function AdminShell({ screen, setScreen, user, onLogout, selectedApplicant, editingApplicant, onSelectApplicant, onEditApplicant, onAddApplicant, onToggleApplicantActive }: {
+  screen: Screen; setScreen: (s: Screen) => void; user: LoginUser | null; onLogout: () => void;
+  selectedApplicant: Applicant | null; editingApplicant: Applicant | null;
+  onSelectApplicant: (a: Applicant) => void;
+  onEditApplicant: (a: Applicant) => void;
+  onAddApplicant: () => void;
+  onToggleApplicantActive: (a: Applicant) => Promise<void>;
+}) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
@@ -1439,9 +1594,28 @@ function AdminShell({ screen, setScreen }: { screen: Screen; setScreen: (s: Scre
   const content: Record<Screen, React.ReactNode> = {
     login: null,
     dashboard: <DashboardScreen setScreen={setScreen} />,
-    applicants: <ApplicantsScreen setScreen={setScreen} />,
-    "applicant-detail": <ApplicantDetailScreen />,
-    registration: <RegistrationScreen />,
+    applicants: (
+      <ApplicantsScreen
+        setScreen={setScreen}
+        onSelectApplicant={onSelectApplicant}
+        onEditApplicant={onEditApplicant}
+        onAddApplicant={onAddApplicant}
+      />
+    ),
+    "applicant-detail": (
+      <ApplicantDetailScreen
+        applicant={selectedApplicant}
+        onBack={() => setScreen("applicants")}
+        onEdit={onEditApplicant}
+        onToggleActive={onToggleApplicantActive}
+      />
+    ),
+    registration: (
+      <RegistrationScreen
+        applicant={editingApplicant}
+        onDone={() => setScreen("applicants")}
+      />
+    ),
     invoice: <InvoiceScreen />,
     courses: <CoursesScreen />,
     "question-bank": <QuestionBankScreen />,
@@ -1480,7 +1654,7 @@ function AdminShell({ screen, setScreen }: { screen: Screen; setScreen: (s: Scre
                 return (
                   <button
                     key={item.label}
-                    onClick={() => setScreen(item.screen)}
+                    onClick={() => item.screen === "registration" ? onAddApplicant() : setScreen(item.screen)}
                     title={!sidebarOpen ? item.label : undefined}
                     className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all mb-0.5
                       ${active ? "bg-[#E6F4F4] text-[#0E7C7B] font-semibold" : "text-[#718096] hover:bg-[#F7FAFC] hover:text-[#1A202C]"}
@@ -1557,14 +1731,16 @@ function AdminShell({ screen, setScreen }: { screen: Screen; setScreen: (s: Scre
             )}
           </div>
 
-          {/* Avatar dropdown */}
+          {/* User + logout */}
           <div className="flex items-center gap-2 pl-2 border-l border-[rgba(0,0,0,0.08)]">
-            <Avatar initials="SA" size="sm" />
+            <Avatar initials={(user?.userName?.[0] ?? "S").toUpperCase()} size="sm" />
             <div className="hidden lg:block">
-              <p className="text-xs font-semibold text-[#1A202C] leading-none">System Admin</p>
-              <p className="text-[10px] text-[#718096] mt-0.5">Super Admin</p>
+              <p className="text-xs font-semibold text-[#1A202C] leading-none">{user?.userName ?? "System Admin"}</p>
+              <p className="text-[10px] text-[#718096] mt-0.5">{user?.roleName ?? "Super Admin"}</p>
             </div>
-            <ChevronDown size={12} className="text-[#718096]" />
+            <button onClick={onLogout} title="Sign out" className="p-2 text-[#718096] hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+              <LogOut size={15} />
+            </button>
           </div>
         </header>
 
@@ -1579,12 +1755,61 @@ function AdminShell({ screen, setScreen }: { screen: Screen; setScreen: (s: Scre
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("login");
-  const [authed, setAuthed] = useState(false);
+  const [screen, setScreen] = useState<Screen>(auth.isAuthenticated() ? "dashboard" : "login");
+  const [authed, setAuthed] = useState(auth.isAuthenticated());
+  const [user, setUser] = useState<LoginUser | null>(auth.getCurrentUser());
+  const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
+  const [editingApplicant, setEditingApplicant] = useState<Applicant | null>(null);
+
+  const handleSelectApplicant = useCallback((a: Applicant) => {
+    setSelectedApplicant(a);
+    setScreen("applicant-detail");
+  }, []);
+
+  const handleEditApplicant = useCallback((a: Applicant) => {
+    setEditingApplicant(a);
+    setScreen("registration");
+  }, []);
+
+  const handleAddApplicant = useCallback(() => {
+    setEditingApplicant(null);
+    setScreen("registration");
+  }, []);
+
+  const handleToggleApplicantActive = useCallback(async (a: Applicant) => {
+    await changeApplicantStatus(a.applicantId);
+    setScreen("applicants");
+  }, []);
 
   if (!authed) {
-    return <LoginScreen onLogin={() => { setAuthed(true); setScreen("dashboard"); }} />;
+    return (
+      <LoginScreen
+        onLogin={(loggedInUser) => {
+          setUser(loggedInUser);
+          setAuthed(true);
+          setScreen("dashboard");
+        }}
+      />
+    );
   }
 
-  return <AdminShell screen={screen} setScreen={setScreen} />;
+  return (
+    <AdminShell
+      screen={screen}
+      setScreen={setScreen}
+      user={user}
+      onLogout={() => {
+        auth.logout();
+        setUser(null);
+        setAuthed(false);
+        setScreen("login");
+      }}
+      selectedApplicant={selectedApplicant}
+      editingApplicant={editingApplicant}
+      onSelectApplicant={handleSelectApplicant}
+      onEditApplicant={handleEditApplicant}
+      onAddApplicant={handleAddApplicant}
+      onToggleApplicantActive={handleToggleApplicantActive}
+    />
+  );
 }
