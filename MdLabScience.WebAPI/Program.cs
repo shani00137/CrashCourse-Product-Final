@@ -35,6 +35,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine($"[JWT] Token rejected: {context.Exception?.Message}");
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                Console.WriteLine($"[JWT] Challenge sent for: {context.HttpContext.Request.Path}");
+                return Task.CompletedTask;
+            }
+        };
     });
 builder.Services.AddAuthorization();
 
@@ -68,6 +81,7 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.MapOpenApi();
+app.UseCors("Frontend");
 //swagger UI finalzed
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -84,7 +98,6 @@ foreach (var dir in staticDirs)
         });
     }
 }
-app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 

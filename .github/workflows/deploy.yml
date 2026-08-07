@@ -2,7 +2,7 @@ name: Deploy to SmarterASP
 
 on:
   push:
-    branches: [main]
+    branches: [cources-and-applicants]
   workflow_dispatch:
 
 env:

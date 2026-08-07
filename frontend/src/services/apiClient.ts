@@ -12,6 +12,17 @@ export class ApiError extends Error {
   }
 }
 
+const AUTH_EXPIRED_EVENT = "mds_auth_expired";
+
+export function notifyAuthExpired(): void {
+  window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
+}
+
+export function onAuthExpired(cb: () => void): () => void {
+  window.addEventListener(AUTH_EXPIRED_EVENT, cb);
+  return () => window.removeEventListener(AUTH_EXPIRED_EVENT, cb);
+}
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers = new Headers(options.headers);
@@ -30,6 +41,10 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
       `Cannot reach the server. Make sure the API is running at ${API_BASE_URL}.`,
       0,
     );
+  }
+
+  if (response.status === 401) {
+    notifyAuthExpired();
   }
 
   if (!response.ok) {

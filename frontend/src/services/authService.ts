@@ -27,8 +27,21 @@ export function logout(): void {
   clearAuth();
 }
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const base64Url = token.split(".")[1] ?? "";
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(window.atob(base64)) as { exp?: number };
+    if (typeof payload?.exp !== "number") return false;
+    return payload.exp * 1000 <= Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export function isAuthenticated(): boolean {
-  return Boolean(getToken());
+  const token = getToken();
+  return Boolean(token) && !isTokenExpired(token);
 }
 
 export function getCurrentUser(): LoginUser | null {

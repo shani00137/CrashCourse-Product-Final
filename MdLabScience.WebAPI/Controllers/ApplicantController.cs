@@ -363,10 +363,13 @@ namespace MdLabScience.Controllers
                         Query.CountryId = value.CountryId;
                         if (!String.IsNullOrEmpty(value.PhotoUrl))
                         {
-                            var oldPath = Path.Combine(_env.ContentRootPath, Query.PhotoUrl);
-                            if (System.IO.File.Exists(oldPath))
+                            if (!String.IsNullOrEmpty(Query.PhotoUrl))
                             {
-                                System.IO.File.Delete(oldPath);
+                                var oldPath = Path.Combine(_env.ContentRootPath, Query.PhotoUrl);
+                                if (System.IO.File.Exists(oldPath))
+                                {
+                                    System.IO.File.Delete(oldPath);
+                                }
                             }
                             byte[] ImageBytes = Convert.FromBase64String(value.PhotoUrl);
                             string folder = Path.Combine(_env.ContentRootPath, "Images", "Applicant");
