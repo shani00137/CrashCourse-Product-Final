@@ -16,6 +16,8 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    env:
+      VITE_API_URL: https://development.crashcourseonlin.net
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
