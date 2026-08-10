@@ -64,7 +64,7 @@ class LoginController extends GetxController with BaseController {
             myList.insert(4, '${loginInfoList[0].mobile}');
             myList.insert(5, '${loginInfoList[0].applicantId}');
             hideLoading();
-            saveToLocalStorage(myList);
+            saveToLocalStorage(myList, loginInfoList[0].userToken);
             _registerNotification(loginInfoList[0].appUserId);
       
             Get.offAllNamed("/home");
@@ -81,9 +81,10 @@ class LoginController extends GetxController with BaseController {
       }
   }
 
-  void saveToLocalStorage(List<String> myList) async {
+  void saveToLocalStorage(List<String> myList, String? jwt) async {
     final box = GetStorage();
     box.write('token', myList);
+    box.write('jwt', jwt ?? '');
     box.write('isLogin', true);
     box.write('isNotification', true);
   }

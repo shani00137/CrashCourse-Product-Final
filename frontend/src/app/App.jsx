@@ -11,6 +11,7 @@ function App() {
   const [user, setUser] = useState(auth.getCurrentUser());
   const [selectedApplicant, setSelectedApplicant] = useState(null);
   const [editingApplicant, setEditingApplicant] = useState(null);
+  const [questionForm, setQuestionForm] = useState(null);
 
   const handleSelectApplicant = useCallback(a => {
     setSelectedApplicant(a);
@@ -25,6 +26,16 @@ function App() {
   const handleAddApplicant = useCallback(() => {
     setEditingApplicant(null);
     setScreen("registration");
+  }, []);
+
+  const handleAddQuestion = useCallback(() => {
+    setQuestionForm({ question: null });
+    setScreen("question-form");
+  }, []);
+
+  const handleEditQuestion = useCallback(q => {
+    setQuestionForm({ question: q });
+    setScreen("question-form");
   }, []);
 
   const handleToggleApplicantActive = useCallback(async a => {
@@ -67,9 +78,12 @@ function App() {
       }}
       selectedApplicant={selectedApplicant}
       editingApplicant={editingApplicant}
+      questionForm={questionForm}
       onSelectApplicant={handleSelectApplicant}
       onEditApplicant={handleEditApplicant}
       onAddApplicant={handleAddApplicant}
+      onAddQuestion={handleAddQuestion}
+      onEditQuestion={handleEditQuestion}
       onToggleApplicantActive={handleToggleApplicantActive}
     />
   );

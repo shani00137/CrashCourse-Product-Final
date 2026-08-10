@@ -20,14 +20,14 @@ class DialogHelper {
               children: [
                 Text(
                   title,
-                  style: Get.textTheme.headline6,
+                  style: Get.textTheme.titleLarge,
                 ),
                 SizedBox(
                   height: 10,
                 ),
                 Text(
                   description ?? '',
-                  style: Get.textTheme.headline6,
+                  style: Get.textTheme.titleLarge,
                 ),
                 SizedBox(
                   height: 10,

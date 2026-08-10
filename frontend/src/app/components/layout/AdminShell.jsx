@@ -31,6 +31,8 @@ import { RegistrationScreen } from "../views/registration/Registration";
 import { InvoiceScreen } from "../views/applicants/Invoices";
 import { CoursesScreen } from "../views/courses/Courses";
 import { QuestionBankScreen } from "../views/courses/QuestionBank";
+import { QuestionFormScreen } from "../views/courses/QuestionForm";
+import { GenerateAIQuestionScreen } from "../views/courses/GenerateAIQuestion";
 import { CreateTestScreen } from "../views/courses/CreateTest";
 import { MobileUsersScreen } from "../views/users/MobileUsers";
 import { RolesScreen } from "../views/users/Roles";
@@ -82,7 +84,7 @@ const navGroups = [
   },
 ];
 
-export function AdminShell({ screen, setScreen, user, onLogout, selectedApplicant, editingApplicant, onSelectApplicant, onEditApplicant, onAddApplicant, onToggleApplicantActive }) {
+export function AdminShell({ screen, setScreen, user, onLogout, selectedApplicant, editingApplicant, questionForm, onSelectApplicant, onEditApplicant, onAddApplicant, onAddQuestion, onEditQuestion, onToggleApplicantActive }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
@@ -94,6 +96,8 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     invoice: ["Applicants", "Invoices"],
     courses: ["Courses & Exams", "Courses"],
     "question-bank": ["Courses & Exams", "Question Bank"],
+    "question-form": ["Courses & Exams", questionForm?.question?.questionId ? "Edit Question" : "Add Question"],
+    "generate-ai-question": ["Courses & Exams", "Generate with AI"],
     "create-test": ["Courses & Exams", "Create Test"],
     "mobile-users": ["Users & Access", "Mobile Users"],
     roles: ["Users & Access", "Roles & Permissions"],
@@ -127,8 +131,10 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     registration: <RegistrationScreen applicant={editingApplicant} onDone={() => setScreen("applicants")} />,
     invoice: <InvoiceScreen />,
     courses: <CoursesScreen />,
-    "question-bank": <QuestionBankScreen />,
-    "create-test": <CreateTestScreen />,
+    "question-bank": <QuestionBankScreen setScreen={setScreen} onAdd={onAddQuestion} onEdit={onEditQuestion} />,
+    "question-form": <QuestionFormScreen question={questionForm?.question ?? null} onBack={() => setScreen("question-bank")} />,
+    "generate-ai-question": <GenerateAIQuestionScreen onBack={() => setScreen("question-bank")} />,
+    "create-test": <CreateTestScreen user={user} />,
     "mobile-users": <MobileUsersScreen />,
     roles: <RolesScreen />,
     "user-accounts": <UserAccountsScreen />,

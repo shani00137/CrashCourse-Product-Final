@@ -2,6 +2,8 @@ using ClosedXML.Excel;
 using EMCQWebApi.Models;
 using ExcelDataReader;
 using MdLabScience.DbContext;
+using MdLabScience.Models;
+using MdLabScience.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -29,36 +31,62 @@ namespace MdLabScience.Controllers
             _env = env;
         }
 
-        [HttpGet]
-        [Route("api/Questions/GetAllQuestions/{CourseId}")]
-        public IActionResult GetAllQuestions(int CourseId)
+        [HttpPost]
+        [Route("api/Questions/GetAllQuestions")]
+        public IActionResult GetAllQuestions([FromBody] PaginationFilter filter)
         {
-            var Query = (dynamic)null;
             try
             {
                 using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
                 {
-                    Query = (from c in db.QuestionsTBs
-                             join q in db.CourseTbs on c.CourseId equals q.CourseId
-                             where c.CourseId == CourseId
-                             select new
-                             {
-                                 c.QuestionContent,
-                                 c.QuestionId,
-                                 c.DateTime,
-                                 c.CourseId,
-                                 q.CourseName,
-                                 IsSelected = false,
-                                 QuestionOptions = db.QuestionOptionsTbs.Where(x => x.QuestionId == c.QuestionId).ToList(),
-                             }).OrderBy(x => x.QuestionId).ToList();
-                    return Ok(Query);
+                    var filtered = (from c in db.QuestionsTBs
+                                    where (filter.CourseId == null || c.CourseId == filter.CourseId)
+                                          && (string.IsNullOrEmpty(filter.SearchTerm) || c.QuestionContent.Contains(filter.SearchTerm))
+                                    select c);
+
+                    var totalRecords = filtered.Count();
+
+                    var pagedQuestionIds = filtered.AsNoTracking()
+                        .OrderBy(c => c.QuestionId)
+                        .Select(c => c.QuestionId)
+                        .Skip((filter.PageNumber - 1) * filter.PageSize)
+                        .Take(filter.PageSize)
+                        .ToList();
+
+                    var rows = (from c in db.QuestionsTBs.AsNoTracking()
+                                join q in db.CourseTbs.AsNoTracking() on c.CourseId equals q.CourseId
+                                where pagedQuestionIds.Contains(c.QuestionId)
+                                select new
+                                {
+                                    c.QuestionContent,
+                                    c.QuestionId,
+                                    c.DateTime,
+                                    c.CourseId,
+                                    q.CourseName
+                                }).OrderBy(x => x.QuestionId).ToList();
+
+                    var options = db.QuestionOptionsTbs.AsNoTracking()
+                        .Where(o => o.QuestionId != null && pagedQuestionIds.Contains(o.QuestionId.Value))
+                        .ToList();
+
+                    var Query = rows.Select(r => new
+                    {
+                        r.QuestionContent,
+                        r.QuestionId,
+                        r.DateTime,
+                        r.CourseId,
+                        r.CourseName,
+                        IsSelected = false,
+                        QuestionOptions = options.Where(o => o.QuestionId == r.QuestionId).ToList()
+                    }).ToList();
+
+                    return Ok(new PagedResponse<List<object>>(Query.Cast<object>().ToList(), filter.PageNumber, filter.PageSize, totalRecords));
                 }
             }
             catch (Exception ex)
             {
-                Query = ex.ToString();
+                return Ok(ex.ToString());
             }
-            return Ok(Query);
         }
 
         [HttpGet]

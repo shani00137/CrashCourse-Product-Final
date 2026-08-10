@@ -7,6 +7,7 @@ import 'package:crushapp/app/models/courseModel.dart';
 import 'package:crushapp/app/models/excerciseModel.dart';
 import 'package:crushapp/app/models/questionmodel.dart';
 import 'package:crushapp/app/models/testhistorymodel.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import '../../helper/applicaitonexceptions.dart';
 import '../../models/CourseMaterialMD.dart';
@@ -15,13 +16,32 @@ import '../../models/loginModel.dart';
 
 class ApiProvide {
   static String appBaseUrl = "https://crashcourseonlin.net/";
+
+  Map<String, String>? _authHeaders() {
+    final box = GetStorage();
+    final jwt = box.read('jwt')?.toString().trim() ?? '';
+    if (jwt.isEmpty) return null;
+    return {'Authorization': 'Bearer $jwt'};
+  }
+
+  Future<http.Response> _get(Uri url) {
+    return http
+        .get(url, headers: _authHeaders())
+        .timeout(const Duration(seconds: 60));
+  }
+
+  Future<http.Response> _post(Uri url, dynamic body) {
+    return http
+        .post(url, body: body, headers: _authHeaders())
+        .timeout(const Duration(seconds: 60));
+  }
+
   Future<List<LoginModel>> getchLoginInformation(data) async {
     var responseJson = "";
     try {
       var url = Uri.parse('${appBaseUrl}api/login/AppUserDetails');
 
-      var response =
-          await http.post(url, body: data).timeout(const Duration(seconds: 60));
+      var response = await _post(url, data);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -47,7 +67,7 @@ class ApiProvide {
       var url = Uri.parse('${appBaseUrl}api/AppUser/UpdateToken');
 
       var response =
-          await http.post(url, body: data).timeout(const Duration(seconds: 60));
+          await _post(url, data);
       if (response.statusCode == 200) {
         responseJson = response.body;
       }
@@ -69,7 +89,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/TakeTest/GetTestHistory/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -94,7 +114,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/Applicant/GetApplicantCourses/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -119,7 +139,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/Course/GetCourseMaterial/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -144,7 +164,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/Course/GetAllExercise');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -169,7 +189,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/AppUser/GetActiveAppUser');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -194,7 +214,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/TakeTest/GetAppUserTestResult/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -219,7 +239,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/AppUser/UserPendingExamCount/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return responseJson;
@@ -242,7 +262,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/AppUser/CheckAppUserStatus/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return responseJson;
@@ -266,7 +286,7 @@ class ApiProvide {
       var url =
           Uri.parse('${appBaseUrl}api/Applicant/ApplicantCompleteProfile/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return responseJson;
@@ -292,7 +312,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/AppUser/GetChatMessage/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -319,7 +339,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/AppUser/SeenMessage/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {}
     } on SocketException catch (e) {
       throw FetchDataException('No Internet connection');
@@ -338,7 +358,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/TakeTest/TakeTestByUser/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -363,7 +383,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/TakeTest/SaveTest/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return responseJson;
@@ -385,10 +405,8 @@ class ApiProvide {
     var responseJson = "";
     try {
       var url = Uri.parse('${appBaseUrl}api/TakeTest/UserTestUpdate');
-
-      var response = await http
-          .post(url, body: details)
-          .timeout(const Duration(seconds: 60));
+      var response =
+          await _post(url, details);
       if (response.statusCode == 200) {}
     } on SocketException catch (e) {
       throw FetchDataException('No Internet connection');
@@ -407,7 +425,7 @@ class ApiProvide {
     try {
       var url = Uri.parse('${appBaseUrl}api/TakeTest/GetTestSummary/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -434,7 +452,7 @@ class ApiProvide {
       var url = Uri.parse(
           '${appBaseUrl}api/Questions/TakeExercise/$start,$end,$courseid');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -460,7 +478,7 @@ class ApiProvide {
       var url = Uri.parse('${appBaseUrl}api/AppUser/ChatMessageSend');
 
       var response =
-          await http.post(url, body: data).timeout(const Duration(seconds: 60));
+          await _post(url, data);
       if (response.statusCode == 200) {
         responseJson = response.body;
       }
@@ -482,6 +500,8 @@ class ApiProvide {
       var url =
           Uri.parse('${appBaseUrl}api/Applicant/UpdateApplicantsServices');
       http.MultipartRequest request = new http.MultipartRequest("POST", url);
+      final _h = _authHeaders();
+      if (_h != null) request.headers.addAll(_h);
 
       http.MultipartFile multipartFile = await http.MultipartFile.fromPath(
           'Photo', file.path,
@@ -512,7 +532,7 @@ class ApiProvide {
       var url =
           Uri.parse('${appBaseUrl}api/Applicant/GetApplicantServiceById/$id');
 
-      var response = await http.get(url).timeout(const Duration(seconds: 60));
+      var response = await _get(url);
       if (response.statusCode == 200) {
         responseJson = response.body;
         return (json.decode(response.body) as List)
@@ -537,6 +557,8 @@ class ApiProvide {
       var url =
           Uri.parse('${appBaseUrl}api/Applicant/SaveUserScreenShot');
       http.MultipartRequest request = new http.MultipartRequest("POST", url);
+      final _h = _authHeaders();
+      if (_h != null) request.headers.addAll(_h);
 
       http.MultipartFile multipartFile = await http.MultipartFile.fromPath(
           'Photo', file.path,

@@ -25,10 +25,11 @@ namespace MdLabScience.Controllers
         {
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
-                var query = (from c in db.AppUserTbs
+                var query = from c in db.AppUserTbs
                              join d in db.ApplicantsTbs on c.ApplicantId equals d.ApplicantId
-                             where (string.IsNullOrEmpty(filter.SearchTerm) || c.UserName.Contains(filter.SearchTerm))
-                                    && (string.IsNullOrEmpty(filter.SearchTerm) || d.FirstName.Contains(filter.SearchTerm))
+                             where (string.IsNullOrEmpty(filter.SearchTerm) || c.UserName.Contains(filter.SearchTerm)
+                                    || d.FirstName.Contains(filter.SearchTerm) || d.LastName.Contains(filter.SearchTerm))
+                             orderby c.Status descending, c.AppUserRecordId descending
                              select new AppUserModel
                              {
                                  ApplicantId = c.ApplicantId,
@@ -43,7 +44,7 @@ namespace MdLabScience.Controllers
                                  PhotoUrl = d.PhotoUrl,
                                  Mobile = d.Mobile,
                                  Address = d.Address
-                             }).OrderByDescending(x => x.Status);
+                             };
 
                 var totalRecords = await query.CountAsync();
                 var pagedData = await query.Skip((filter.PageNumber - 1) * filter.PageSize)

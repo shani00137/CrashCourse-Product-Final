@@ -15,6 +15,6 @@ namespace MdLabScience.DbContext
         public int Duration { get; set; }
         public Nullable<System.DateTime> TestStartTime { get; set; }
         public Nullable<int> RightQuestions { get; set; }
-        public string Remarks { get; set; }
+        public string? Remarks { get; set; }
     }
 }

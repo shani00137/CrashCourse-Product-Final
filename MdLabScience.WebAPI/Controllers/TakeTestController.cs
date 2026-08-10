@@ -53,8 +53,11 @@ namespace MdLabScience.Controllers
                             db.SaveChanges();
 
                             var AppInformaiton = db.AppUserTbs.Where(x => x.ApplicantId == q).FirstOrDefault();
-                            String _message = "Dear Mr/Mrs " + AppInformaiton.UserName + "A new Exam has been generated for you, please check and take exam. best of luck..";
-                            PushNotification.PushNotificationTOuser(AppInformaiton.Token, _message, "Exam Test.");
+                            if (AppInformaiton != null)
+                            {
+                                String _message = "Dear Mr/Mrs " + AppInformaiton.UserName + "A new Exam has been generated for you, please check and take exam. best of luck..";
+                                PushNotification.PushNotificationTOuser(AppInformaiton.Token, _message, "Exam Test.");
+                            }
                             var RandomQuestions = db.QuestionsTBs.Where(x => x.CourseId == value.CourseId).OrderBy(x => Guid.NewGuid()).Take(value.Questions).ToList();
                             foreach (var m in RandomQuestions)
                             {
@@ -110,8 +113,11 @@ namespace MdLabScience.Controllers
                             db.AppUserTestTbs.Add(appUserTest);
                             db.SaveChanges();
                             var AppInformaiton = db.AppUserTbs.Where(x => x.ApplicantId == q.ApplicantId).FirstOrDefault();
-                            String _message = "Dear Mr/Mrs " + AppInformaiton.UserName + "A new Exam has been generated for you, please check and take exam. best of luck..";
-                            PushNotification.PushNotificationTOuser(AppInformaiton.Token, _message, "Exam Test.");
+                            if (AppInformaiton != null)
+                            {
+                                String _message = "Dear Mr/Mrs " + AppInformaiton.UserName + "A new Exam has been generated for you, please check and take exam. best of luck..";
+                                PushNotification.PushNotificationTOuser(AppInformaiton.Token, _message, "Exam Test.");
+                            }
                             var RandomQuestions = db.QuestionsTBs.Where(x => x.CourseId == value.CourseId).OrderBy(x => Guid.NewGuid()).Take(value.Questions).ToList();
                             foreach (var m in RandomQuestions)
                             {
@@ -205,39 +211,49 @@ namespace MdLabScience.Controllers
 
         [HttpGet]
         [Route("api/TakeTest/GetAppUserTest")]
-        public IActionResult GetAppUserTest()
+        public IActionResult GetAppUserTest(int page = 1, int pageSize = 20)
         {
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 20;
+            if (pageSize > 100) pageSize = 100;
+
             List<AppUserTestModel> list = new List<AppUserTestModel>();
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
-                var QuestionQuery = (from c in db.AppUserTestTbs
-                                     join d in db.CourseTbs on c.CourseId equals d.CourseId
-                                     join a in db.ApplicantsTbs on c.ApplicantId equals a.ApplicantId
-                                     select
-                                     new
-                                     {
-                                         c.CreatedBy,
-                                         d.CourseName,
-                                         c.IsCompleted,
-                                         c.TestDate,
-                                         c.TestId,
-                                         c.Questions,
-                                         c.Duration,
-                                         a.FirstName,
-                                         a.LastName,
-                                         c.CreatedDate,
-                                         c.TestStartTime,
-                                         c.RightQuestions,
-                                         c.Remarks,
-                                     }
-                                  ).OrderByDescending(x => x.TestId).Take(100).ToList();
+                var BaseQuery = (from c in db.AppUserTestTbs
+                                 join d in db.CourseTbs on c.CourseId equals d.CourseId
+                                 join a in db.ApplicantsTbs on c.ApplicantId equals a.ApplicantId
+                                 select
+                                 new
+                                 {
+                                     c.CreatedBy,
+                                     d.CourseName,
+                                     c.IsCompleted,
+                                     c.TestDate,
+                                     c.TestId,
+                                     c.Questions,
+                                     c.Duration,
+                                     a.FirstName,
+                                     a.LastName,
+                                     c.CreatedDate,
+                                     c.TestStartTime,
+                                     c.RightQuestions,
+                                     c.Remarks,
+                                 });
+
+                int total = BaseQuery.Count();
+                var QuestionQuery = BaseQuery
+                                  .OrderByDescending(x => x.TestId)
+                                  .Skip((page - 1) * pageSize)
+                                  .Take(pageSize)
+                                  .ToList();
 
                 foreach (var q in QuestionQuery)
                 {
                     int Percentage = 0;
-                    if (q.IsCompleted == true)
+                    if (q.IsCompleted == true && q.Questions > 0)
                     {
-                        double value = (double.Parse(q.RightQuestions.ToString()) / double.Parse(q.Questions.ToString()));
+                        double value = ((double)(q.RightQuestions ?? 0) / (double)q.Questions);
                         double NetPercentage = value * 100;
                         Percentage = (int)NetPercentage;
                     }
@@ -278,7 +294,7 @@ namespace MdLabScience.Controllers
                         });
                     }
                 }
-                return Ok(list);
+                return Ok(new { data = list, total = total, page = page, pageSize = pageSize });
             }
         }
 
@@ -336,7 +352,7 @@ namespace MdLabScience.Controllers
                                          c.TestId,
                                          c.QuestionContent,
                                          c.QuestionId,
-                                         QuestionOptions = db.TestQuestionOptionTbs.Where(x => x.QuestionId == c.QuestionId && x.TestId == testId)
+                                         QuestionOptions = db.TestQuestionOptionTbs.Where(x => x.QuestionId == c.QuestionId && x.TestId == testId).ToList()
                                      }).ToList();
                 return Ok(QuestionQuery);
             }

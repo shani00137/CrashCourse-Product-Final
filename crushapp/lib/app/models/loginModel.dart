@@ -8,6 +8,7 @@ class LoginModel {
   String? email;
   String? address;
   int? applicantId;
+  String? userToken;
 
   LoginModel(
       {this.username,
@@ -18,7 +19,8 @@ class LoginModel {
       this.mobile,
       this.email,
       this.address,
-      this.applicantId});
+      this.applicantId,
+      this.userToken});
 
   LoginModel.fromJson(Map<String, dynamic> json) {
     username = json['Username'];
@@ -30,6 +32,7 @@ class LoginModel {
     email = json['Email'];
     address = json['Address'];
     applicantId = json['ApplicantId'];
+    userToken = json['UserToken'];
   }
 
   Map<String, dynamic> toJson() {
@@ -44,6 +47,7 @@ class LoginModel {
     data['Email'] = this.email;
     data['Address'] = this.address;
     data['ApplicantId'] = this.address;
+    data['UserToken'] = this.userToken;
     return data;
   }
 }

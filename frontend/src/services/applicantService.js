@@ -26,8 +26,16 @@ async function getCountries() {
 async function getActiveCourses() {
   return apiFetch("/api/Course/api/Course/GetActiveCourse");
 }
+async function getActiveApplicantsByCourse(courseId) {
+  return apiFetch(`/api/Applicant/api/Applicant/GetActiveApplicantsByCourse/${courseId}`);
+}
+async function getActiveApplicants() {
+  return apiFetch("/api/Applicant/api/Applicant/GetActiveApplicants");
+}
 export {
   changeApplicantStatus,
+  getActiveApplicants,
+  getActiveApplicantsByCourse,
   getActiveCourses,
   getApplicants,
   getCountries,
