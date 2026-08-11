@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Route, Routes, Navigate, useNavigate } from "react-router";
+import { Toaster } from "sonner";
 import * as auth from "../services/authService";
 import { onAuthExpired } from "../services/apiClient";
 import { changeApplicantStatus } from "../services/applicantService";
@@ -105,10 +106,13 @@ function ProtectedApp() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/*" element={<ProtectedApp />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/*" element={<ProtectedApp />} />
+      </Routes>
+      <Toaster position="top-right" richColors closeButton />
+    </>
   );
 }
 

@@ -126,10 +126,11 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
         onBack={() => setScreen("applicants")}
         onEdit={onEditApplicant}
         onToggleActive={onToggleApplicantActive}
+        onManageInvoices={() => setScreen("invoice")}
       />
     ),
     registration: <RegistrationScreen applicant={editingApplicant} onDone={() => setScreen("applicants")} />,
-    invoice: <InvoiceScreen />,
+    invoice: <InvoiceScreen key={selectedApplicant?.applicantId ?? "none"} applicant={selectedApplicant} />,
     courses: <CoursesScreen />,
     "question-bank": <QuestionBankScreen setScreen={setScreen} onAdd={onAddQuestion} onEdit={onEditQuestion} />,
     "question-form": <QuestionFormScreen question={questionForm?.question ?? null} onBack={() => setScreen("question-bank")} />,
