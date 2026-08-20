@@ -8,3 +8,7 @@ dist/
 
 # React build copied into the API by CI
 MdLabScience.WebAPI/wwwroot/
+
+# Local secrets and configuration
+appsettings.Development.json
+appsettings.Local.json

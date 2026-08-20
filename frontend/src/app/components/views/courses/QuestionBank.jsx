@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileSpreadsheet,
   Plus,
@@ -12,14 +12,16 @@ import {
   BookOpen,
   Loader2,
   CheckCircle,
-  Sparkles
+  Sparkles,
+  FileUp,
+  Download
 } from "lucide-react";
 import { Btn, BouncingDots, Card, SearchableSelect } from "../../shared/ui";
-import { getAllQuestions, deleteQuestion } from "../../../../services/questionService";
+import { getAllQuestions, deleteQuestion, importQuestions, downloadQuestionModel } from "../../../../services/questionService";
 import { getActiveCourses } from "../../../../services/applicantService";
 import { htmlToText } from "../../../../utils/html";
 
-export function QuestionBankScreen({ setScreen, onAdd, onEdit }) {
+export function QuestionBankScreen({ setScreen, onEdit }) {
   const pageSize = 10;
   const [rows, setRows] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -32,6 +34,9 @@ export function QuestionBankScreen({ setScreen, onAdd, onEdit }) {
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -99,6 +104,40 @@ export function QuestionBankScreen({ setScreen, onAdd, onEdit }) {
     }
   };
 
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "xls" && ext !== "xlsx") {
+      showToast("error", "Please select a valid Excel file (.xls or .xlsx)");
+      return;
+    }
+    setImporting(true);
+    setImportMsg(null);
+    try {
+      const res = await importQuestions(file);
+      const msg = typeof res === "string" ? res : "Import completed";
+      setImportMsg({ type: "success", text: msg });
+      showToast("success", msg);
+      load();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Import failed";
+      setImportMsg({ type: "error", text: msg });
+      showToast("error", msg);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      await downloadQuestionModel("Question");
+    } catch (err) {
+      showToast("error", err instanceof Error ? err.message : "Download failed");
+    }
+  };
+
   const courseOptions = courses.map(c => ({ id: c.courseId, label: `${c.courseCode} — ${c.courseName}` }));
 
   return (
@@ -106,9 +145,14 @@ export function QuestionBankScreen({ setScreen, onAdd, onEdit }) {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-[#1A202C]">MCQ Question Bank</h1>
         <div className="flex gap-2">
-          <Btn variant="outline" icon={<FileSpreadsheet size={14} />}>Import Excel</Btn>
+          <input ref={fileInputRef} type="file" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleImportFile} className="hidden" />
+          <Btn variant="outline" icon={importing ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />} onClick={() => fileInputRef.current?.click()} disabled={importing}>
+            {importing ? "Importing..." : "Import Excel"}
+          </Btn>
+          <Btn variant="outline" icon={<Download size={14} />} onClick={handleDownloadTemplate}>Template</Btn>
+          <Btn variant="outline" icon={<FileUp size={14} />} onClick={() => setScreen("upload-from-pdf")}>Upload from PDF</Btn>
           <Btn variant="outline" icon={<Sparkles size={14} />} onClick={() => setScreen("generate-ai-question")}>Generate with AI</Btn>
-          <Btn variant="primary" icon={<Plus size={14} />} onClick={onAdd}>Add Question</Btn>
+          <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setScreen("question-form")}>Add Question</Btn>
         </div>
       </div>
       <Card className="p-4">
@@ -136,6 +180,14 @@ export function QuestionBankScreen({ setScreen, onAdd, onEdit }) {
           />
         </div>
       </Card>
+
+      {importMsg && (
+        <div className={`flex items-center gap-2 text-xs px-4 py-2.5 rounded-lg border ${importMsg.type === "success" ? "text-emerald-700 bg-emerald-50 border-emerald-200" : "text-red-600 bg-red-50 border-red-100"}`}>
+          {importMsg.type === "success" ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+          {importMsg.text}
+          <button onClick={() => setImportMsg(null)} className="ml-auto p-0.5 hover:opacity-70"><X size={12} /></button>
+        </div>
+      )}
 
       {loading && <Card className="p-4"><BouncingDots label={rows.length ? "Refreshing results…" : "Loading questions…"} /></Card>}
       {!loading && error && (

@@ -22,6 +22,9 @@ import {
   DollarSign,
   BookMarked,
   Activity,
+  FileUp,
+  Sparkles,
+  PlusCircle,
 } from "lucide-react";
 import { Avatar } from "../shared/ui";
 import { DashboardScreen } from "../views/dashboard/Dashboard";
@@ -33,6 +36,7 @@ import { CoursesScreen } from "../views/courses/Courses";
 import { QuestionBankScreen } from "../views/courses/QuestionBank";
 import { QuestionFormScreen } from "../views/courses/QuestionForm";
 import { GenerateAIQuestionScreen } from "../views/courses/GenerateAIQuestion";
+import { UploadFromPdfScreen } from "../views/courses/UploadFromPdf";
 import { CreateTestScreen } from "../views/courses/CreateTest";
 import { MobileUsersScreen } from "../views/users/MobileUsers";
 import { RolesScreen } from "../views/users/Roles";
@@ -60,7 +64,15 @@ const navGroups = [
     label: "Courses & Exams",
     items: [
       { icon: BookOpen, label: "Courses", screen: "courses" },
+    ],
+  },
+  {
+    label: "Questions",
+    items: [
       { icon: ClipboardList, label: "Question Bank", screen: "question-bank" },
+      { icon: PlusCircle, label: "Add Question", screen: "question-form" },
+      { icon: FileUp, label: "Upload from PDF", screen: "upload-from-pdf" },
+      { icon: Sparkles, label: "Generate with AI", screen: "generate-ai-question" },
       { icon: BookMarked, label: "Create Test", screen: "create-test" },
     ],
   },
@@ -95,10 +107,11 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     registration: ["Applicants", "Registration"],
     invoice: ["Applicants", "Invoices"],
     courses: ["Courses & Exams", "Courses"],
-    "question-bank": ["Courses & Exams", "Question Bank"],
-    "question-form": ["Courses & Exams", questionForm?.question?.questionId ? "Edit Question" : "Add Question"],
-    "generate-ai-question": ["Courses & Exams", "Generate with AI"],
-    "create-test": ["Courses & Exams", "Create Test"],
+    "question-bank": ["Questions", "Question Bank"],
+    "question-form": ["Questions", questionForm?.question?.questionId ? "Edit Question" : "Add Question"],
+    "generate-ai-question": ["Questions", "Generate with AI"],
+    "upload-from-pdf": ["Questions", "Upload from PDF"],
+    "create-test": ["Questions", "Create Test"],
     "mobile-users": ["Users & Access", "Mobile Users"],
     roles: ["Users & Access", "Roles & Permissions"],
     "user-accounts": ["Users & Access", "User Accounts"],
@@ -131,9 +144,10 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     registration: <RegistrationScreen applicant={editingApplicant} onDone={() => setScreen("applicants")} />,
     invoice: <InvoiceScreen />,
     courses: <CoursesScreen />,
-    "question-bank": <QuestionBankScreen setScreen={setScreen} onAdd={onAddQuestion} onEdit={onEditQuestion} />,
+    "question-bank": <QuestionBankScreen setScreen={setScreen} onEdit={onEditQuestion} />,
     "question-form": <QuestionFormScreen question={questionForm?.question ?? null} onBack={() => setScreen("question-bank")} />,
     "generate-ai-question": <GenerateAIQuestionScreen onBack={() => setScreen("question-bank")} />,
+    "upload-from-pdf": <UploadFromPdfScreen onBack={() => setScreen("question-bank")} />,
     "create-test": <CreateTestScreen user={user} />,
     "mobile-users": <MobileUsersScreen />,
     roles: <RolesScreen />,
@@ -166,7 +180,11 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
                 return (
                   <button
                     key={item.label}
-                    onClick={() => (item.screen === "registration" ? onAddApplicant() : setScreen(item.screen))}
+                    onClick={() => {
+                      if (item.screen === "registration") return onAddApplicant();
+                      if (item.screen === "question-form") return onAddQuestion();
+                      setScreen(item.screen);
+                    }}
                     title={!sidebarOpen ? item.label : void 0}
                     className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all mb-0.5
                       ${active ? "bg-[#E6F4F4] text-[#0E7C7B] font-semibold" : "text-[#718096] hover:bg-[#F7FAFC] hover:text-[#1A202C]"}

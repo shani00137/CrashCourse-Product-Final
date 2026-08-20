@@ -1,4 +1,7 @@
 using ClosedXML.Excel;
+using Docnet.Core;
+using Docnet.Core.Models;
+using Docnet.Core.Readers;
 using EMCQWebApi.Models;
 using ExcelDataReader;
 using MdLabScience.DbContext;
@@ -7,13 +10,18 @@ using MdLabScience.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OpenCvSharp;
+using OpenAI.Chat;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MdLabScience.Controllers
@@ -25,10 +33,12 @@ namespace MdLabScience.Controllers
     {
         private static TimeZoneInfo Pakistan_Standard_Time = TimeZoneInfo.FindSystemTimeZoneById("Pakistan Standard Time");
         private readonly IWebHostEnvironment _env;
+        private readonly IConfiguration _configuration;
 
-        public QuestionsController(IWebHostEnvironment env)
+        public QuestionsController(IWebHostEnvironment env, IConfiguration configuration)
         {
             _env = env;
+            _configuration = configuration;
         }
 
         [HttpPost]
@@ -603,6 +613,359 @@ namespace MdLabScience.Controllers
                 ResponseMessage = ex.ToString();
             }
             return ResponseMessage;
+        }
+
+        [HttpPost]
+        [Route("api/Questions/OcrPdf")]
+        public async Task<IActionResult> OcrPdf([FromBody] PdfOcrRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request?.ImageBase64))
+                {
+                    return BadRequest("ImageBase64 is required.");
+                }
+
+                string apiKey = _configuration["OpenAI:ApiKey1"];
+                string model = _configuration["OpenAI:Model"] ?? "gpt-4o";
+                if (string.IsNullOrEmpty(apiKey))
+                {
+                    return Ok(new PdfOcrResponse()
+                    {
+                        Succeeded = false,
+                        Message = "OpenAI ApiKey is not configured."
+                    });
+                }
+
+                ChatClient client = new ChatClient(model, apiKey);
+
+                string dataUrl = "data:image/png;base64," + request.ImageBase64;
+
+                ChatCompletion completion = await client.CompleteChatAsync(new UserChatMessage(
+                    ChatMessageContentPart.CreateTextPart(
+                        "Extract all text from this image exactly as written. Preserve line breaks, numbering, indentation, and reading order. Return only the extracted text with no commentary, formatting, or markdown."),
+                    ChatMessageContentPart.CreateImagePart(new Uri(dataUrl))));
+
+                string text = string.Join("\n", completion.Content.Select(c => c.Text));
+
+                return Ok(new PdfOcrResponse()
+                {
+                    Succeeded = true,
+                    FullText = text,
+                    Pages = new List<PdfOcrPageResult>()
+                    {
+                        new PdfOcrPageResult()
+                        {
+                            PageNumber = 1,
+                            Text = text
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OcrPdf] {ex}");
+                return Ok(new PdfOcrResponse()
+                {
+                    Succeeded = false,
+                    Message = "OCR failed: " + ex.Message
+                });
+            }
+        }
+
+        [HttpPost]
+        [Route("api/Questions/ParseOcrToQuestions")]
+        public async Task<IActionResult> ParseOcrToQuestions([FromBody] ParseOcrRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request?.OcrText))
+                {
+                    return BadRequest("OcrText is required.");
+                }
+
+                string apiKey = _configuration["OpenAI:ApiKey1"];
+                string model = _configuration["OpenAI:Model"] ?? "gpt-4o";
+                if (string.IsNullOrEmpty(apiKey))
+                {
+                    return Ok(new ParseOcrResponse()
+                    {
+                        Succeeded = false,
+                        Message = "OpenAI ApiKey is not configured."
+                    });
+                }
+
+                ChatClient client = new ChatClient(model, apiKey);
+
+                string prompt = @"You are an expert exam question parser. Given the OCR text extracted from a PDF exam page, parse it into structured MCQ questions.
+
+Rules:
+1. Sort questions in their original order (Q1, Q2, Q3...).
+2. Each question has exactly 4 options (A, B, C, D).
+3. Mark exactly one option as the correct answer (correctIndex: 0=A, 1=B, 2=C, 3=D).
+4. Add a brief explanation for the correct answer (max 200 words).
+5. Preserve the original question text and option text as closely as possible.
+6. If the OCR text is messy, clean up obvious OCR errors but keep the original meaning.
+7. Return ONLY valid JSON, no commentary.
+
+Return a JSON array with this exact structure:
+[
+  {
+    ""questionContent"": ""question text here"",
+    ""options"": [
+      { ""text"": ""option A text"" },
+      { ""text"": ""option B text"" },
+      { ""text"": ""option C text"" },
+      { ""text"": ""option D text"" }
+    ],
+    ""correctIndex"": 0,
+    ""explanation"": ""brief explanation of the correct answer""
+  }
+]
+
+OCR Text:
+" + request.OcrText;
+
+                ChatCompletion completion = await client.CompleteChatAsync(new UserChatMessage(prompt));
+                string responseText = string.Join("", completion.Content.Select(c => c.Text));
+
+                responseText = responseText.Trim();
+                if (responseText.StartsWith("```"))
+                {
+                    responseText = responseText.Substring(responseText.IndexOf('\n') + 1);
+                    if (responseText.EndsWith("```"))
+                    {
+                        responseText = responseText.Substring(0, responseText.LastIndexOf("```"));
+                    }
+                    responseText = responseText.Trim();
+                }
+
+                var questions = System.Text.Json.JsonSerializer.Deserialize<List<ParsedQuestionItem>>(responseText,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                return Ok(new ParseOcrResponse()
+                {
+                    Succeeded = true,
+                    Questions = questions ?? new List<ParsedQuestionItem>()
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ParseOcrToQuestions] {ex}");
+                return Ok(new ParseOcrResponse()
+                {
+                    Succeeded = false,
+                    Message = "Failed to parse questions: " + ex.Message
+                });
+            }
+        }
+
+        [HttpPost]
+        [Route("api/Questions/BulkSaveQuestions")]
+        public IActionResult BulkSaveQuestions([FromBody] BulkSaveRequest request)
+        {
+            try
+            {
+                if (request?.Questions == null || request.Questions.Count == 0)
+                {
+                    return BadRequest("No questions to save.");
+                }
+
+                int savedCount = 0;
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    foreach (var q in request.Questions)
+                    {
+                        var GetMaxNo = (from c in db.QuestionsTBs select c.QuestionId).ToList();
+                        int QuestionId = 1;
+                        if (GetMaxNo.Count > 0)
+                        {
+                            QuestionId = 1 + int.Parse(GetMaxNo.Max().ToString());
+                        }
+
+                        QuestionsTB Qt = new QuestionsTB();
+                        Qt.QuestionContent = q.QuestionContent;
+                        Qt.QuestionId = QuestionId;
+                        Qt.CourseId = request.CourseId;
+                        Qt.DateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
+                        db.QuestionsTBs.Add(Qt);
+                        db.SaveChanges();
+
+                        if (q.QuestionOptionsList != null)
+                        {
+                            foreach (var opt in q.QuestionOptionsList)
+                            {
+                                QuestionOptionsTb Qto = new QuestionOptionsTb();
+                                Qto.QuestionId = QuestionId;
+                                Qto.Options = opt.Options;
+                                Qto.IsRightAns = opt.IsRightAns;
+                                db.QuestionOptionsTbs.Add(Qto);
+                                db.SaveChanges();
+                            }
+                        }
+                        savedCount++;
+                    }
+                }
+
+                return Ok($"Successfully saved {savedCount} questions.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BulkSaveQuestions] {ex}");
+                return StatusCode(500, "Failed to save questions: " + ex.Message);
+            }
+        }
+
+        [HttpPost]
+        [Route("api/Questions/GenerateAiQuestions")]
+        public async Task<IActionResult> GenerateAiQuestions([FromBody] GenerateAiRequest request)
+        {
+            try
+            {
+                if (request == null || request.CourseId <= 0)
+                {
+                    return BadRequest("CourseId is required.");
+                }
+
+                int count = Math.Clamp(request.Count, 1, 50);
+                string difficulty = string.IsNullOrWhiteSpace(request.Difficulty) ? "Medium" : request.Difficulty;
+                string courseName = "";
+                string existingQuestionsJson = "";
+
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var course = db.CourseTbs.FirstOrDefault(c => c.CourseId == request.CourseId);
+                    if (course == null)
+                    {
+                        return BadRequest("Course not found.");
+                    }
+                    courseName = course.CourseName ?? "";
+
+                    if (request.UseDatabase)
+                    {
+                        var dbQuestions = (from q in db.QuestionsTBs
+                                           where q.CourseId == request.CourseId
+                                           select new
+                                           {
+                                               q.QuestionContent,
+                                               Options = db.QuestionOptionsTbs
+                                                   .Where(o => o.QuestionId == q.QuestionId)
+                                                   .Select(o => new { o.Options, o.IsRightAns })
+                                                   .ToList()
+                                           })
+                                           .OrderBy(x => Guid.NewGuid())
+                                           .Take(100)
+                                           .ToList();
+
+                        if (dbQuestions.Count > 0)
+                        {
+                            var sampleList = dbQuestions.Select(q => new
+                            {
+                                question = StripHTML(q.QuestionContent),
+                                options = q.Options.Select(o => new
+                                {
+                                    text = StripHTML(o.Options),
+                                    isCorrect = o.IsRightAns == true
+                                }).ToList()
+                            }).ToList();
+
+                            existingQuestionsJson = System.Text.Json.JsonSerializer.Serialize(sampleList,
+                                new System.Text.Json.JsonSerializerOptions { WriteIndented = false });
+                        }
+                    }
+                }
+
+                string apiKey = _configuration["OpenAI:ApiKey1"];
+                string model = _configuration["OpenAI:Model"] ?? "gpt-4o";
+                if (string.IsNullOrEmpty(apiKey))
+                {
+                    return Ok(new GenerateAiResponse()
+                    {
+                        Succeeded = false,
+                        Message = "OpenAI ApiKey is not configured."
+                    });
+                }
+
+                string dbSection = "";
+                if (!string.IsNullOrEmpty(existingQuestionsJson))
+                {
+                    dbSection = $@"
+
+Here are existing questions from the course database for reference. Use them as inspiration for topic coverage and style, but generate NEW and DIFFERENT questions — do NOT duplicate these:
+
+{existingQuestionsJson}";
+                }
+
+                string customSection = "";
+                if (!string.IsNullOrWhiteSpace(request.Prompt))
+                {
+                    customSection = $@"
+
+Additional instructions from the user: {request.Prompt}";
+                }
+
+                string prompt = $@"You are an expert exam question writer for the course: ""{courseName}"".
+
+Generate exactly {count} multiple-choice questions at **{difficulty}** difficulty level.
+
+Rules:
+1. Each question must have exactly 4 options (A, B, C, D).
+2. Mark exactly one option as the correct answer (correctIndex: 0=A, 1=B, 2=C, 3=D).
+3. Add a brief explanation for the correct answer (max 150 words).
+4. Questions should be clear, unambiguous, and professionally written.
+5. Vary the topics to provide good coverage of the subject matter.
+6. Do NOT repeat or closely paraphrase the same question.
+7. Return ONLY valid JSON, no commentary.{dbSection}{customSection}
+
+Return a JSON array with this exact structure:
+[
+  {{
+    ""questionContent"": ""question text here"",
+    ""options"": [
+      {{ ""text"": ""option A text"" }},
+      {{ ""text"": ""option B text"" }},
+      {{ ""text"": ""option C text"" }},
+      {{ ""text"": ""option D text"" }}
+    ],
+    ""correctIndex"": 0,
+    ""explanation"": ""brief explanation of the correct answer""
+  }}
+]";
+
+                ChatClient client = new ChatClient(model, apiKey);
+
+                ChatCompletion completion = await client.CompleteChatAsync(new UserChatMessage(prompt));
+                string responseText = string.Join("", completion.Content.Select(c => c.Text));
+
+                responseText = responseText.Trim();
+                if (responseText.StartsWith("```"))
+                {
+                    responseText = responseText.Substring(responseText.IndexOf('\n') + 1);
+                    if (responseText.EndsWith("```"))
+                    {
+                        responseText = responseText.Substring(0, responseText.LastIndexOf("```"));
+                    }
+                    responseText = responseText.Trim();
+                }
+
+                var questions = System.Text.Json.JsonSerializer.Deserialize<List<GenerateAiQuestionItem>>(responseText,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                return Ok(new GenerateAiResponse()
+                {
+                    Succeeded = true,
+                    Questions = questions ?? new List<GenerateAiQuestionItem>()
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GenerateAiQuestions] {ex}");
+                return Ok(new GenerateAiResponse()
+                {
+                    Succeeded = false,
+                    Message = "AI generation failed: " + ex.Message
+                });
+            }
         }
 
         [HttpGet]

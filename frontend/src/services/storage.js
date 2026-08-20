@@ -1,5 +1,6 @@
 const TOKEN_KEY = "mds_token";
 const USER_KEY = "mds_user";
+const SCREEN_KEY = "mds_screen";
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -21,11 +22,20 @@ function setStoredUser(user) {
 function clearAuth() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(SCREEN_KEY);
+}
+function getScreen() {
+  return localStorage.getItem(SCREEN_KEY) || "dashboard";
+}
+function setScreen(screen) {
+  localStorage.setItem(SCREEN_KEY, screen);
 }
 export {
   clearAuth,
+  getScreen,
   getStoredUser,
   getToken,
+  setScreen,
   setStoredUser,
   setToken
 };

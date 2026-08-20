@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Route, Routes, Navigate, useNavigate } from "react-router";
 import * as auth from "../services/authService";
+import { getScreen as getStoredScreen, setScreen as setStoredScreen } from "../services/storage";
 import { onAuthExpired } from "../services/apiClient";
 import { changeApplicantStatus } from "../services/applicantService";
 import { LoginScreen } from "./components/views/auth/Login";
@@ -28,10 +29,15 @@ function ProtectedApp() {
   const navigate = useNavigate();
   const [authed, setAuthed] = useState(auth.isAuthenticated());
   const [user, setUser] = useState(auth.getCurrentUser());
-  const [screen, setScreen] = useState("dashboard");
+  const [screen, _setScreen] = useState(getStoredScreen);
   const [selectedApplicant, setSelectedApplicant] = useState(null);
   const [editingApplicant, setEditingApplicant] = useState(null);
   const [questionForm, setQuestionForm] = useState(null);
+
+  const setScreen = useCallback((s) => {
+    _setScreen(s);
+    if (typeof s === "string") setStoredScreen(s);
+  }, []);
 
   const handleSelectApplicant = useCallback(a => {
     setSelectedApplicant(a);
