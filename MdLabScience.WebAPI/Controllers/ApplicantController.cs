@@ -569,8 +569,11 @@ namespace MdLabScience.Controllers
                     }
                 }
             }
-            catch (Exception ex)
+catch (Exception ex)
             {
+                var msg = ex.Message;
+                if (ex.InnerException != null) msg += " | Inner: " + ex.InnerException.Message;
+                return StatusCode(500, new { succeeded = false, message = msg });
             }
             return Ok(_response);
         }
@@ -743,6 +746,57 @@ namespace MdLabScience.Controllers
             }
         }
 
+        [HttpGet]
+        [Route("api/Applicant/GetAllApplicantInvoices")]
+        public IActionResult GetAllApplicantInvoices()
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var Courses = (from c in db.ApplicantInvoiceTBs
+                               join d in db.ApplicantsTbs on c.ApplicantId equals d.ApplicantId
+                               select new
+                               {
+                                   c.PaidAmount,
+                                   c.Currency,
+                                   c.Balance,
+                                   c.InvoiceNo,
+                                   c.InvoiceId,
+                                   c.ApplicantId,
+                                   c.Amount,
+                                   c.Service,
+                                   d.FirstName,
+                                   d.LastName,
+                                   c.Remarks,
+                                   c.DateTime,
+                                   ServiceList = db.CertificateInvoiceTbs.Where(x => x.InvoiceId == c.InvoiceId).ToList()
+                               }).OrderByDescending(x => x.InvoiceId).ToList();
+                return Ok(Courses);
+            }
+        }
+
+        [HttpGet]
+        [Route("api/Applicant/GetApplicantsWithInvoices")]
+        public IActionResult GetApplicantsWithInvoices()
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var result = (from i in db.ApplicantInvoiceTBs
+                              join a in db.ApplicantsTbs on i.ApplicantId equals a.ApplicantId
+                              group new { i, a } by new { a.ApplicantId, a.FirstName, a.LastName, a.RegistrationNo } into g
+                              orderby g.Key.ApplicantId descending
+                              select new
+                              {
+                                  ApplicantId = g.Key.ApplicantId,
+                                  FirstName = g.Key.FirstName,
+                                  LastName = g.Key.LastName,
+                                  RegistrationNo = g.Key.RegistrationNo,
+                                  InvoiceCount = g.Count(),
+                                  TotalAmount = g.Sum(x => x.i.Amount)
+                              }).ToList();
+                return Ok(result);
+            }
+        }
+
         private void RemoveExtraScreenShots(int ApplicantId)
         {
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
@@ -768,7 +822,6 @@ namespace MdLabScience.Controllers
         [Route("api/Applicant/SaveApplicantInvoice")]
         public IActionResult SaveApplicantInvoice([FromBody] ApplicantInvoiceMD value)
         {
-            String _response = "";
             try
             {
                 using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
@@ -810,7 +863,7 @@ namespace MdLabScience.Controllers
                             db.CertificateInvoiceTbs.Add(certificateInvoiceTb);
                             db.SaveChanges();
                         }
-                        return Ok("Update Successfully");
+                        return Ok(new { succeeded = true, message = "Update Successfully", invoiceId = value.InvoiceId, invoiceNo = UpdateQuery.InvoiceNo });
                     }
                     else
                     {
@@ -852,37 +905,72 @@ namespace MdLabScience.Controllers
                             db.CertificateInvoiceTbs.Add(certificateInvoiceTb);
                             db.SaveChanges();
                         }
-                        return Ok("Saved Successfully");
+                        return Ok(new { succeeded = true, message = "Saved Successfully", invoiceId = appliantTransactionsTb.InvoiceId, invoiceNo = appliantTransactionsTb.InvoiceNo });
                     }
                 }
             }
             catch (Exception ex)
             {
-                _response = ex.ToString();
+                var msg = ex.Message;
+                if (ex.InnerException != null) msg += " | Inner: " + ex.InnerException.Message;
+                return StatusCode(500, new { succeeded = false, message = msg });
             }
-            return Ok(_response);
+        }
+
+        [HttpDelete]
+        [Route("api/Applicant/DeleteInvoiceNo/{id}")]
+        public IActionResult DeleteInvoiceNo(int id)
+        {
+            try
+            {
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var DeleteQuery = db.ApplicantInvoiceTBs.Where(x => x.InvoiceId == id).FirstOrDefault();
+                    if (DeleteQuery == null)
+                    {
+                        return NotFound(new { succeeded = false, message = "Invoice not found." });
+                    }
+
+                    db.ApplicantInvoiceTBs.Remove(DeleteQuery);
+
+                    var DeleteTransaction = db.ApplicantTransactionTBs.Where(x => x.Reference == DeleteQuery.InvoiceNo).FirstOrDefault();
+                    if (DeleteTransaction != null)
+                    {
+                        db.ApplicantTransactionTBs.Remove(DeleteTransaction);
+                    }
+
+                    var DeleteLineItems = db.CertificateInvoiceTbs.Where(x => x.InvoiceId == id).ToList();
+                    if (DeleteLineItems.Count > 0)
+                    {
+                        db.CertificateInvoiceTbs.RemoveRange(DeleteLineItems);
+                    }
+
+                    db.SaveChanges();
+
+                    return Ok(new { succeeded = true, message = "Deleted Successfully", invoiceId = id });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { succeeded = false, message = ex.Message });
+            }
         }
 
         [HttpGet]
         [Route("api/Applicant/DeleteInvoiceNo/{id}")]
-        public IActionResult DeleteInvoiceNo(int id)
+        public IActionResult DeleteInvoiceNoLegacy(int id)
         {
-            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            var result = DeleteInvoiceNo(id) as ObjectResult;
+            var message = ((dynamic)result?.Value)?.message;
+            if (result?.StatusCode == 200)
             {
-                var DeleteQuery = db.ApplicantInvoiceTBs.Where(x => x.InvoiceId == id).FirstOrDefault();
-                if (DeleteQuery != null)
-                {
-                    db.ApplicantInvoiceTBs.Remove(DeleteQuery);
-                    db.SaveChanges();
-                }
-                var DeleteTransaction = db.ApplicantTransactionTBs.Where(x => x.Reference == DeleteQuery.InvoiceNo).FirstOrDefault();
-                if (DeleteTransaction != null)
-                {
-                    db.ApplicantTransactionTBs.Remove(DeleteTransaction);
-                    db.SaveChanges();
-                }
-                return Ok("Deleted Successfully");
+                return Ok((string)message);
             }
+            if (result?.StatusCode == 404)
+            {
+                return NotFound((string)message);
+            }
+            return StatusCode(500, (string)message);
         }
 
         [HttpPost]

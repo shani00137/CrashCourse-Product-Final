@@ -37,7 +37,16 @@ async function apiFetch(path, options = {}) {
     notifyAuthExpired();
   }
   if (!response.ok) {
-    throw new ApiError(`Request failed with status ${response.status}.`, response.status);
+    let message = `Request failed with status ${response.status}.`;
+    try {
+      const body = JSON.parse(await response.text());
+      if (body && typeof body.message === "string" && body.message) {
+        message = body.message;
+      }
+    } catch {
+      // non-JSON error body; keep the generic message
+    }
+    throw new ApiError(message, response.status);
   }
   const text = await response.text();
   if (!text) return void 0;

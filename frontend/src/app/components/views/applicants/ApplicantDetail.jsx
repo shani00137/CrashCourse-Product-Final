@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  ArrowRight, Upload, Eye, CheckCircle, Clock, Phone, Mail, MapPin, Hash, Calendar,
+  ArrowRight, Upload, Eye, CheckCircle, Clock, Phone, Mail, MapPin, Hash, Calendar, FileText, AlertCircle,
 } from "lucide-react";
-import { Avatar, Btn, Card, StatusBadge } from "../../shared/ui";
-import { invoices } from "../../../data/mockData";
+import { Avatar, Btn, BouncingDots, Card, StatusBadge } from "../../shared/ui";
+import { getApplicantInvoice } from "../../../../services/applicantInvoiceService";
 
-export function ApplicantDetailScreen({ applicant, onBack, onEdit, onToggleActive }) {
+export function ApplicantDetailScreen({ applicant, onBack, onEdit, onToggleActive, onManageInvoices }) {
   const [activeTab, setActiveTab] = useState("documents");
   const [toggling, setToggling] = useState(false);
+  const [invoices, setInvoices] = useState([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [invoicesError, setInvoicesError] = useState(null);
   const docs = [
     { name: "Degree Certificate", status: "Uploaded" },
     { name: "Matric Certificate", status: "Uploaded" },
@@ -23,6 +26,38 @@ export function ApplicantDetailScreen({ applicant, onBack, onEdit, onToggleActiv
     ? ((applicant.firstName?.[0] ?? "") + (applicant.lastName?.[0] ?? "")).toUpperCase() || "NA"
     : "NA";
   const fmt = (d) => (d ? new Date(d).toLocaleDateString() : "—");
+
+  useEffect(() => {
+    if (!applicant?.applicantId) return;
+    let cancelled = false;
+    setInvoicesLoading(true);
+    setInvoicesError(null);
+    getApplicantInvoice(applicant.applicantId)
+      .then((data) => {
+        if (cancelled) return;
+        setInvoices(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setInvoicesError(err instanceof Error ? err.message : "Failed to load invoices.");
+        setInvoices([]);
+      })
+      .finally(() => {
+        if (!cancelled) setInvoicesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [applicant?.applicantId]);
+
+  const invoiceStatus = (inv) => {
+    const amount = Number(inv.amount) || 0;
+    const paid = Number(inv.paidAmount) || 0;
+    if (amount > 0 && paid >= amount) return "Paid";
+    if (paid <= 0) return "Unpaid";
+    return "Partial";
+  };
+  const money = (v) => (Number(v) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const handleToggle = async () => {
     if (!applicant || toggling) return;
@@ -152,18 +187,39 @@ export function ApplicantDetailScreen({ applicant, onBack, onEdit, onToggleActiv
               )}
               {activeTab === "invoices" && (
                 <div className="flex flex-col gap-2">
-                  {invoices.map(inv => (
-                    <div key={inv.no} className="flex items-center justify-between p-3 rounded-xl border border-[rgba(0,0,0,0.07)] hover:border-[#0E7C7B]/30 transition">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-[#718096]">
+                      {invoicesLoading ? "Loading invoices…" : `${invoices.length} invoice${invoices.length === 1 ? "" : "s"}`}
+                    </p>
+                    <Btn variant="outline" className="text-xs" onClick={() => applicant && onManageInvoices?.(applicant)}>
+                      Manage invoices
+                    </Btn>
+                  </div>
+                  {invoicesLoading && <BouncingDots label="Loading invoices…" />}
+                  {!invoicesLoading && invoicesError && (
+                    <div className="py-8 text-center">
+                      <AlertCircle size={26} className="mx-auto text-red-400 mb-2" />
+                      <p className="text-sm text-red-600 font-medium">{invoicesError}</p>
+                    </div>
+                  )}
+                  {!invoicesLoading && !invoicesError && invoices.length === 0 && (
+                    <div className="py-10 text-center">
+                      <FileText size={30} className="mx-auto text-gray-300 mb-2" />
+                      <p className="text-[#718096] font-medium">No invoices yet</p>
+                    </div>
+                  )}
+                  {!invoicesLoading && !invoicesError && invoices.map(inv => (
+                    <div key={inv.invoiceId} className="flex items-center justify-between p-3 rounded-xl border border-[rgba(0,0,0,0.07)] hover:border-[#0E7C7B]/30 transition">
                       <div>
-                        <p className="text-sm font-medium text-[#1A202C]">{inv.no}</p>
-                        <p className="text-xs text-[#718096]">{inv.service} · {inv.date}</p>
+                        <p className="text-sm font-medium text-[#1A202C] font-mono">{inv.invoiceNo}</p>
+                        <p className="text-xs text-[#718096]">{inv.service || "—"} · {fmt(inv.dateTime)}</p>
                       </div>
                       <div className="text-right flex items-center gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-[#1A202C]">AED {inv.amount}</p>
-                          <p className="text-xs text-[#718096]">Bal: {inv.balance}</p>
+                          <p className="text-sm font-semibold text-[#1A202C]">{inv.currency} {money(inv.amount)}</p>
+                          <p className="text-xs text-[#718096]">Bal: {money(inv.balance)}</p>
                         </div>
-                        <StatusBadge status={inv.status} />
+                        <StatusBadge status={invoiceStatus(inv)} />
                       </div>
                     </div>
                   ))}
