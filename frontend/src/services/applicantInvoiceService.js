@@ -108,15 +108,39 @@ async function getApplicantTransactions(applicantId) {
 }
 
 /**
- * Change an applicant's workflow status.
+ * Change an applicant's workflow status. Reason is required (min 10 chars).
  * @param {number} applicantId
  * @param {number} statusId
- * @returns {Promise<{ succeeded: boolean, applicantId: number, applicationStatusId: number, statusName: string }>}
+ * @param {{ reason: string, category?: string }} payload
+ * @returns {Promise<{ succeeded: boolean, applicantId: number, applicationStatusId: number, statusName: string, message?: string }>}
  */
-async function setApplicantStatus(applicantId, statusId) {
-  return apiFetch(`/api/Applicant/api/Applicant/SetApplicantStatus/${applicantId}/${statusId}`, {
-    method: "POST"
+/**
+ * Record a partial or full payment against an applicant's outstanding invoices.
+ * @param {number} applicantId
+ * @param {{ amount: number, remarks?: string }} payload
+ */
+async function recordApplicantPayment(applicantId, payload) {
+  return apiFetch("/api/Applicant/api/Applicant/RecordApplicantPayment/" + applicantId, {
+    method: "POST",
+    body: JSON.stringify(payload)
   });
+}
+async function setApplicantStatus(applicantId, statusId, payload) {
+  return apiFetch(`/api/Applicant/api/Applicant/SetApplicantStatus/${applicantId}/${statusId}`, {
+    method: "POST",
+    body: JSON.stringify({
+      reason: payload?.reason ?? "",
+      category: payload?.category || null
+    })
+  });
+}
+
+/**
+ * Status change audit trail, newest first.
+ * @param {number} applicantId
+ */
+async function getApplicantStatusHistory(applicantId) {
+  return apiFetch(`/api/Applicant/api/Applicant/GetApplicantStatusHistory/${applicantId}`);
 }
 
 export {
@@ -124,8 +148,10 @@ export {
   getAllApplicantInvoices,
   getApplicantDetail,
   getApplicantInvoice,
+  getApplicantStatusHistory,
   getApplicantTransactions,
   getApplicantsWithInvoices,
+  recordApplicantPayment,
   saveApplicantInvoice,
   setApplicantStatus
 };

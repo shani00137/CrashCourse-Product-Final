@@ -659,20 +659,106 @@ catch (Exception ex)
 
         [HttpPost]
         [Route("api/Applicant/SetApplicantStatus/{applicantId}/{statusId}")]
-        public IActionResult SetApplicantStatus(int applicantId, int statusId)
+        public IActionResult SetApplicantStatus(int applicantId, int statusId, [FromBody] SetApplicantStatusMD body)
         {
+            var reason = (body?.Reason ?? "").Trim();
+            if (reason.Length < 10)
+                return BadRequest(new { succeeded = false, message = "A reason of at least 10 characters is required." });
+
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
+                EnsureStatusTransactionsTable(db);
                 var app = db.ApplicantsTbs.Where(x => x.ApplicantId == applicantId).FirstOrDefault();
                 if (app == null)
                     return NotFound("Applicant not found");
                 var status = db.ApplicationStatusTbs.Where(s => s.ApplicationStatusId == statusId).FirstOrDefault();
                 if (status == null)
                     return BadRequest("Invalid status");
+                if (app.ApplicationStatusId == statusId)
+                    return Ok(new { succeeded = true, applicantId, applicationStatusId = statusId, statusName = status.StatusName, message = "Status unchanged." });
+
+                var oldStatusId = app.ApplicationStatusId;
                 app.ApplicationStatusId = statusId;
+                db.ApplicantStatusTransactionsTbs.Add(new ApplicantStatusTransactionsTb
+                {
+                    ApplicantId = applicantId,
+                    OldStatusId = oldStatusId,
+                    StatusId = statusId,
+                    DateTime = DateTime.Now,
+                    Remarks = reason,
+                    Category = string.IsNullOrWhiteSpace(body?.Category) ? null : body.Category.Trim(),
+                    ChangedBy = User?.Identity?.Name
+                });
                 db.SaveChanges();
-                return Ok(new { succeeded = true, applicantId = applicantId, applicationStatusId = statusId, statusName = status.StatusName });
+                return Ok(new { succeeded = true, applicantId, applicationStatusId = statusId, statusName = status.StatusName, message = "Status updated." });
             }
+        }
+
+        [HttpGet]
+        [Route("api/Applicant/GetApplicantStatusHistory/{id}")]
+        public IActionResult GetApplicantStatusHistory(int id)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                EnsureStatusTransactionsTable(db);
+                var rows = (
+                    from h in db.ApplicantStatusTransactionsTbs
+                    where h.ApplicantId == id
+                    join ns in db.ApplicationStatusTbs on h.StatusId equals ns.ApplicationStatusId into nsg
+                    from ns in nsg.DefaultIfEmpty()
+                    join os in db.ApplicationStatusTbs on h.OldStatusId equals os.ApplicationStatusId into osg
+                    from os in osg.DefaultIfEmpty()
+                    orderby h.DateTime descending, h.StatusTransactionId descending
+                    select new
+                    {
+                        historyId = h.StatusTransactionId,
+                        applicantId = h.ApplicantId,
+                        oldStatusId = h.OldStatusId,
+                        oldStatusName = os != null ? os.StatusName : null,
+                        newStatusId = h.StatusId,
+                        newStatusName = ns != null ? ns.StatusName : null,
+                        reason = h.Remarks,
+                        category = h.Category,
+                        changedBy = h.ChangedBy,
+                        changedAt = h.DateTime
+                    }
+                ).ToList();
+                return Ok(rows);
+            }
+        }
+
+        private static void EnsureStatusTransactionsTable(MdLabScienceDbEntities db)
+        {
+            db.Database.ExecuteSqlRaw(@"
+IF OBJECT_ID(N'dbo.ApplicantStatusTransactionsTb', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ApplicantStatusTransactionsTb (
+        StatusTransactionId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        StatusId INT NULL,
+        [DateTime] DATETIME NULL,
+        Remarks NVARCHAR(MAX) NULL
+    );
+END");
+            db.Database.ExecuteSqlRaw(@"
+IF COL_LENGTH(N'dbo.ApplicantStatusTransactionsTb', N'ApplicantId') IS NULL
+    ALTER TABLE dbo.ApplicantStatusTransactionsTb ADD ApplicantId INT NULL;");
+            db.Database.ExecuteSqlRaw(@"
+IF COL_LENGTH(N'dbo.ApplicantStatusTransactionsTb', N'OldStatusId') IS NULL
+    ALTER TABLE dbo.ApplicantStatusTransactionsTb ADD OldStatusId INT NULL;");
+            db.Database.ExecuteSqlRaw(@"
+IF COL_LENGTH(N'dbo.ApplicantStatusTransactionsTb', N'ChangedBy') IS NULL
+    ALTER TABLE dbo.ApplicantStatusTransactionsTb ADD ChangedBy NVARCHAR(200) NULL;");
+            db.Database.ExecuteSqlRaw(@"
+IF COL_LENGTH(N'dbo.ApplicantStatusTransactionsTb', N'Category') IS NULL
+    ALTER TABLE dbo.ApplicantStatusTransactionsTb ADD Category NVARCHAR(100) NULL;");
+            db.Database.ExecuteSqlRaw(@"
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = N'IX_ApplicantStatusTransactionsTb_ApplicantId'
+      AND object_id = OBJECT_ID(N'dbo.ApplicantStatusTransactionsTb')
+)
+    CREATE INDEX IX_ApplicantStatusTransactionsTb_ApplicantId
+        ON dbo.ApplicantStatusTransactionsTb (ApplicantId);");
         }
 
         [HttpGet]
@@ -780,6 +866,72 @@ catch (Exception ex)
             }
         }
 
+        [HttpPost]
+        [Route("api/Applicant/RecordApplicantPayment/{id}")]
+        public IActionResult RecordApplicantPayment(int id, [FromBody] ApplicantPaymentMD value)
+        {
+            if (value == null || !double.IsFinite(value.Amount) || value.Amount <= 0)
+                return BadRequest(new { succeeded = false, message = "Payment amount must be greater than zero." });
+
+            try
+            {
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                using (var transaction = db.Database.BeginTransaction())
+                {
+                    if (!db.ApplicantsTbs.Any(x => x.ApplicantId == id))
+                        return NotFound(new { succeeded = false, message = "Applicant not found." });
+
+                    var invoices = db.ApplicantInvoiceTBs
+                        .Where(x => x.ApplicantId == id && x.Balance > 0)
+                        .OrderBy(x => x.DateTime)
+                        .ThenBy(x => x.InvoiceId)
+                        .ToList();
+                    var outstanding = invoices.Sum(x => x.Balance ?? 0);
+
+                    if (value.Amount > outstanding + 0.000001)
+                        return BadRequest(new { succeeded = false, message = "Payment cannot exceed the outstanding balance." });
+
+                    var remaining = value.Amount;
+                    foreach (var invoice in invoices)
+                    {
+                        if (remaining <= 0) break;
+                        var applied = Math.Min(remaining, invoice.Balance ?? 0);
+                        invoice.PaidAmount = (invoice.PaidAmount ?? 0) + applied;
+                        invoice.Balance = Math.Max(0, invoice.Amount - (invoice.PaidAmount ?? 0));
+                        remaining -= applied;
+                    }
+
+                    var now = TimeZoneInfo.ConvertTime(DateTime.Now, Pakistan_Standard_Time);
+                    var payment = new ApplicantTransactionTB
+                    {
+                        ApplicantId = id,
+                        Debit = 0,
+                        Credit = value.Amount,
+                        DateTime = now,
+                        Reference = "PAY-" + now.ToString("yyyyMMddHHmmssfff"),
+                        Remarks = string.IsNullOrWhiteSpace(value.Remarks) ? "Applicant payment" : value.Remarks.Trim()
+                    };
+                    db.ApplicantTransactionTBs.Add(payment);
+                    db.SaveChanges();
+                    transaction.Commit();
+
+                    return Ok(new
+                    {
+                        succeeded = true,
+                        message = "Payment recorded successfully.",
+                        amount = value.Amount,
+                        outstandingBalance = Math.Max(0, outstanding - value.Amount),
+                        reference = payment.Reference
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                var message = ex.Message;
+                if (ex.InnerException != null) message += " | Inner: " + ex.InnerException.Message;
+                return StatusCode(500, new { succeeded = false, message });
+            }
+        }
         [HttpGet]
         [Route("api/Applicant/GetApplicantInvoice/{id}")]
         public IActionResult GetApplicantInvoice(int id)
@@ -892,6 +1044,13 @@ catch (Exception ex)
                     var UpdateQuery = db.ApplicantInvoiceTBs.Where(x => x.InvoiceId == value.InvoiceId).FirstOrDefault();
                     if (UpdateQuery != null)
                     {
+                        var originalLedgerEntry = db.ApplicantTransactionTBs
+                            .Where(x => x.Reference == UpdateQuery.InvoiceNo)
+                            .FirstOrDefault();
+                        var externallyApplied = originalLedgerEntry == null
+                            ? 0
+                            : Math.Max(0, (UpdateQuery.PaidAmount ?? 0) - originalLedgerEntry.Credit);
+
                         UpdateQuery.Amount = value.Amount;
                         UpdateQuery.Service = value.Service;
                         UpdateQuery.PaidAmount = value.PaidAmount;
@@ -900,11 +1059,11 @@ catch (Exception ex)
                         UpdateQuery.Currency = value.Currency;
                         db.SaveChanges();
 
-                        var Query = db.ApplicantTransactionTBs.Where(x => x.Reference == value.InvoiceNo).FirstOrDefault();
+                        var Query = originalLedgerEntry;
                         if (Query != null)
                         {
                             Query.Debit = value.Amount;
-                            Query.Credit = (double)value.PaidAmount;
+                            Query.Credit = Math.Max(0, (value.PaidAmount ?? 0) - externallyApplied);
                             Query.Remarks = value.Currency;
                             db.SaveChanges();
                         }

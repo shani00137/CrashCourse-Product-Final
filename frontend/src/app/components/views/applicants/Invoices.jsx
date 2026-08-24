@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, AlertCircle, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, X, AlertCircle, FileText, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Btn, BouncingDots, Card, Input, Modal, SearchableSelect, Select, StatusBadge } from "../../shared/ui";
 import { ServiceMultiSelect } from "../../shared/LookupSelect";
@@ -15,12 +15,15 @@ import {
   getAllApplicantInvoices,
   getApplicantDetail,
   getApplicantInvoice,
+  getApplicantStatusHistory,
   getApplicantTransactions,
+  recordApplicantPayment,
   saveApplicantInvoice,
   setApplicantStatus
 } from "../../../../services/applicantInvoiceService";
 
 const CURRENCIES = ["AED", "SAR", "USD", "GBP", "EUR"];
+const STATUS_CHANGE_CATEGORIES = ["Payment Issue", "Docs Pending", "Manual Review", "Other"];
 
 const emptyForm = () => ({
   service: "",
@@ -56,6 +59,54 @@ function invoiceStatus(inv) {
 
 function validateForm(form) {
   const errors = {};
+  const openPaymentModal = () => {
+    if (ledgerOutstanding <= 0) return;
+    setPaymentAmount("");
+    setPaymentRemarks("");
+    setPaymentError("");
+    setShowPaymentModal(true);
+  };
+
+  const closePaymentModal = () => {
+    if (paymentSaving) return;
+    setShowPaymentModal(false);
+    setPaymentAmount("");
+    setPaymentRemarks("");
+    setPaymentError("");
+  };
+
+  const handlePayment = async () => {
+    const amount = Number(paymentAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPaymentError("Enter a payment amount greater than zero.");
+      return;
+    }
+    if (amount > ledgerOutstanding + 0.000001) {
+      setPaymentError("Payment cannot exceed the outstanding balance.");
+      return;
+    }
+
+    setPaymentSaving(true);
+    setPaymentError("");
+    try {
+      const res = await recordApplicantPayment(drawerApplicant.applicantId, {
+        amount,
+        remarks: paymentRemarks.trim() || undefined
+      });
+      const txns = await getApplicantTransactions(drawerApplicant.applicantId);
+      setDrawerTxns(Array.isArray(txns) ? txns : []);
+      load();
+      setShowPaymentModal(false);
+      setPaymentAmount("");
+      setPaymentRemarks("");
+      toast.success(res?.message || "Payment recorded successfully.");
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Failed to record payment.");
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
+
   const amount = toNumber(form.amount);
   const paidAmount = toNumber(form.paidAmount || 0);
   if (!form.service.trim()) errors.service = "Service is required.";
@@ -115,9 +166,19 @@ export function InvoiceScreen({ applicant }) {
   const [drawerApplicant, setDrawerApplicant] = useState(null);
   const [drawerDetail, setDrawerDetail] = useState(null);
   const [drawerTxns, setDrawerTxns] = useState([]);
+  const [drawerHistory, setDrawerHistory] = useState([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [drawerError, setDrawerError] = useState(null);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState(null);
+  const [statusReason, setStatusReason] = useState("");
+  const [statusCategory, setStatusCategory] = useState("Other");
+  const [statusReasonError, setStatusReasonError] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentRemarks, setPaymentRemarks] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentSaving, setPaymentSaving] = useState(false);
 
   const openDrawer = (applicant) => {
     const applicantId = applicant.applicantId;
@@ -128,29 +189,62 @@ export function InvoiceScreen({ applicant }) {
     });
     setDrawerDetail(null);
     setDrawerTxns([]);
+    setDrawerHistory([]);
     setDrawerError(null);
     setDrawerLoading(true);
     Promise.all([
       getApplicantDetail(applicantId),
-      getApplicantTransactions(applicantId)
+      getApplicantTransactions(applicantId),
+      getApplicantStatusHistory(applicantId).catch(() => [])
     ])
-      .then(([detail, txns]) => {
+      .then(([detail, txns, history]) => {
         setDrawerDetail(detail ?? {});
         setDrawerTxns(Array.isArray(txns) ? txns : []);
+        setDrawerHistory(Array.isArray(history) ? history : []);
       })
       .catch((err) => setDrawerError(err instanceof Error ? err.message : "Failed to load applicant."))
       .finally(() => setDrawerLoading(false));
   };
 
-  const handleStatusChange = async (e) => {
+  const handleStatusSelect = (e) => {
     const newId = Number(e.target.value);
-    if (!drawerApplicant || !newId) return;
+    if (!drawerApplicant || !newId || newId === drawerDetail?.applicationStatusId) return;
+    setPendingStatus({
+      statusId: newId,
+      statusName: statuses.find((s) => s.applicationStatusId === newId)?.statusName ?? ""
+    });
+    setStatusReason("");
+    setStatusCategory("Other");
+    setStatusReasonError("");
+  };
+
+  const closeStatusModal = () => {
+    if (statusSaving) return;
+    setPendingStatus(null);
+    setStatusReason("");
+    setStatusReasonError("");
+  };
+
+  const handleStatusChange = async () => {
+    if (!drawerApplicant || !pendingStatus) return;
+    const reason = statusReason.trim();
+    if (reason.length < 10) {
+      setStatusReasonError("Enter a reason of at least 10 characters.");
+      return;
+    }
     setStatusSaving(true);
     try {
-      const res = await setApplicantStatus(drawerApplicant.applicantId, newId);
-      const name = res?.statusName ?? statuses.find((s) => s.applicationStatusId === newId)?.statusName ?? "";
-      setDrawerDetail((d) => ({ ...d, applicationStatusId: newId, statusName: name }));
+      const res = await setApplicantStatus(drawerApplicant.applicantId, pendingStatus.statusId, {
+        reason,
+        category: statusCategory
+      });
+      const name = res?.statusName ?? pendingStatus.statusName;
+      setDrawerDetail((d) => ({ ...d, applicationStatusId: pendingStatus.statusId, statusName: name }));
+      const history = await getApplicantStatusHistory(drawerApplicant.applicantId).catch(() => []);
+      setDrawerHistory(Array.isArray(history) ? history : []);
       toast.success(res?.message || "Status updated.");
+      setPendingStatus(null);
+      setStatusReason("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update status.");
     } finally {
@@ -335,7 +429,55 @@ export function InvoiceScreen({ applicant }) {
       setFormErrors(errors);
       return;
     }
-    const amount = toNumber(form.amount);
+    const openPaymentModal = () => {
+    if (ledgerOutstanding <= 0) return;
+    setPaymentAmount("");
+    setPaymentRemarks("");
+    setPaymentError("");
+    setShowPaymentModal(true);
+  };
+
+  const closePaymentModal = () => {
+    if (paymentSaving) return;
+    setShowPaymentModal(false);
+    setPaymentAmount("");
+    setPaymentRemarks("");
+    setPaymentError("");
+  };
+
+  const handlePayment = async () => {
+    const amount = Number(paymentAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPaymentError("Enter a payment amount greater than zero.");
+      return;
+    }
+    if (amount > ledgerOutstanding + 0.000001) {
+      setPaymentError("Payment cannot exceed the outstanding balance.");
+      return;
+    }
+
+    setPaymentSaving(true);
+    setPaymentError("");
+    try {
+      const res = await recordApplicantPayment(drawerApplicant.applicantId, {
+        amount,
+        remarks: paymentRemarks.trim() || undefined
+      });
+      const txns = await getApplicantTransactions(drawerApplicant.applicantId);
+      setDrawerTxns(Array.isArray(txns) ? txns : []);
+      load();
+      setShowPaymentModal(false);
+      setPaymentAmount("");
+      setPaymentRemarks("");
+      toast.success(res?.message || "Payment recorded successfully.");
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Failed to record payment.");
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
+
+  const amount = toNumber(form.amount);
     const paidAmount = toNumber(form.paidAmount || 0);
     const serviceList = form.serviceList
       .filter((item) => item.service.trim() && item.amount !== "")
@@ -380,9 +522,301 @@ export function InvoiceScreen({ applicant }) {
     }
   };
 
+  const openPaymentModal = () => {
+    if (ledgerOutstanding <= 0) return;
+    setPaymentAmount("");
+    setPaymentRemarks("");
+    setPaymentError("");
+    setShowPaymentModal(true);
+  };
+
+  const closePaymentModal = () => {
+    if (paymentSaving) return;
+    setShowPaymentModal(false);
+    setPaymentAmount("");
+    setPaymentRemarks("");
+    setPaymentError("");
+  };
+
+  const handlePayment = async () => {
+    const amount = Number(paymentAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPaymentError("Enter a payment amount greater than zero.");
+      return;
+    }
+    if (amount > ledgerOutstanding + 0.000001) {
+      setPaymentError("Payment cannot exceed the outstanding balance.");
+      return;
+    }
+
+    setPaymentSaving(true);
+    setPaymentError("");
+    try {
+      const res = await recordApplicantPayment(drawerApplicant.applicantId, {
+        amount,
+        remarks: paymentRemarks.trim() || undefined
+      });
+      const txns = await getApplicantTransactions(drawerApplicant.applicantId);
+      setDrawerTxns(Array.isArray(txns) ? txns : []);
+      load();
+      setShowPaymentModal(false);
+      setPaymentAmount("");
+      setPaymentRemarks("");
+      toast.success(res?.message || "Payment recorded successfully.");
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Failed to record payment.");
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
+
   const amount = toNumber(form.amount);
   const paidAmount = toNumber(form.paidAmount || 0);
   const derivedBalance = form.amount !== "" && amount > 0 ? Math.max(amount - paidAmount, 0) : null;
+  const ledgerInvoiced = drawerTxns.reduce((a, t) => a + (Number(t.debit) || 0), 0);
+  const ledgerPaid = drawerTxns.reduce((a, t) => a + (Number(t.credit) || 0), 0);
+  const ledgerOutstanding = ledgerInvoiced - ledgerPaid;
+  const lastTxnDate = drawerTxns.reduce((latest, t) => {
+    if (!t.dateTime) return latest;
+    const d = new Date(t.dateTime);
+    if (Number.isNaN(d.getTime())) return latest;
+    return !latest || d > latest ? d : latest;
+  }, null);
+
+  if (drawerApplicant) {
+    return (
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold text-[#1A202C]">{drawerApplicant.label}</h1>
+            <p className="text-sm text-[#718096]">Applicant details</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Btn variant="primary" onClick={openPaymentModal} disabled={drawerLoading || ledgerOutstanding <= 0}>
+              Pay
+            </Btn>
+            <Btn variant="outline" icon={<ArrowRight size={14} className="rotate-180" />} onClick={() => setDrawerApplicant(null)}>
+              Back to invoices
+            </Btn>
+          </div>
+        </div>
+
+        <Card>
+          <div className="p-5 flex flex-col gap-5">
+            {drawerLoading && <BouncingDots label="Loading applicant…" />}
+            {drawerError && (
+              <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                <AlertCircle size={14} /> {drawerError}
+              </div>
+            )}
+
+            {!drawerLoading && drawerDetail && (
+              <>
+                <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <InfoItem label="Registration No" value={drawerDetail.registrationNo} />
+                  <InfoItem label="Mobile" value={drawerDetail.mobile} />
+                  <InfoItem label="Email" value={drawerDetail.email} />
+                  <InfoItem label="Country" value={drawerDetail.country} />
+                  <div className="col-span-2 md:col-span-4">
+                    <InfoItem label="Course" value={drawerDetail.course} />
+                  </div>
+                </section>
+
+                <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="rounded-lg border border-[rgba(0,0,0,0.06)] bg-[#F7FAFC] px-3 py-3">
+                    <InfoItem label="Total Invoiced" value={fmtMoney(ledgerInvoiced)} />
+                  </div>
+                  <div className="rounded-lg border border-[rgba(0,0,0,0.06)] bg-[#F7FAFC] px-3 py-3">
+                    <InfoItem label="Total Paid" value={fmtMoney(ledgerPaid)} />
+                  </div>
+                  <div className="rounded-lg border border-[rgba(0,0,0,0.06)] bg-[#F7FAFC] px-3 py-3">
+                    <InfoItem label="Outstanding" value={fmtMoney(ledgerOutstanding)} />
+                  </div>
+                  <div className="rounded-lg border border-[rgba(0,0,0,0.06)] bg-[#F7FAFC] px-3 py-3">
+                    <InfoItem label="Last Transaction" value={lastTxnDate ? lastTxnDate.toLocaleDateString() : "—"} />
+                  </div>
+                </section>
+
+                <section className="flex flex-col gap-1 max-w-sm">
+                  <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Status</label>
+                  <select
+                    value={drawerDetail.applicationStatusId ?? ""}
+                    onChange={handleStatusSelect}
+                    disabled={statusSaving}
+                    className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition disabled:opacity-60"
+                  >
+                    <option value="">Select status</option>
+                    {statuses.map((s) => (
+                      <option key={s.applicationStatusId} value={s.applicationStatusId}>{s.statusName}</option>
+                    ))}
+                  </select>
+                </section>
+
+                <section className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Ledger / Transactions</h3>
+                    {drawerTxns.length > 0 && (
+                      <span className="text-[11px] text-[#718096]">
+                        Bal: {fmtMoney(
+                          drawerTxns.reduce((a, t) => a + (Number(t.debit) || 0) - (Number(t.credit) || 0), 0)
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  {drawerTxns.length === 0 ? (
+                    <p className="text-xs text-gray-400 py-4 text-center">No transactions yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto border border-[rgba(0,0,0,0.06)] rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-[#F7FAFC] text-[11px] uppercase tracking-wide text-[#718096]">
+                            <th className="text-left px-3 py-2">Reference</th>
+                            <th className="text-right px-3 py-2">Debit</th>
+                            <th className="text-right px-3 py-2">Credit</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {drawerTxns.map((t, i) => (
+                            <tr key={i} className="border-t border-[rgba(0,0,0,0.04)]">
+                              <td className="px-3 py-2 text-[#1A202C]">
+                                <div className="font-mono text-xs">{t.reference}</div>
+                                <div className="text-[10px] text-[#718096]">{formatDate(t.dateTime)}</div>
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono text-xs text-red-600">{fmtMoney(t.debit)}</td>
+                              <td className="px-3 py-2 text-right font-mono text-xs text-emerald-600">{fmtMoney(t.credit)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+                <section className="flex flex-col gap-2">
+                  <h3 className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Status History</h3>
+                  {drawerHistory.length === 0 ? (
+                    <p className="text-xs text-gray-400 py-2">No status changes recorded yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto border border-[rgba(0,0,0,0.06)] rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-[#F7FAFC] text-[11px] uppercase tracking-wide text-[#718096]">
+                            <th className="text-left px-3 py-2">When</th>
+                            <th className="text-left px-3 py-2">Change</th>
+                            <th className="text-left px-3 py-2">Reason</th>
+                            <th className="text-left px-3 py-2">By</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {drawerHistory.map((h) => (
+                            <tr key={h.historyId} className="border-t border-[rgba(0,0,0,0.04)]">
+                              <td className="px-3 py-2 text-[10px] text-[#718096] whitespace-nowrap">{formatDate(h.changedAt)}</td>
+                              <td className="px-3 py-2 text-xs text-[#1A202C]">
+                                {(h.oldStatusName || "—")} → {(h.newStatusName || "—")}
+                                {h.category && <span className="ml-2 text-[10px] text-[#718096]">{h.category}</span>}
+                              </td>
+                              <td className="px-3 py-2 text-xs text-[#1A202C]">{h.reason}</td>
+                              <td className="px-3 py-2 text-xs text-[#718096]">{h.changedBy || "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              </>
+            )}
+          </div>
+        </Card>
+
+        {showPaymentModal && (
+          <Modal title="Record payment" onClose={closePaymentModal} className="max-w-md">
+            <div className="flex flex-col gap-4">
+              <div className="rounded-xl border border-teal-100 bg-teal-50 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0E7C7B]">Current outstanding balance</p>
+                <p className="mt-1 text-2xl font-semibold text-[#1A202C]">{fmtMoney(ledgerOutstanding)}</p>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="payment-amount" className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">
+                  Payment amount
+                </label>
+                <input
+                  id="payment-amount"
+                  type="number"
+                  min="0.01"
+                  max={ledgerOutstanding}
+                  step="0.01"
+                  inputMode="decimal"
+                  autoFocus
+                  value={paymentAmount}
+                  onChange={(e) => {
+                    setPaymentAmount(e.target.value);
+                    if (paymentError) setPaymentError("");
+                  }}
+                  placeholder="0.00"
+                  className={'h-10 px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition ' + (paymentError ? "border-red-400" : "border-[rgba(0,0,0,0.12)]")}
+                />
+                {paymentError && <p className="text-xs text-red-600">{paymentError}</p>}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="payment-remarks" className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">
+                  Remarks <span className="font-normal normal-case text-[#718096]">(optional)</span>
+                </label>
+                <textarea
+                  id="payment-remarks"
+                  rows={2}
+                  maxLength={250}
+                  value={paymentRemarks}
+                  onChange={(e) => setPaymentRemarks(e.target.value)}
+                  placeholder="Payment method or reference"
+                  className="px-3 py-2 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition resize-none"
+                />
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <Btn variant="ghost" onClick={closePaymentModal} disabled={paymentSaving}>Cancel</Btn>
+                <Btn variant="primary" onClick={handlePayment} disabled={paymentSaving || !paymentAmount}>
+                  {paymentSaving ? "Recording…" : "Record Payment"}
+                </Btn>
+              </div>
+            </div>
+          </Modal>
+        )}
+        {pendingStatus && (
+          <Modal title="Confirm status change" onClose={closeStatusModal} className="max-w-md">
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-[#1A202C]">
+                {(drawerDetail?.statusName || "No status")} → <strong>{pendingStatus.statusName}</strong>
+              </p>
+
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Reason</label>
+                <textarea
+                  value={statusReason}
+                  onChange={(e) => {
+                    setStatusReason(e.target.value);
+                    if (statusReasonError) setStatusReasonError("");
+                  }}
+                  rows={3}
+                  placeholder="Why are you changing this status?"
+                  className={`px-3 py-2 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition resize-none ${statusReasonError ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
+                />
+                {statusReasonError && <p className="text-xs text-red-600">{statusReasonError}</p>}
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Btn variant="ghost" onClick={closeStatusModal} disabled={statusSaving}>Cancel</Btn>
+                <Btn variant="primary" onClick={handleStatusChange} disabled={statusSaving}>
+                  {statusSaving ? "Saving…" : "Update Status"}
+                </Btn>
+              </div>
+            </div>
+          </Modal>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -758,104 +1192,6 @@ export function InvoiceScreen({ applicant }) {
         </Modal>
       )}
 
-      {drawerApplicant && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black/30" onClick={() => setDrawerApplicant(null)} />
-          <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
-              <div>
-                <h2 className="text-base font-semibold text-[#1A202C]">{drawerApplicant.label}</h2>
-                <p className="text-xs text-[#718096]">Applicant details</p>
-              </div>
-              <button
-                onClick={() => setDrawerApplicant(null)}
-                className="p-2 text-[#718096] hover:text-[#1A202C] hover:bg-gray-100 rounded-lg transition"
-                title="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-              {drawerLoading && <BouncingDots label="Loading applicant…" />}
-              {drawerError && (
-                <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                  <AlertCircle size={14} /> {drawerError}
-                </div>
-              )}
-
-              {!drawerLoading && drawerDetail && (
-                <>
-                  <section className="grid grid-cols-2 gap-3">
-                    <InfoItem label="Registration No" value={drawerDetail.registrationNo} />
-                    <InfoItem label="Mobile" value={drawerDetail.mobile} />
-                    <InfoItem label="Email" value={drawerDetail.email} />
-                    <InfoItem label="Country" value={drawerDetail.country} />
-                    <div className="col-span-2">
-                      <InfoItem label="Course" value={drawerDetail.course} />
-                    </div>
-                  </section>
-
-                  <section className="flex flex-col gap-1">
-                    <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Status</label>
-                    <select
-                      value={drawerDetail.applicationStatusId ?? ""}
-                      onChange={handleStatusChange}
-                      disabled={statusSaving}
-                      className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition disabled:opacity-60"
-                    >
-                      <option value="">Select status</option>
-                      {statuses.map((s) => (
-                        <option key={s.applicationStatusId} value={s.applicationStatusId}>{s.statusName}</option>
-                      ))}
-                    </select>
-                  </section>
-
-                  <section className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Ledger / Transactions</h3>
-                      {drawerTxns.length > 0 && (
-                        <span className="text-[11px] text-[#718096]">
-                          Bal: {fmtMoney(
-                            drawerTxns.reduce((a, t) => a + (Number(t.debit) || 0) - (Number(t.credit) || 0), 0)
-                          )}
-                        </span>
-                      )}
-                    </div>
-                    {drawerTxns.length === 0 ? (
-                      <p className="text-xs text-gray-400 py-4 text-center">No transactions yet.</p>
-                    ) : (
-                      <div className="overflow-x-auto border border-[rgba(0,0,0,0.06)] rounded-lg">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-[#F7FAFC] text-[11px] uppercase tracking-wide text-[#718096]">
-                              <th className="text-left px-3 py-2">Reference</th>
-                              <th className="text-right px-3 py-2">Debit</th>
-                              <th className="text-right px-3 py-2">Credit</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {drawerTxns.map((t, i) => (
-                              <tr key={i} className="border-t border-[rgba(0,0,0,0.04)]">
-                                <td className="px-3 py-2 text-[#1A202C]">
-                                  <div className="font-mono text-xs">{t.reference}</div>
-                                  <div className="text-[10px] text-[#718096]">{formatDate(t.dateTime)}</div>
-                                </td>
-                                <td className="px-3 py-2 text-right font-mono text-xs text-red-600">{fmtMoney(t.debit)}</td>
-                                <td className="px-3 py-2 text-right font-mono text-xs text-emerald-600">{fmtMoney(t.credit)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </section>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

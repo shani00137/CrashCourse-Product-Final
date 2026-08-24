@@ -47,6 +47,7 @@ namespace MdLabScience.DbContext
         public virtual DbSet<UserPermission> UserPermissions { get; set; }
         public virtual DbSet<UserRole> UserRoles { get; set; }
         public virtual DbSet<ApplicationStatusTb> ApplicationStatusTbs { get; set; }
+        public virtual DbSet<ApplicantStatusTransactionsTb> ApplicantStatusTransactionsTbs { get; set; }
         public virtual DbSet<ServiceTb> ServiceTbs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -200,6 +201,11 @@ namespace MdLabScience.DbContext
             {
                 entity.HasKey(e => e.ApplicationStatusId);
                 entity.ToTable("ApplicationStatus");
+            });
+            modelBuilder.Entity<ApplicantStatusTransactionsTb>(entity =>
+            {
+                entity.HasKey(e => e.StatusTransactionId);
+                entity.ToTable("ApplicantStatusTransactionsTb");
             });
             modelBuilder.Entity<ServiceTb>(entity =>
             {
