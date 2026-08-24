@@ -297,6 +297,14 @@ namespace MdLabScience.Controllers
                     applicantsTb.ExpiryDate = value.ExpiryDate;
                     applicantsTb.IsActive = true;
                     applicantsTb.RegistrationDate = value.RegistrationDate;
+                    var pendingStatusId = db.ApplicationStatusTbs
+                        .Where(s => s.StatusName == "Pending")
+                        .Select(s => (int?)s.ApplicationStatusId)
+                        .FirstOrDefault();
+                    if (pendingStatusId.HasValue)
+                    {
+                        applicantsTb.ApplicationStatusId = pendingStatusId.Value;
+                    }
                     applicantsTb.UserNo = value.UserNo;
                     applicantsTb.CreatedOn = DateTime.Now;
                     applicantsTb.CountryId = value.CountryId;
@@ -609,6 +617,61 @@ catch (Exception ex)
                     db.SaveChanges();
                 }
                 return Ok("Update Sucessfuly.");
+            }
+        }
+
+        [HttpGet]
+        [Route("api/Applicant/GetApplicant/{id}")]
+        public IActionResult GetApplicant(int id)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var app = db.ApplicantsTbs.Where(x => x.ApplicantId == id).FirstOrDefault();
+                if (app == null)
+                    return NotFound("Applicant not found");
+                var statusName = db.ApplicationStatusTbs
+                    .Where(s => s.ApplicationStatusId == app.ApplicationStatusId)
+                    .Select(s => s.StatusName).FirstOrDefault();
+                var country = db.CountryTbs
+                    .Where(c => c.CountryId == app.CountryId)
+                    .Select(c => c.CoutryName).FirstOrDefault();
+                var course = (from cs in db.ApplicantCourseSelectionTbs
+                              join co in db.CourseTbs on cs.CourseId equals co.CourseId
+                              where cs.ApplicantId == id
+                              select co.CourseName).FirstOrDefault();
+                return Ok(new
+                {
+                    applicantId = app.ApplicantId,
+                    registrationNo = app.RegistrationNo,
+                    firstName = app.FirstName,
+                    lastName = app.LastName,
+                    mobile = app.Mobile,
+                    email = app.Email,
+                    address = app.Address,
+                    country = country,
+                    course = course,
+                    applicationStatusId = app.ApplicationStatusId,
+                    statusName = statusName,
+                    isActive = app.IsActive
+                });
+            }
+        }
+
+        [HttpPost]
+        [Route("api/Applicant/SetApplicantStatus/{applicantId}/{statusId}")]
+        public IActionResult SetApplicantStatus(int applicantId, int statusId)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var app = db.ApplicantsTbs.Where(x => x.ApplicantId == applicantId).FirstOrDefault();
+                if (app == null)
+                    return NotFound("Applicant not found");
+                var status = db.ApplicationStatusTbs.Where(s => s.ApplicationStatusId == statusId).FirstOrDefault();
+                if (status == null)
+                    return BadRequest("Invalid status");
+                app.ApplicationStatusId = statusId;
+                db.SaveChanges();
+                return Ok(new { succeeded = true, applicantId = applicantId, applicationStatusId = statusId, statusName = status.StatusName });
             }
         }
 

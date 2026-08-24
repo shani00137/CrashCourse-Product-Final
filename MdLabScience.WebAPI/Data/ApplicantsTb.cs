@@ -19,5 +19,6 @@ namespace MdLabScience.DbContext
         public string? PhotoUrl { get; set; }
         public int? CountryId { get; set; }
         public bool? IsActive { get; set; }
+        public int? ApplicationStatusId { get; set; }
     }
 }

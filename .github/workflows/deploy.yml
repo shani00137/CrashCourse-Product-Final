@@ -2,7 +2,7 @@ name: Deploy to SmarterASP
 
 on:
   push:
-    branches: [QuestionBankAndCreateTest]
+    branches: [invoice]
   workflow_dispatch:
 
 env:

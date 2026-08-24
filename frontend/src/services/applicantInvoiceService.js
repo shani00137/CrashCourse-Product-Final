@@ -89,10 +89,43 @@ async function deleteApplicantInvoice(invoiceId) {
   });
 }
 
+/**
+ * Applicant summary for the invoice drawer: info + current status.
+ * @param {number} applicantId
+ * @returns {Promise<{ applicantId:number, registrationNo:string, firstName:string, lastName:string, mobile:string, email:string, address:string, country:string, course:string, applicationStatusId:number|null, statusName:string|null, isActive:boolean|null }>}
+ */
+async function getApplicantDetail(applicantId) {
+  return apiFetch(`/api/Applicant/api/Applicant/GetApplicant/${applicantId}`);
+}
+
+/**
+ * Applicant ledger entries.
+ * @param {number} applicantId
+ * @returns {Promise<Array<{ applicantId:number, debit:number, credit:number, dateTime:string, reference:string, remarks:string, totalDebit:number, totalCredit:number }>>}
+ */
+async function getApplicantTransactions(applicantId) {
+  return apiFetch(`/api/Applicant/api/Applicant/GetApplicantTransaction/${applicantId}`);
+}
+
+/**
+ * Change an applicant's workflow status.
+ * @param {number} applicantId
+ * @param {number} statusId
+ * @returns {Promise<{ succeeded: boolean, applicantId: number, applicationStatusId: number, statusName: string }>}
+ */
+async function setApplicantStatus(applicantId, statusId) {
+  return apiFetch(`/api/Applicant/api/Applicant/SetApplicantStatus/${applicantId}/${statusId}`, {
+    method: "POST"
+  });
+}
+
 export {
   deleteApplicantInvoice,
   getAllApplicantInvoices,
+  getApplicantDetail,
   getApplicantInvoice,
+  getApplicantTransactions,
   getApplicantsWithInvoices,
-  saveApplicantInvoice
+  saveApplicantInvoice,
+  setApplicantStatus
 };

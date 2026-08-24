@@ -25,6 +25,7 @@ import {
   FileUp,
   Sparkles,
   PlusCircle,
+  ListChecks,
 } from "lucide-react";
 import { Avatar } from "../shared/ui";
 import { DashboardScreen } from "../views/dashboard/Dashboard";
@@ -32,6 +33,8 @@ import { ApplicantsScreen } from "../views/applicants/Applicants";
 import { ApplicantDetailScreen } from "../views/applicants/ApplicantDetail";
 import { RegistrationScreen } from "../views/registration/Registration";
 import { InvoiceScreen } from "../views/applicants/Invoices";
+import { ServicesScreen } from "../views/applicants/Services";
+import { StatusesScreen } from "../views/applicants/Statuses";
 import { CoursesScreen } from "../views/courses/Courses";
 import { QuestionBankScreen } from "../views/courses/QuestionBank";
 import { QuestionFormScreen } from "../views/courses/QuestionForm";
@@ -52,14 +55,16 @@ const navGroups = [
     label: "Overview",
     items: [{ icon: LayoutDashboard, label: "Dashboard", screen: "dashboard" }],
   },
-  {
-    label: "Applicants",
-    items: [
-      { icon: Users, label: "Applicants", screen: "applicants" },
-      { icon: FileText, label: "Registration", screen: "registration" },
-      { icon: DollarSign, label: "Invoices", screen: "invoice" },
-    ],
-  },
+{
+        label: "Applicants",
+        items: [
+          { icon: Users, label: "Applicants", screen: "applicants" },
+          { icon: FileText, label: "Registration", screen: "registration" },
+          { icon: DollarSign, label: "Invoices", screen: "invoice" },
+          { icon: FileText, label: "Services", screen: "services" },
+          { icon: ListChecks, label: "Statuses", screen: "statuses" },
+        ],
+      },
   {
     label: "Courses & Exams",
     items: [
@@ -106,6 +111,8 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     "applicant-detail": ["Applicants", "Zara Ahmed"],
     registration: ["Applicants", "Registration"],
     invoice: ["Applicants", "Invoices"],
+    services: ["Applicants", "Services"],
+    statuses: ["Applicants", "Statuses"],
     courses: ["Courses & Exams", "Courses"],
     "question-bank": ["Questions", "Question Bank"],
     "question-form": ["Questions", questionForm?.question?.questionId ? "Edit Question" : "Add Question"],
@@ -144,6 +151,8 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     ),
     registration: <RegistrationScreen applicant={editingApplicant} onDone={() => setScreen("applicants")} />,
     invoice: <InvoiceScreen key={selectedApplicant?.applicantId ?? "none"} applicant={selectedApplicant} />,
+    services: <ServicesScreen />,
+    statuses: <StatusesScreen />,
     courses: <CoursesScreen />,
     "question-bank": <QuestionBankScreen setScreen={setScreen} onEdit={onEditQuestion} />,
     "question-form": <QuestionFormScreen question={questionForm?.question ?? null} onBack={() => setScreen("question-bank")} />,

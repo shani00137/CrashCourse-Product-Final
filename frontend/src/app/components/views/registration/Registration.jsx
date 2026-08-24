@@ -11,8 +11,11 @@ import {
   getCountries,
   getActiveCourses
 } from "../../../../services/applicantService";
+import { useServices } from "../../../../hooks/useLookups";
+import { ServiceMultiSelect } from "../../shared/LookupSelect";
 function RegistrationScreen({ applicant, onDone }) {
   const isEdit = !!applicant;
+  const { services } = useServices();
   const [fullName, setFullName] = useState(applicant ? `${applicant.firstName} ${applicant.lastName}`.trim() : "");
   const [mobile, setMobile] = useState(applicant?.mobile ?? "");
   const [otherMobile, setOtherMobile] = useState(applicant?.otherMobile ?? "");
@@ -20,6 +23,7 @@ function RegistrationScreen({ applicant, onDone }) {
   const [address, setAddress] = useState(applicant?.address ?? "");
   const [countryId, setCountryId] = useState(applicant?.countryId ?? 0);
   const [courseId, setCourseId] = useState(applicant?.courseMD?.courseId ?? 0);
+  const [serviceIds, setServiceIds] = useState([]);
   const [registrationDate, setRegistrationDate] = useState(applicant?.registrationDate?.slice(0, 10) ?? "");
   const [photo, setPhoto] = useState(null);
   const [countries, setCountries] = useState([]);
@@ -73,6 +77,10 @@ function RegistrationScreen({ applicant, onDone }) {
     const regDate = registrationDate ? new Date(registrationDate) : /* @__PURE__ */ new Date();
     const expiry = new Date(regDate);
     expiry.setFullYear(expiry.getFullYear() + 1);
+    const serviceNames = serviceIds
+      .map((id) => services.find((s) => s.serviceId === id)?.serviceName)
+      .filter(Boolean)
+      .join(", ");
     const payload = {
       applicantId: applicant?.applicantId ?? 0,
       registrationNo: applicant?.registrationNo ?? "",
@@ -87,7 +95,8 @@ function RegistrationScreen({ applicant, onDone }) {
       expiryDate: expiry.toISOString(),
       isActive: applicant?.isActive ?? true,
       countryId,
-      courseId
+      courseId,
+      serviceId: serviceNames
     };
     setSaving(true);
     try {
@@ -104,6 +113,7 @@ function RegistrationScreen({ applicant, onDone }) {
           setAddress("");
           setCountryId(0);
           setCourseId(0);
+          setServiceIds([]);
           setRegistrationDate("");
           setPhoto(null);
         } else {
@@ -163,6 +173,10 @@ function RegistrationScreen({ applicant, onDone }) {
                 <option value={0}>Select Course</option>
                 {courses.map((c) => <option key={c.courseId} value={c.courseId}>{c.courseName}</option>)}
               </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelCls}>Service</label>
+              <ServiceMultiSelect services={services} value={serviceIds} onChange={setServiceIds} placeholder="Select services…" allLabel="Clear services" />
             </div>
             <div className="flex flex-col gap-1">
               <label className={labelCls}>Registration Date</label>
