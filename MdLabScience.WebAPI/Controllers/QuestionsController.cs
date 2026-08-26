@@ -72,11 +72,16 @@ namespace MdLabScience.Controllers
                                     c.QuestionId,
                                     c.DateTime,
                                     c.CourseId,
+                                    c.TopId,
                                     q.CourseName
                                 }).OrderBy(x => x.QuestionId).ToList();
 
                     var options = db.QuestionOptionsTbs.AsNoTracking()
                         .Where(o => o.QuestionId != null && pagedQuestionIds.Contains(o.QuestionId.Value))
+                        .ToList();
+
+                    var topics = db.QuestionTopicTBs.AsNoTracking()
+                        .Where(t => pagedQuestionIds.Contains(t.QuestionId))
                         .ToList();
 
                     var Query = rows.Select(r => new
@@ -85,7 +90,9 @@ namespace MdLabScience.Controllers
                         r.QuestionId,
                         r.DateTime,
                         r.CourseId,
+                        r.TopId,
                         r.CourseName,
+                        TopicTitle = topics.Where(t => t.QuestionId == r.QuestionId).Select(t => t.TopTitle).FirstOrDefault(),
                         IsSelected = false,
                         QuestionOptions = options.Where(o => o.QuestionId == r.QuestionId).ToList()
                     }).ToList();
@@ -265,9 +272,24 @@ namespace MdLabScience.Controllers
                 Qt.QuestionContent = value.QuestionContent;
                 Qt.QuestionId = QuestionId;
                 Qt.CourseId = value.CourseId;
+                Qt.TopId = value.TopId;
                 Qt.DateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
                 db.QuestionsTBs.Add(Qt);
                 db.SaveChanges();
+
+                if (value.TopId.HasValue && !string.IsNullOrWhiteSpace(value.TopTitle))
+                {
+                    var existingTopic = db.QuestionTopicTBs.FirstOrDefault(t => t.TopId == value.TopId.Value);
+                    if (existingTopic == null)
+                    {
+                        QuestionTopicTB topic = new QuestionTopicTB();
+                        topic.TopId = value.TopId.Value;
+                        topic.TopTitle = value.TopTitle;
+                        topic.QuestionId = QuestionId;
+                        db.QuestionTopicTBs.Add(topic);
+                        db.SaveChanges();
+                    }
+                }
 
                 foreach (var q in value.QuestionOptionsList)
                 {
@@ -296,8 +318,29 @@ namespace MdLabScience.Controllers
                 {
                     UpdateQuery[0].QuestionContent = value.QuestionContent;
                     UpdateQuery[0].CourseId = value.CourseId;
+                    UpdateQuery[0].TopId = value.TopId;
                     db.SaveChanges();
                     ResponseMessage = "Question Updated Sucessfuly..!";
+
+                    if (value.TopId.HasValue && !string.IsNullOrWhiteSpace(value.TopTitle))
+                    {
+                        var existingTopic = db.QuestionTopicTBs.FirstOrDefault(t => t.TopId == value.TopId.Value && t.QuestionId == value.QuestionId);
+                        if (existingTopic == null)
+                        {
+                            QuestionTopicTB topic = new QuestionTopicTB();
+                            topic.TopId = value.TopId.Value;
+                            topic.TopTitle = value.TopTitle;
+                            topic.QuestionId = value.QuestionId;
+                            db.QuestionTopicTBs.Add(topic);
+                            db.SaveChanges();
+                        }
+                        else
+                        {
+                            existingTopic.TopTitle = value.TopTitle;
+                            db.SaveChanges();
+                        }
+                    }
+
                     var OptionsQuery = db.QuestionOptionsTbs.Where(x => x.QuestionId == value.QuestionId).ToList();
                     if (OptionsQuery.Count > 0)
                     {
@@ -816,6 +859,128 @@ OCR Text:
             }
         }
 
+        [HttpGet]
+        [Route("api/Questions/GetAllTopics")]
+        public IActionResult GetAllTopics()
+        {
+            try
+            {
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var topics = (from t in db.QuestionTopicTBs.AsNoTracking()
+                                  group t by new { t.TopId, t.TopTitle } into g
+                                  select new
+                                  {
+                                      TopId = g.Key.TopId,
+                                      TopTitle = g.Key.TopTitle,
+                                      QuestionCount = g.Count()
+                                  }).OrderBy(t => t.TopTitle).ToList();
+
+                    return Ok(topics);
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(ex.ToString());
+            }
+        }
+
+        [HttpPost]
+        [Route("api/Questions/SaveTopic")]
+        public IActionResult SaveTopic([FromBody] TopicMD value)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(value.TopTitle))
+                    return BadRequest("Topic title is required.");
+
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var exists = db.QuestionTopicTBs.FirstOrDefault(t => t.TopTitle == value.TopTitle.Trim());
+                    if (exists != null)
+                        return Ok("Topic already exists.");
+
+                    int newTopId = 1;
+                    var maxId = db.QuestionTopicTBs.Select(t => t.TopId).ToList();
+                    if (maxId.Count > 0)
+                        newTopId = maxId.Max() + 1;
+
+                    QuestionTopicTB topic = new QuestionTopicTB();
+                    topic.TopId = newTopId;
+                    topic.TopTitle = value.TopTitle.Trim();
+                    topic.QuestionId = 0;
+                    db.QuestionTopicTBs.Add(topic);
+                    db.SaveChanges();
+
+                    return Ok("Topic created successfully.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Failed to create topic: " + ex.Message);
+            }
+        }
+
+        [HttpPut]
+        [Route("api/Questions/EditTopic")]
+        public IActionResult EditTopic([FromBody] TopicMD value)
+        {
+            try
+            {
+                if (value.TopId <= 0)
+                    return BadRequest("Invalid topic ID.");
+                if (string.IsNullOrWhiteSpace(value.TopTitle))
+                    return BadRequest("Topic title is required.");
+
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var existing = db.QuestionTopicTBs.Where(t => t.TopId == value.TopId).ToList();
+                    if (existing.Count == 0)
+                        return NotFound("Topic not found.");
+
+                    var duplicate = db.QuestionTopicTBs.FirstOrDefault(t => t.TopTitle == value.TopTitle.Trim() && t.TopId != value.TopId);
+                    if (duplicate != null)
+                        return Ok("Another topic with this title already exists.");
+
+                    foreach (var t in existing)
+                    {
+                        t.TopTitle = value.TopTitle.Trim();
+                    }
+                    db.SaveChanges();
+
+                    return Ok("Topic updated successfully.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Failed to update topic: " + ex.Message);
+            }
+        }
+
+        [HttpGet]
+        [Route("api/Questions/DeleteTopic/{id}")]
+        public IActionResult DeleteTopic(int id)
+        {
+            try
+            {
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var topics = db.QuestionTopicTBs.Where(t => t.TopId == id).ToList();
+                    if (topics.Count == 0)
+                        return NotFound("Topic not found.");
+
+                    db.QuestionTopicTBs.RemoveRange(topics);
+                    db.SaveChanges();
+
+                    return Ok("Topic deleted successfully.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Failed to delete topic: " + ex.Message);
+            }
+        }
+
         [HttpPost]
         [Route("api/Questions/GenerateAiQuestions")]
         public async Task<IActionResult> GenerateAiQuestions([FromBody] GenerateAiRequest request)
@@ -904,9 +1069,17 @@ Here are existing questions from the course database for reference. Use them as 
 Additional instructions from the user: {request.Prompt}";
                 }
 
+                string topicSection = "";
+                if (!string.IsNullOrWhiteSpace(request.TopTitle))
+                {
+                    topicSection = $@"
+
+Focus on the topic: ""{request.TopTitle}"". All questions should relate to this specific topic.";
+                }
+
                 string prompt = $@"You are an expert exam question writer for the course: ""{courseName}"".
 
-Generate exactly {count} multiple-choice questions at **{difficulty}** difficulty level.
+Generate exactly {count} multiple-choice questions at **{difficulty}** difficulty level.{topicSection}
 
 Rules:
 1. Each question must have exactly 4 options (A, B, C, D).

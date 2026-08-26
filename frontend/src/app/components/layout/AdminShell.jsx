@@ -25,6 +25,7 @@ import {
   FileUp,
   Sparkles,
   PlusCircle,
+  Tag,
 } from "lucide-react";
 import { Avatar } from "../shared/ui";
 import { DashboardScreen } from "../views/dashboard/Dashboard";
@@ -38,6 +39,7 @@ import { QuestionFormScreen } from "../views/courses/QuestionForm";
 import { GenerateAIQuestionScreen } from "../views/courses/GenerateAIQuestion";
 import { UploadFromPdfScreen } from "../views/courses/UploadFromPdf";
 import { CreateTestScreen } from "../views/courses/CreateTest";
+import { TopicManagerScreen } from "../views/courses/TopicManager";
 import { MobileUsersScreen } from "../views/users/MobileUsers";
 import { RolesScreen } from "../views/users/Roles";
 import { UserAccountsScreen } from "../views/users/UserAccounts";
@@ -74,6 +76,7 @@ const navGroups = [
       { icon: FileUp, label: "Upload from PDF", screen: "upload-from-pdf" },
       { icon: Sparkles, label: "Generate with AI", screen: "generate-ai-question" },
       { icon: BookMarked, label: "Create Test", screen: "create-test" },
+      { icon: Tag, label: "Manage Topics", screen: "topic-manager" },
     ],
   },
   {
@@ -112,6 +115,7 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     "generate-ai-question": ["Questions", "Generate with AI"],
     "upload-from-pdf": ["Questions", "Upload from PDF"],
     "create-test": ["Questions", "Create Test"],
+    "topic-manager": ["Questions", "Manage Topics"],
     "mobile-users": ["Users & Access", "Mobile Users"],
     roles: ["Users & Access", "Roles & Permissions"],
     "user-accounts": ["Users & Access", "User Accounts"],
@@ -150,6 +154,7 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     "generate-ai-question": <GenerateAIQuestionScreen onBack={() => setScreen("question-bank")} />,
     "upload-from-pdf": <UploadFromPdfScreen onBack={() => setScreen("question-bank")} />,
     "create-test": <CreateTestScreen user={user} />,
+    "topic-manager": <TopicManagerScreen onBack={() => setScreen("question-bank")} />,
     "mobile-users": <MobileUsersScreen />,
     roles: <RolesScreen />,
     "user-accounts": <UserAccountsScreen />,

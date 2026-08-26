@@ -16,7 +16,7 @@ import {
   Filter
 } from "lucide-react";
 import { Btn, Card, SearchableSelect } from "../../shared/ui";
-import { generateAiQuestions, bulkSaveQuestions } from "../../../../services/questionService";
+import { generateAiQuestions, bulkSaveQuestions, getAllTopics } from "../../../../services/questionService";
 import { getActiveCourses } from "../../../../services/applicantService";
 import { htmlToText } from "../../../../utils/html";
 
@@ -45,6 +45,9 @@ function DifficultyBadge({ level, size = "sm" }) {
 export function GenerateAIQuestionScreen({ onBack }) {
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState(null);
+  const [topics, setTopics] = useState([]);
+  const [selectedTopicId, setSelectedTopicId] = useState(null);
+  const [topicTitle, setTopicTitle] = useState("");
   const [count, setCount] = useState(10);
   const [difficulty, setDifficulty] = useState("Medium");
   const [useDatabase, setUseDatabase] = useState(true);
@@ -63,6 +66,9 @@ export function GenerateAIQuestionScreen({ onBack }) {
     getActiveCourses()
       .then(list => setCourses(Array.isArray(list) ? list : []))
       .catch(() => setCourses([]));
+    getAllTopics()
+      .then(list => setTopics(Array.isArray(list) ? list : []))
+      .catch(() => setTopics([]));
   }, []);
 
   useEffect(() => {
@@ -75,6 +81,7 @@ export function GenerateAIQuestionScreen({ onBack }) {
     id: c.courseId,
     label: `${c.courseCode} — ${c.courseName}`
   }));
+  const topicOptions = topics.map(t => ({ id: t.topId, label: t.topTitle }));
 
   const stats = useMemo(() => {
     const s = { total: questions.length, Easy: 0, Medium: 0, Hard: 0 };
@@ -101,7 +108,9 @@ export function GenerateAIQuestionScreen({ onBack }) {
         count: Math.min(Number(count), 50),
         difficulty,
         useDatabase,
-        prompt: prompt.trim() || undefined
+        prompt: prompt.trim() || undefined,
+        topId: selectedTopicId || undefined,
+        topTitle: topicTitle || undefined
       });
       if (res?.succeeded && res.questions?.length > 0) {
         const tagged = res.questions.map(q => ({ ...q, difficulty }));
@@ -274,6 +283,44 @@ export function GenerateAIQuestionScreen({ onBack }) {
                 className="h-9 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] text-center font-semibold focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
               />
             </div>
+          </div>
+
+          {/* Row 1.5: Topic */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-bold text-[#718096] uppercase tracking-widest">
+                Topic <span className="font-normal text-[#A0AEC0] normal-case tracking-normal">(optional)</span>
+              </label>
+              <SearchableSelect
+                options={topicOptions}
+                value={selectedTopicId}
+                onSelect={id => {
+                  setSelectedTopicId(id);
+                  if (id) {
+                    const found = topics.find(t => t.topId === id);
+                    if (found) setTopicTitle(found.topTitle);
+                  } else {
+                    setTopicTitle("");
+                  }
+                }}
+                allLabel="No topic"
+                placeholder="Search or type new topic..."
+              />
+            </div>
+            {!selectedTopicId && (
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-bold text-[#718096] uppercase tracking-widest">
+                  New Topic Name
+                </label>
+                <input
+                  type="text"
+                  value={topicTitle}
+                  onChange={e => setTopicTitle(e.target.value)}
+                  placeholder="Type a new topic name..."
+                  className="h-9 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition"
+                />
+              </div>
+            )}
           </div>
 
           {/* Row 2: Difficulty + Source */}

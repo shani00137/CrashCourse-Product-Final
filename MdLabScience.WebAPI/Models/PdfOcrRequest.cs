@@ -65,6 +65,8 @@ namespace MdLabScience.Models
         public string Difficulty { get; set; }
         public bool UseDatabase { get; set; }
         public string Prompt { get; set; }
+        public int? TopId { get; set; }
+        public string TopTitle { get; set; }
     }
 
     public class GenerateAiQuestionItem

@@ -9,5 +9,7 @@ namespace MdLabScience.DbContext
         public Nullable<System.DateTime> DateTime { get; set; }
         public string QuestionContent { get; set; }
         public Nullable<System.DateTime> StartDateTime { get; set; }
+        public string? Remarks { get; set; }
+        public int? TopId { get; set; }
     }
 }

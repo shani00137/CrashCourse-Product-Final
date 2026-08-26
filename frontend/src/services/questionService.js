@@ -69,15 +69,37 @@ async function downloadQuestionModel(filename) {
   a.remove();
   window.URL.revokeObjectURL(url);
 }
+async function getAllTopics() {
+  return apiFetch("/api/Questions/api/Questions/GetAllTopics");
+}
+async function createTopic(payload) {
+  return apiFetch("/api/Questions/api/Questions/SaveTopic", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+async function updateTopic(payload) {
+  return apiFetch("/api/Questions/api/Questions/EditTopic", {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+}
+async function deleteTopic(topicId) {
+  return apiFetch(`/api/Questions/api/Questions/DeleteTopic/${topicId}`);
+}
 export {
   bulkSaveQuestions,
+  createTopic,
   deleteQuestion,
+  deleteTopic,
   downloadQuestionModel,
   editQuestion,
   generateAiQuestions,
   getAllQuestions,
+  getAllTopics,
   importQuestions,
   ocrPdf,
   parseOcrToQuestions,
-  saveQuestion
+  saveQuestion,
+  updateTopic
 };

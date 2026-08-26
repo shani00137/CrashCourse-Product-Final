@@ -46,6 +46,8 @@ namespace MdLabScience.DbContext
         public virtual DbSet<UserPage> UserPages { get; set; }
         public virtual DbSet<UserPermission> UserPermissions { get; set; }
         public virtual DbSet<UserRole> UserRoles { get; set; }
+        public virtual DbSet<UserdiscussionTB> UserdiscussionTBs { get; set; }
+        public virtual DbSet<QuestionTopicTB> QuestionTopicTBs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -193,6 +195,16 @@ namespace MdLabScience.DbContext
             {
                 entity.HasKey(e => e.RoleId);
                 entity.ToTable("UserRole");
+            });
+            modelBuilder.Entity<QuestionTopicTB>(entity =>
+            {
+                entity.HasKey(e => e.TopId);
+                entity.ToTable("QuestionTopicTB");
+            });
+            modelBuilder.Entity<UserdiscussionTB>(entity =>
+            {
+                entity.HasKey(e => e.DiscuId);
+                entity.ToTable("UserdiscussionTB");
             });
         }
     }

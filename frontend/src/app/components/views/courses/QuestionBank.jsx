@@ -214,6 +214,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-[#718096] bg-[#EDF2F7] px-2 py-0.5 rounded-md">Q{start + qi + 1}</span>
                   <span className="text-xs text-[#0E7C7B] font-medium">{q.courseName}</span>
+                  {q.topicTitle && <span className="text-xs text-[#7C3AED] font-medium bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded">{q.topicTitle}</span>}
                   {q.dateTime && <span className="text-xs text-[#718096]">· {new Date(q.dateTime).toLocaleDateString()}</span>}
                 </div>
                 <div className="flex gap-1">

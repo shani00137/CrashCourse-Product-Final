@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Loader2, CheckCircle, Plus, Trash2, CircleDot } from "lucide-react";
+import { AlertCircle, Loader2, CheckCircle, Plus, Trash2 } from "lucide-react";
 import { Btn, Card, SearchableSelect } from "../../shared/ui";
 import { RichTextEditor } from "../../shared/RichTextEditor";
-import { saveQuestion, editQuestion } from "../../../../services/questionService";
+import { saveQuestion, editQuestion, getAllTopics } from "../../../../services/questionService";
 import { getActiveCourses } from "../../../../services/applicantService";
 import { htmlToText } from "../../../../utils/html";
 
@@ -13,6 +13,9 @@ export function QuestionFormScreen({ question, onBack }) {
   const editing = Boolean(question?.questionId);
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState(editing ? String(question.courseId) : "");
+  const [topics, setTopics] = useState([]);
+  const [selectedTopicId, setSelectedTopicId] = useState(editing ? (question.topId || null) : null);
+  const [topicTitle, setTopicTitle] = useState(editing ? (question.topicTitle || "") : "");
   const [content, setContent] = useState(() => {
     if (!editing) return "";
     return question.questionContent ?? "";
@@ -36,6 +39,7 @@ export function QuestionFormScreen({ question, onBack }) {
 
   useEffect(() => {
     getActiveCourses().then(list => setCourses(Array.isArray(list) ? list : [])).catch(() => setCourses([]));
+    getAllTopics().then(list => setTopics(Array.isArray(list) ? list : [])).catch(() => setTopics([]));
   }, []);
 
   useEffect(() => {
@@ -45,6 +49,7 @@ export function QuestionFormScreen({ question, onBack }) {
   }, [toast]);
 
   const courseOptions = courses.map(c => ({ id: c.courseId, label: `${c.courseCode} — ${c.courseName}` }));
+  const topicOptions = topics.map(t => ({ id: t.topId, label: t.topTitle }));
 
   const addOptions = () => {
     const next = Math.min(options.length + 2, MAX_OPTIONS);
@@ -86,6 +91,8 @@ export function QuestionFormScreen({ question, onBack }) {
     const payload = {
       courseId: courseIdNum,
       questionContent: questionHtml,
+      topId: selectedTopicId || null,
+      topTitle: topicTitle || null,
       questionOptionsList: nonEmptyOptions.map((opt, i) => ({ options: htmlToText(opt), isRightAns: i === finalCorrect }))
     };
     setSaving(true);
@@ -124,6 +131,33 @@ export function QuestionFormScreen({ question, onBack }) {
               allLabel="Select a course..."
               placeholder="Search courses..."
             />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-bold text-[#718096] uppercase tracking-widest">Topic</label>
+            <SearchableSelect
+              options={topicOptions}
+              value={selectedTopicId}
+              onSelect={id => {
+                setSelectedTopicId(id);
+                if (id) {
+                  const found = topics.find(t => t.topId === id);
+                  if (found) setTopicTitle(found.topTitle);
+                } else {
+                  setTopicTitle("");
+                }
+              }}
+              allLabel="No topic (optional)"
+              placeholder="Search or create topic..."
+            />
+            {!selectedTopicId && (
+              <input
+                type="text"
+                value={topicTitle}
+                onChange={e => setTopicTitle(e.target.value)}
+                placeholder="Type a new topic name..."
+                className="mt-1 text-sm border border-[rgba(0,0,0,0.12)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0E7C7B]/30 focus:border-[#0E7C7B]"
+              />
+            )}
           </div>
         </Card>
 

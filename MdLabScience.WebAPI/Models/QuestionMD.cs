@@ -11,6 +11,8 @@ namespace EMCQWebApi.Models
         public Nullable<System.DateTime> DateTime { get; set; }
         public string QuestionContent { get; set; }
         public int[] CourseIdList { get; set; }
+        public int? TopId { get; set; }
+        public string? TopTitle { get; set; }
         public IEnumerable<QuestionOptions> QuestionOptionsList { get; set; }
     }
 
@@ -21,5 +23,11 @@ namespace EMCQWebApi.Models
         public Nullable<int> JobsId { get; set; }
         public string Options { get; set; }
         public Nullable<bool> IsRightAns { get; set; }
+    }
+
+    public class TopicMD
+    {
+        public int TopId { get; set; }
+        public string TopTitle { get; set; }
     }
 }
