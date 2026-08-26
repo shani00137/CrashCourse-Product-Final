@@ -143,7 +143,21 @@ async function getApplicantStatusHistory(applicantId) {
   return apiFetch(`/api/Applicant/api/Applicant/GetApplicantStatusHistory/${applicantId}`);
 }
 
+/**
+ * Complete a service line item and record purchase amount.
+ * @param {number} certificateInvoiceId
+ * @param {{ purchaseAmount: number }} payload
+ * @returns {Promise<{ succeeded: boolean, message: string }>}
+ */
+async function completeService(certificateInvoiceId, payload) {
+  return apiFetch(`/api/Applicant/api/Applicant/CompleteService/${certificateInvoiceId}`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
 export {
+  completeService,
   deleteApplicantInvoice,
   getAllApplicantInvoices,
   getApplicantDetail,

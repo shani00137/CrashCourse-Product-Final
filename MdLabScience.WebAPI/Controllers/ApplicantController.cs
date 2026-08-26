@@ -1082,6 +1082,8 @@ IF NOT EXISTS (
                             certificateInvoiceTb.Amount = q.Amount;
                             certificateInvoiceTb.Service = q.Service;
                             certificateInvoiceTb.InvoiceId = UpdateQuery.InvoiceId;
+                            certificateInvoiceTb.PurchaseAmount = q.PurchaseAmount;
+                            certificateInvoiceTb.IsCompleted = q.IsCompleted;
                             db.CertificateInvoiceTbs.Add(certificateInvoiceTb);
                             db.SaveChanges();
                         }
@@ -1124,11 +1126,57 @@ IF NOT EXISTS (
                             certificateInvoiceTb.Amount = q.Amount;
                             certificateInvoiceTb.Service = q.Service;
                             certificateInvoiceTb.InvoiceId = appliantTransactionsTb.InvoiceId;
+                            certificateInvoiceTb.PurchaseAmount = q.PurchaseAmount;
+                            certificateInvoiceTb.IsCompleted = q.IsCompleted;
                             db.CertificateInvoiceTbs.Add(certificateInvoiceTb);
                             db.SaveChanges();
                         }
                         return Ok(new { succeeded = true, message = "Saved Successfully", invoiceId = appliantTransactionsTb.InvoiceId, invoiceNo = appliantTransactionsTb.InvoiceNo });
                     }
+                }
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message;
+                if (ex.InnerException != null) msg += " | Inner: " + ex.InnerException.Message;
+                return StatusCode(500, new { succeeded = false, message = msg });
+            }
+        }
+
+        [HttpPost]
+        [Route("api/Applicant/CompleteService/{certificateInoviceId}")]
+        public IActionResult CompleteService(int certificateInoviceId, [FromBody] CompleteServiceRequest value)
+        {
+            try
+            {
+                if (value == null || !double.IsFinite(value.PurchaseAmount) || value.PurchaseAmount < 0)
+                    return BadRequest(new { succeeded = false, message = "Purchase amount must be a valid number." });
+
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var lineItem = db.CertificateInvoiceTbs.FirstOrDefault(x => x.CertificateInoviceId == certificateInoviceId);
+                    if (lineItem == null)
+                        return NotFound(new { succeeded = false, message = "Service line item not found." });
+
+                    var invoice = db.ApplicantInvoiceTBs.FirstOrDefault(x => x.InvoiceId == lineItem.InvoiceId);
+                    if (invoice == null)
+                        return NotFound(new { succeeded = false, message = "Parent invoice not found." });
+
+                    lineItem.IsCompleted = true;
+                    lineItem.PurchaseAmount = value.PurchaseAmount;
+                    db.SaveChanges();
+
+                    ApplicantTransactionTB purchaseTxn = new ApplicantTransactionTB();
+                    purchaseTxn.Debit = value.PurchaseAmount;
+                    purchaseTxn.Credit = 0;
+                    purchaseTxn.Reference = invoice.InvoiceNo + "-PURCHASE-" + lineItem.CertificateInoviceId;
+                    purchaseTxn.Remarks = "Purchase: " + lineItem.Service;
+                    purchaseTxn.ApplicantId = invoice.ApplicantId;
+                    purchaseTxn.DateTime = TimeZoneInfo.ConvertTime(DateTime.Now, Pakistan_Standard_Time);
+                    db.ApplicantTransactionTBs.Add(purchaseTxn);
+                    db.SaveChanges();
+
+                    return Ok(new { succeeded = true, message = "Service completed and purchase recorded." });
                 }
             }
             catch (Exception ex)

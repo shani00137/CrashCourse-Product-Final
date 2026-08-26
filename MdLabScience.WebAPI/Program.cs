@@ -78,6 +78,41 @@ if (!string.IsNullOrEmpty(connectionString))
 }
 
 var app = builder.Build();
+
+if (!string.IsNullOrEmpty(connectionString))
+{
+    try
+    {
+        using var db = new MdLabScienceDbEntities();
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ServiceTb') AND name = 'PurchasePrice')
+            BEGIN
+                ALTER TABLE ServiceTb ADD PurchasePrice DECIMAL(18,2) NOT NULL DEFAULT 0;
+            END
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ServiceTb') AND name = 'SalePrice')
+            BEGIN
+                ALTER TABLE ServiceTb ADD SalePrice DECIMAL(18,2) NOT NULL DEFAULT 0;
+            END
+        ");
+        Console.WriteLine("[Migration] PurchasePrice and SalePrice columns verified.");
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('CertificateInvoiceTb') AND name = 'PurchaseAmount')
+            BEGIN
+                ALTER TABLE CertificateInvoiceTb ADD PurchaseAmount FLOAT NULL;
+            END
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('CertificateInvoiceTb') AND name = 'IsCompleted')
+            BEGIN
+                ALTER TABLE CertificateInvoiceTb ADD IsCompleted BIT NOT NULL DEFAULT 0;
+            END
+        ");
+        Console.WriteLine("[Migration] CertificateInvoiceTb columns verified.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Migration] Auto-migration skipped: {ex.Message}");
+    }
+}
+
 app.UseSwagger();
 app.UseSwaggerUI();
 app.MapOpenApi();

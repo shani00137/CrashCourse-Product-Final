@@ -26,6 +26,8 @@ import {
   Sparkles,
   PlusCircle,
   ListChecks,
+  BarChart3,
+  TrendingUp,
 } from "lucide-react";
 import { Avatar } from "../shared/ui";
 import { DashboardScreen } from "../views/dashboard/Dashboard";
@@ -49,6 +51,8 @@ import { CertificatesScreen } from "../views/reports/Certificates";
 import { ScreenshotsScreen } from "../views/reports/Screenshots";
 import { BackupScreen } from "../views/reports/Backup";
 import { SettingsScreen } from "../views/settings/Settings";
+import { ProfitLossScreen } from "../views/applicants/ProfitLoss";
+import { InvoiceDashboardScreen } from "../views/applicants/InvoiceDashboard";
 
 const navGroups = [
   {
@@ -61,6 +65,8 @@ const navGroups = [
           { icon: Users, label: "Applicants", screen: "applicants" },
           { icon: FileText, label: "Registration", screen: "registration" },
           { icon: DollarSign, label: "Invoices", screen: "invoice" },
+          { icon: BarChart3, label: "Invoice Dashboard", screen: "invoice-dashboard" },
+          { icon: TrendingUp, label: "Profit & Loss", screen: "profit-loss" },
           { icon: FileText, label: "Services", screen: "services" },
           { icon: ListChecks, label: "Statuses", screen: "statuses" },
         ],
@@ -113,6 +119,8 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     invoice: ["Applicants", "Invoices"],
     services: ["Applicants", "Services"],
     statuses: ["Applicants", "Statuses"],
+    "invoice-dashboard": ["Applicants", "Invoice Dashboard"],
+    "profit-loss": ["Applicants", "Profit & Loss"],
     courses: ["Courses & Exams", "Courses"],
     "question-bank": ["Questions", "Question Bank"],
     "question-form": ["Questions", questionForm?.question?.questionId ? "Edit Question" : "Add Question"],
@@ -153,6 +161,8 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     invoice: <InvoiceScreen key={selectedApplicant?.applicantId ?? "none"} applicant={selectedApplicant} />,
     services: <ServicesScreen />,
     statuses: <StatusesScreen />,
+    "invoice-dashboard": <InvoiceDashboardScreen />,
+    "profit-loss": <ProfitLossScreen />,
     courses: <CoursesScreen />,
     "question-bank": <QuestionBankScreen setScreen={setScreen} onEdit={onEditQuestion} />,
     "question-form": <QuestionFormScreen question={questionForm?.question ?? null} onBack={() => setScreen("question-bank")} />,

@@ -7,5 +7,7 @@ namespace MdLabScience.DbContext
         public Nullable<double> Amount { get; set; }
         public string Service { get; set; }
         public Nullable<int> InvoiceId { get; set; }
+        public Nullable<double> PurchaseAmount { get; set; }
+        public bool IsCompleted { get; set; }
     }
 }

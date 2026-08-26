@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, AlertCircle, FileText, ArrowRight } from "lucide-react";
+import { Plus, Pencil, Trash2, X, AlertCircle, FileText, ArrowRight, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Btn, BouncingDots, Card, Input, Modal, SearchableSelect, Select, StatusBadge } from "../../shared/ui";
 import { ServiceMultiSelect } from "../../shared/LookupSelect";
@@ -11,6 +11,7 @@ import {
   saveApplicant
 } from "../../../../services/applicantService";
 import {
+  completeService,
   deleteApplicantInvoice,
   getAllApplicantInvoices,
   getApplicantDetail,
@@ -21,6 +22,7 @@ import {
   saveApplicantInvoice,
   setApplicantStatus
 } from "../../../../services/applicantInvoiceService";
+import { PrintInvoice } from "./PrintInvoice";
 
 const CURRENCIES = ["AED", "SAR", "USD", "GBP", "EUR"];
 const STATUS_CHANGE_CATEGORIES = ["Payment Issue", "Docs Pending", "Manual Review", "Other"];
@@ -180,6 +182,12 @@ export function InvoiceScreen({ applicant }) {
   const [paymentError, setPaymentError] = useState("");
   const [paymentSaving, setPaymentSaving] = useState(false);
 
+  const [printInvoice, setPrintInvoice] = useState(null);
+
+  const [completeModalItem, setCompleteModalItem] = useState(null);
+  const [completePurchaseAmount, setCompletePurchaseAmount] = useState("");
+  const [completeSaving, setCompleteSaving] = useState(false);
+
   const openDrawer = (applicant) => {
     const applicantId = applicant.applicantId;
     if (!applicantId) return;
@@ -258,6 +266,32 @@ export function InvoiceScreen({ applicant }) {
     setShowRegModal(true);
     getCountries().then((res) => setRegCountries(Array.isArray(res) ? res : [])).catch(() => setRegCountries([]));
     getActiveCourses().then((res) => setRegCourses(Array.isArray(res) ? res : [])).catch(() => setRegCourses([]));
+  };
+
+  const openCompleteModal = (item) => {
+    setCompleteModalItem(item);
+    setCompletePurchaseAmount("");
+  };
+
+  const handleCompleteService = async () => {
+    if (!completeModalItem) return;
+    const amt = Number(completePurchaseAmount);
+    if (!Number.isFinite(amt) || amt < 0) {
+      toast.error("Enter a valid purchase amount.");
+      return;
+    }
+    setCompleteSaving(true);
+    try {
+      await completeService(completeModalItem.certificateInoviceId, { purchaseAmount: amt });
+      toast.success("Service marked as completed.");
+      setCompleteModalItem(null);
+      setCompletePurchaseAmount("");
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to complete service.");
+    } finally {
+      setCompleteSaving(false);
+    }
   };
 
   const handleRegSubmit = async () => {
@@ -723,6 +757,80 @@ export function InvoiceScreen({ applicant }) {
                     </div>
                   )}
                 </section>
+
+                <section className="flex flex-col gap-3">
+                  <h3 className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Services Timeline</h3>
+                  {rows.length === 0 ? (
+                    <p className="text-xs text-gray-400 py-2">No services yet.</p>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {rows.filter(inv => inv.applicantId === drawerApplicant?.applicantId).map((inv) => (
+                        <div key={inv.invoiceId} className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2 text-xs text-[#718096]">
+                            <span className="font-mono font-semibold">{inv.invoiceNo}</span>
+                            <span>·</span>
+                            <span>{formatDate(inv.dateTime)}</span>
+                            <span>·</span>
+                            <span>{inv.currency}</span>
+                          </div>
+                          {(inv.serviceList ?? []).length === 0 ? (
+                            <p className="text-xs text-gray-400 pl-4">No line items</p>
+                          ) : (
+                            <div className="ml-3 pl-5 border-l-2 border-teal-200">
+                              {(inv.serviceList ?? []).map((item, idx) => {
+                                const isCompleted = item.isCompleted;
+                                return (
+                                  <div key={item.certificateInoviceId ?? idx} className="relative pb-3 last:pb-0">
+                                    <div className="flex items-start gap-3">
+                                      <div className="relative flex-shrink-0 mt-0.5">
+                                        <input
+                                          type="checkbox"
+                                          checked={isCompleted}
+                                          readOnly
+                                          className="w-4 h-4 rounded border-2 cursor-pointer appearance-none checked:bg-[#0E7C7B] checked:border-[#0E7C7B] transition-colors"
+                                          style={{
+                                            backgroundImage: isCompleted ? "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3E%3C/svg%3E\")" : "none",
+                                            backgroundSize: "100% 100%",
+                                            backgroundRepeat: "no-repeat",
+                                            backgroundPosition: "center"
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="flex-1 flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className={`text-sm font-medium ${isCompleted ? "text-[#1A202C]" : "text-[#718096]"}`}>{item.service}</span>
+                                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isCompleted ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                                            {isCompleted ? "Completed" : "Pending"}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                          <span className="text-sm font-mono text-[#1A202C]">{fmtMoney(item.amount)}</span>
+                                          {!isCompleted && (
+                                            <button
+                                              onClick={() => openCompleteModal(item)}
+                                              className="text-[10px] font-medium text-[#0E7C7B] hover:underline whitespace-nowrap"
+                                            >
+                                              Mark done
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {isCompleted && item.purchaseAmount != null && (
+                                      <div className="ml-7 text-xs text-[#718096] mt-0.5">
+                                        Purchase: <span className="font-mono">{fmtMoney(item.purchaseAmount)}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </>
             )}
           </div>
@@ -888,6 +996,13 @@ export function InvoiceScreen({ applicant }) {
                   <td className="px-4 py-3"><StatusBadge status={invoiceStatus(inv)} /></td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
+                      <button
+                        title="Print invoice"
+                        onClick={() => setPrintInvoice(inv)}
+                        className="p-1.5 text-[#718096] hover:text-[#0E7C7B] hover:bg-teal-50 rounded-lg transition"
+                      >
+                        <Printer size={14} />
+                      </button>
                       <button
                         title="Edit invoice"
                         onClick={() => openEdit(inv)}
@@ -1186,6 +1301,38 @@ export function InvoiceScreen({ applicant }) {
               <Btn variant="ghost" onClick={() => setShowRegModal(false)} disabled={regSaving}>Cancel</Btn>
               <Btn variant="primary" onClick={handleRegSubmit} disabled={regSaving}>
                 {regSaving ? "Saving…" : "Register & Select"}
+              </Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {printInvoice && (
+        <PrintInvoice invoice={printInvoice} onClose={() => setPrintInvoice(null)} />
+      )}
+
+      {completeModalItem && (
+        <Modal title="Complete Service" onClose={() => setCompleteModalItem(null)} className="max-w-sm">
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-sm font-medium text-[#1A202C]">{completeModalItem.service}</p>
+              <p className="text-xs text-[#718096]">Sale: {fmtMoney(completeModalItem.amount)} {completeModalItem.currency || ""}</p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Purchase Amount</label>
+              <input
+                type="number"
+                step="0.01"
+                value={completePurchaseAmount}
+                onChange={(e) => setCompletePurchaseAmount(e.target.value)}
+                placeholder="0.00"
+                className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Btn variant="ghost" onClick={() => setCompleteModalItem(null)} disabled={completeSaving}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleCompleteService} disabled={completeSaving}>
+                {completeSaving ? "Saving…" : "Complete"}
               </Btn>
             </div>
           </div>

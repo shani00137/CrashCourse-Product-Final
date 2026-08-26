@@ -117,7 +117,9 @@ namespace MdLabScience.Controllers
                     .Select(s => new ServiceModel
                     {
                         ServiceId = s.ServiceId,
-                        ServiceName = s.ServiceName
+                        ServiceName = s.ServiceName,
+                        PurchasePrice = s.PurchasePrice,
+                        SalePrice = s.SalePrice
                     })
                     .OrderBy(x => x.ServiceId)
                     .ToList();
@@ -136,7 +138,9 @@ namespace MdLabScience.Controllers
                     .Select(s => new ServiceModel
                     {
                         ServiceId = s.ServiceId,
-                        ServiceName = s.ServiceName
+                        ServiceName = s.ServiceName,
+                        PurchasePrice = s.PurchasePrice,
+                        SalePrice = s.SalePrice
                     })
                     .FirstOrDefault();
                 if (service == null)
@@ -152,11 +156,16 @@ namespace MdLabScience.Controllers
             if (string.IsNullOrWhiteSpace(model.ServiceName))
                 return BadRequest("Service name is required");
 
+            if (model.PurchasePrice < 0 || model.SalePrice < 0)
+                return BadRequest("Prices cannot be negative");
+
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
                 var entity = new ServiceTb
                 {
-                    ServiceName = model.ServiceName.Trim()
+                    ServiceName = model.ServiceName.Trim(),
+                    PurchasePrice = model.PurchasePrice,
+                    SalePrice = model.SalePrice
                 };
                 db.ServiceTbs.Add(entity);
                 db.SaveChanges();
@@ -172,6 +181,9 @@ namespace MdLabScience.Controllers
             if (string.IsNullOrWhiteSpace(model.ServiceName))
                 return BadRequest("Service name is required");
 
+            if (model.PurchasePrice < 0 || model.SalePrice < 0)
+                return BadRequest("Prices cannot be negative");
+
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
                 var entity = db.ServiceTbs.FirstOrDefault(x => x.ServiceId == model.ServiceId);
@@ -179,6 +191,8 @@ namespace MdLabScience.Controllers
                     return NotFound("Service not found");
 
                 entity.ServiceName = model.ServiceName.Trim();
+                entity.PurchasePrice = model.PurchasePrice;
+                entity.SalePrice = model.SalePrice;
                 db.SaveChanges();
                 return Ok(model);
             }
