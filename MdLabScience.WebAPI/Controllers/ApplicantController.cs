@@ -17,6 +17,7 @@ namespace MdLabScience.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    //checj auth
     public class ApplicantController : ControllerBase
     {
         private readonly IWebHostEnvironment _env;
