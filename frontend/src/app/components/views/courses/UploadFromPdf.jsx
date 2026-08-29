@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Btn, Card, SearchableSelect } from "../../shared/ui";
 import { RichTextEditor } from "../../shared/RichTextEditor";
-import { ocrPdf, parseOcrToQuestions, bulkSaveQuestions } from "../../../../services/questionService";
+import { parseOcrToQuestions, bulkSaveQuestions } from "../../../../services/questionService";
 import { getActiveCourses } from "../../../../services/applicantService";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = PdfJsWorker;
@@ -34,6 +34,7 @@ const ZOOM_STEP = 25;
 const ZOOM_MIN = 50;
 const ZOOM_MAX = 300;
 const OCR_SCALE = 2;
+const OCR_SERVICE_URL = (import.meta.env.VITE_OCR_URL || "http://localhost:5100/ocr");
 
 export function UploadFromPdfScreen({ onBack }) {
   const [fileName, setFileName] = useState("");
@@ -179,15 +180,35 @@ export function UploadFromPdfScreen({ onBack }) {
       const ctx = offscreen.getContext("2d");
       await page.render({ canvasContext: ctx, viewport }).promise;
 
-      const dataUrl = offscreen.toDataURL("image/png");
-      const base64 = dataUrl.split(",")[1];
+      const pageBlob = await new Promise((resolve) =>
+        offscreen.toBlob(resolve, "image/png")
+      );
 
-      const ocrRes = await ocrPdf({ imageBase64: base64, fileName });
-      if (!ocrRes?.succeeded) {
-        throw new Error(ocrRes?.message || "OCR failed for page " + pageNum);
+      const formData = new FormData();
+      formData.append("file", pageBlob, `page_${pageNum}.png`);
+
+      let ocrRes;
+      try {
+        const ocrResponse = await fetch(OCR_SERVICE_URL, {
+          method: "POST",
+          body: formData
+        });
+        if (!ocrResponse.ok) {
+          const errText = await ocrResponse.text();
+          throw new Error(
+            `OCR service returned error (${ocrResponse.status}): ${errText || "unknown"}`
+          );
+        }
+        ocrRes = await ocrResponse.json();
+      } catch (err) {
+        console.error("[UploadFromPdf:OcrService]", err);
+        throw new Error(
+          `Could not reach the OCR service at ${OCR_SERVICE_URL}. ` +
+          (err instanceof Error ? err.message : String(err))
+        );
       }
 
-      const pageText = ocrRes.pages?.[0]?.text || ocrRes.fullText || "";
+      const pageText = ocrRes?.text || "";
       setOcrText(prev => prev ? prev + "\n\n--- Page " + pageNum + " ---\n\n" + pageText : pageText);
 
       if (pageText.trim()) {
