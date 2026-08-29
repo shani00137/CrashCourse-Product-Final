@@ -12,3 +12,4 @@ MdLabScience.WebAPI/wwwroot/
 # Local secrets and configuration
 appsettings.Development.json
 appsettings.Local.json
+appsettings.Production.json
