@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, AlertCircle, FileText, ArrowRight, Printer } from "lucide-react";
+import { Plus, Pencil, Trash2, X, AlertCircle, FileText, ArrowRight, Printer, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Btn, BouncingDots, Card, Input, Modal, SearchableSelect, Select, StatusBadge } from "../../shared/ui";
 import { ServiceMultiSelect } from "../../shared/LookupSelect";
@@ -39,6 +39,14 @@ const emptyForm = () => ({
 function toNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function subtotalOf(serviceList) {
+  return (serviceList ?? []).reduce((sum, r) => {
+    if (r.amount === "" || r.amount == null) return sum;
+    const n = Number(r.amount);
+    return sum + (Number.isFinite(n) && n > 0 ? n : 0);
+  }, 0);
 }
 
 function fmtMoney(value) {
@@ -187,6 +195,7 @@ export function InvoiceScreen({ applicant }) {
   const [completeModalItem, setCompleteModalItem] = useState(null);
   const [completePurchaseAmount, setCompletePurchaseAmount] = useState("");
   const [completeSaving, setCompleteSaving] = useState(false);
+  const [completeStep, setCompleteStep] = useState("details");
 
   const openDrawer = (applicant) => {
     const applicantId = applicant.applicantId;
@@ -269,8 +278,21 @@ export function InvoiceScreen({ applicant }) {
   };
 
   const openCompleteModal = (item) => {
+    const catalog = services.find((s) => s.serviceName === (item.service ?? "").trim());
+    const suggested = catalog && Number(catalog.purchasePrice) > 0 ? Number(catalog.purchasePrice) : "";
     setCompleteModalItem(item);
-    setCompletePurchaseAmount("");
+    setCompletePurchaseAmount(suggested === "" ? "" : String(suggested));
+    setCompleteStep("details");
+  };
+
+  const continueComplete = () => {
+    if (!completeModalItem) return;
+    const amt = Number(completePurchaseAmount);
+    if (completePurchaseAmount === "" || !Number.isFinite(amt) || amt < 0) {
+      toast.error("Enter the total purchase amount spent on this service.");
+      return;
+    }
+    setCompleteStep("confirm");
   };
 
   const handleCompleteService = async () => {
@@ -283,9 +305,14 @@ export function InvoiceScreen({ applicant }) {
     setCompleteSaving(true);
     try {
       await completeService(completeModalItem.certificateInoviceId, { purchaseAmount: amt });
-      toast.success("Service marked as completed.");
+      toast.success("Service completed and purchase recorded.");
+      const txns = drawerApplicant
+        ? await getApplicantTransactions(drawerApplicant.applicantId).catch(() => null)
+        : null;
+      if (txns) setDrawerTxns(Array.isArray(txns) ? txns : []);
       setCompleteModalItem(null);
       setCompletePurchaseAmount("");
+      setCompleteStep("details");
       load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to complete service.");
@@ -436,11 +463,12 @@ export function InvoiceScreen({ applicant }) {
     });
   };
 
-  const setLine = (index, field) => (e) => {
+  const setLineAmount = (index) => (e) => {
     const value = e.target.value;
     setForm((f) => {
-      const serviceList = f.serviceList.map((item, i) => (i === index ? { ...item, [field]: value } : item));
-      return { ...f, serviceList };
+      const serviceList = f.serviceList.map((item, i) => (i === index ? { ...item, amount: value } : item));
+      const subtotal = subtotalOf(serviceList);
+      return { ...f, serviceList, amount: subtotal > 0 ? String(subtotal) : f.amount };
     });
     setFormErrors((errs) => {
       if (!(`line-${index}` in errs)) return errs;
@@ -451,7 +479,74 @@ export function InvoiceScreen({ applicant }) {
   };
 
   const addLine = () => setForm((f) => ({ ...f, serviceList: [...f.serviceList, { service: "", amount: "" }] }));
-  const removeLine = (index) => setForm((f) => ({ ...f, serviceList: f.serviceList.filter((_, i) => i !== index) }));
+  const removeLine = (index) => setForm((f) => {
+    const serviceList = f.serviceList.filter((_, i) => i !== index);
+    const removed = f.serviceList[index];
+    let service = f.service;
+    if (removed) {
+      const rmName = (removed.service ?? "").trim();
+      const isCatalog = services.some((s) => s.serviceName === rmName);
+      if (isCatalog && rmName && service) {
+        service = service.split(",").map((n) => n.trim()).filter((n) => n && n !== rmName).join(", ");
+      }
+    }
+    const subtotal = subtotalOf(serviceList);
+    return { ...f, serviceList, service, amount: subtotal > 0 ? String(subtotal) : f.amount };
+  });
+
+  const handleServiceSelection = (ids) => {
+    const selected = ids
+      .map((id) => services.find((s) => s.serviceId === id))
+      .filter(Boolean);
+    const selectedNames = new Set(selected.map((s) => s.serviceName));
+    setForm((f) => {
+      const kept = f.serviceList.filter((r) => {
+        const nm = (r.service ?? "").trim();
+        if (!nm) return false;
+        const isCatalog = services.some((s) => s.serviceName === nm);
+        return isCatalog ? selectedNames.has(nm) : true;
+      });
+      const keptNames = new Set(kept.map((r) => r.service.trim()));
+      const added = selected
+        .filter((s) => !keptNames.has(s.serviceName))
+        .map((s) => ({ service: s.serviceName, amount: String(Number(s.salePrice ?? 0)) }));
+      const serviceList = [...kept, ...added];
+      const subtotal = subtotalOf(serviceList);
+      return {
+        ...f,
+        service: [...selectedNames].join(", "),
+        serviceList,
+        amount: subtotal > 0 ? String(subtotal) : f.amount
+      };
+    });
+    setFormErrors((errs) => {
+      if (!("service" in errs)) return errs;
+      const next = { ...errs };
+      delete next.service;
+      return next;
+    });
+  };
+
+  const setLineService = (index) => (e) => {
+    const value = e.target.value;
+    const matched = services.find((s) => s.serviceName === value.trim());
+    setForm((f) => {
+      const serviceList = f.serviceList.map((item, i) => {
+        if (i !== index) return item;
+        return matched
+          ? { ...item, service: value, amount: String(Number(matched.salePrice ?? 0)) }
+          : { ...item, service: value };
+      });
+      const subtotal = subtotalOf(serviceList);
+      return { ...f, serviceList, amount: subtotal > 0 ? String(subtotal) : f.amount };
+    });
+    setFormErrors((errs) => {
+      if (!(`line-${index}` in errs)) return errs;
+      const next = { ...errs };
+      delete next[`line-${index}`];
+      return next;
+    });
+  };
 
   const handleSubmit = async () => {
     if (!modalApplicant?.applicantId) {
@@ -776,51 +871,47 @@ export function InvoiceScreen({ applicant }) {
                           {(inv.serviceList ?? []).length === 0 ? (
                             <p className="text-xs text-gray-400 pl-4">No line items</p>
                           ) : (
-                            <div className="ml-3 pl-5 border-l-2 border-teal-200">
+                            <div className="flex flex-col">
                               {(inv.serviceList ?? []).map((item, idx) => {
                                 const isCompleted = item.isCompleted;
+                                const isLast = idx === (inv.serviceList ?? []).length - 1;
                                 return (
-                                  <div key={item.certificateInoviceId ?? idx} className="relative pb-3 last:pb-0">
-                                    <div className="flex items-start gap-3">
-                                      <div className="relative flex-shrink-0 mt-0.5">
-                                        <input
-                                          type="checkbox"
-                                          checked={isCompleted}
-                                          readOnly
-                                          className="w-4 h-4 rounded border-2 cursor-pointer appearance-none checked:bg-[#0E7C7B] checked:border-[#0E7C7B] transition-colors"
-                                          style={{
-                                            backgroundImage: isCompleted ? "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3E%3C/svg%3E\")" : "none",
-                                            backgroundSize: "100% 100%",
-                                            backgroundRepeat: "no-repeat",
-                                            backgroundPosition: "center"
-                                          }}
-                                        />
-                                      </div>
-                                      <div className="flex-1 flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className={`text-sm font-medium ${isCompleted ? "text-[#1A202C]" : "text-[#718096]"}`}>{item.service}</span>
-                                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isCompleted ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                                  <div key={item.certificateInoviceId ?? idx} className="relative flex gap-4 pb-5 last:pb-0">
+                                    <div className="relative flex flex-col items-center">
+                                      <span className={`relative z-10 flex h-6 w-6 items-center justify-center rounded-full transition-colors ${isCompleted ? "bg-[#0E7C7B] text-white ring-4 ring-teal-100" : "border-2 border-amber-400 bg-white"}`}>
+                                        {isCompleted
+                                          ? <Check size={13} strokeWidth={3} />
+                                          : <span className="h-2 w-2 rounded-full bg-amber-400" />}
+                                      </span>
+                                      {!isLast && <span className={`absolute top-7 bottom-0 w-0.5 ${isCompleted ? "bg-emerald-200" : "bg-gray-200"}`} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0 pt-0.5 flex flex-col gap-1">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <span className={`text-sm font-medium truncate ${isCompleted ? "text-[#1A202C]" : "text-[#718096]"}`}>{item.service}</span>
+                                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${isCompleted ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
                                             {isCompleted ? "Completed" : "Pending"}
                                           </span>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                          <span className="text-sm font-mono text-[#1A202C]">{fmtMoney(item.amount)}</span>
+                                        <div className="flex items-center gap-3 flex-shrink-0">
+                                          <span className="text-sm font-mono text-[#1A202C]">{fmtMoney(item.amount)} {inv.currency}</span>
                                           {!isCompleted && (
                                             <button
                                               onClick={() => openCompleteModal(item)}
-                                              className="text-[10px] font-medium text-[#0E7C7B] hover:underline whitespace-nowrap"
+                                              className="text-[10px] font-semibold px-2.5 py-1 text-[#0E7C7B] bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition whitespace-nowrap"
                                             >
                                               Mark done
                                             </button>
                                           )}
                                         </div>
                                       </div>
+                                      {isCompleted && item.purchaseAmount != null && (
+                                        <div className="text-xs text-[#718096]">
+                                          Purchase: <span className="font-mono text-[#1A202C]">{fmtMoney(item.purchaseAmount)}</span>
+                                          <span className="ml-2 text-emerald-600 font-medium">Profit {fmtMoney(Number(item.amount ?? 0) - Number(item.purchaseAmount ?? 0))}</span>
+                                        </div>
+                                      )}
                                     </div>
-                                    {isCompleted && item.purchaseAmount != null && (
-                                      <div className="ml-7 text-xs text-[#718096] mt-0.5">
-                                        Purchase: <span className="font-mono">{fmtMoney(item.purchaseAmount)}</span>
-                                      </div>
-                                    )}
                                   </div>
                                 );
                               })}
@@ -922,6 +1013,106 @@ export function InvoiceScreen({ applicant }) {
             </div>
           </Modal>
         )}
+        {completeModalItem && (() => {
+          const saleAmt = Number(completeModalItem.amount ?? 0);
+          const pAmt = completePurchaseAmount === "" ? 0 : Number(completePurchaseAmount);
+          const purchaseNum = Number.isFinite(pAmt) ? pAmt : 0;
+          const margin = saleAmt - purchaseNum;
+          const currency = completeModalItem.currency || "";
+          const catalog = services.find((s) => s.serviceName === (completeModalItem.service ?? "").trim());
+          const valid = completePurchaseAmount !== "" && Number.isFinite(Number(completePurchaseAmount)) && Number(completePurchaseAmount) >= 0;
+          return (
+            <Modal title="Complete Service" onClose={() => !completeSaving && setCompleteModalItem(null)} className="max-w-md">
+              <div className="flex flex-col gap-4">
+                {completeStep === "details" ? (
+                  <>
+                    <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#F7FAFC] p-4 flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-[#1A202C]">{completeModalItem.service}</span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Pending</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[#718096]">Sale amount</span>
+                        <span className="font-mono font-semibold text-[#1A202C]">{fmtMoney(saleAmt)} {currency}</span>
+                      </div>
+                      {catalog && Number(catalog.purchasePrice) > 0 && (
+                        <div className="text-[11px] text-[#718096]">
+                          Catalog purchase price: <span className="font-mono">{fmtMoney(catalog.purchasePrice)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">
+                        Total Purchase Price Spent <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={completePurchaseAmount}
+                        onChange={(e) => setCompletePurchaseAmount(e.target.value)}
+                        placeholder="0.00"
+                        autoFocus
+                        className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                      />
+                      <p className="text-[11px] text-[#718096]">The purchase amount will be recorded against this service and reflected in the invoice.</p>
+                    </div>
+
+                    <div className={`flex items-center justify-between px-4 py-3 rounded-xl border text-sm ${margin > 0 ? "border-emerald-100 bg-emerald-50" : margin < 0 ? "border-red-100 bg-red-50" : "border-[rgba(0,0,0,0.08)] bg-gray-50"}`}>
+                      <span className="text-[#718096] font-medium">Margin on this service</span>
+                      <span className={`font-mono font-semibold ${margin > 0 ? "text-emerald-600" : margin < 0 ? "text-red-600" : "text-[#1A202C]"}`}>{fmtMoney(margin)}</span>
+                    </div>
+
+                    <div className="flex gap-2 justify-end">
+                      <Btn variant="ghost" onClick={() => setCompleteModalItem(null)} disabled={completeSaving}>Cancel</Btn>
+                      <Btn variant="primary" onClick={continueComplete} disabled={!valid}>
+                        Continue
+                      </Btn>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="rounded-xl border border-[rgba(0,0,0,0.08)] overflow-hidden">
+                      <div className="px-4 py-2 bg-[#F7FAFC] border-b border-[rgba(0,0,0,0.06)] text-[11px] font-semibold uppercase tracking-wide text-[#718096]">
+                        Confirm Completion — {completeModalItem.service}
+                      </div>
+                      <div className="px-4 py-3 flex flex-col gap-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#718096]">Sale amount</span>
+                          <span className="font-mono font-medium text-[#1A202C]">{fmtMoney(saleAmt)} {currency}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#718096]">Purchase price</span>
+                          <span className="font-mono font-medium text-[#1A202C]">{fmtMoney(purchaseNum)} {currency}</span>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-[rgba(0,0,0,0.06)] pt-2">
+                          <span className="font-semibold text-[#1A202C]">Net margin</span>
+                          <span className={`font-mono font-semibold ${margin > 0 ? "text-emerald-600" : margin < 0 ? "text-red-600" : "text-[#1A202C]"}`}>{fmtMoney(margin)} {currency}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2.5">
+                      <AlertCircle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-amber-700 leading-relaxed">
+                        This marks the service as completed, records the purchase price above on the invoice, and updates the ledger. This action cannot be undone.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 justify-end">
+                      <Btn variant="ghost" onClick={() => setCompleteStep("details")} disabled={completeSaving}>Back</Btn>
+                      <Btn variant="primary" onClick={handleCompleteService} disabled={completeSaving}>
+                        {completeSaving && <Loader2 size={14} className="animate-spin" />}
+                        {completeSaving ? "Completing…" : "Confirm & Complete"}
+                      </Btn>
+                    </div>
+                  </>
+                )}
+              </div>
+            </Modal>
+          );
+        })()}
       </div>
     );
   }
@@ -1057,11 +1248,30 @@ export function InvoiceScreen({ applicant }) {
         <Modal
           title={editing ? `Edit Invoice ${editing.invoiceNo}` : "Create Invoice"}
           onClose={() => setShowModal(false)}
-          className="max-w-xl"
+          className="max-w-2xl"
         >
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col max-h-[75vh] overflow-y-auto pr-1">
+            {/* Invoice header */}
+            <div className="flex items-start justify-between px-1 pb-4 mb-4 border-b border-[rgba(0,0,0,0.08)]">
+              <div>
+                <h2 className="text-2xl font-bold text-[#1A202C] tracking-tight">INVOICE</h2>
+                <p className="text-[11px] uppercase tracking-wide text-[#718096] mt-1">Medical Education &amp; Certification Services</p>
+              </div>
+              <div className="text-right">
+                {editing ? (
+                  <>
+                    <div className="text-sm font-mono font-semibold text-[#1A202C]">{editing.invoiceNo}</div>
+                    <div className="text-xs text-[#718096] mt-0.5">{formatDate(editing.dateTime)}</div>
+                  </>
+                ) : (
+                  <div className="text-sm text-[#718096]">New Invoice</div>
+                )}
+              </div>
+            </div>
+
+            {/* Bill to */}
             <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Applicant</label>
+              <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Bill To — Applicant</label>
               {editing ? (
                 <div className="h-10 flex items-center px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-gray-50 text-sm text-[#1A202C]">
                   {modalApplicant?.label}
@@ -1100,33 +1310,81 @@ export function InvoiceScreen({ applicant }) {
                 </>
               )}
             </div>
-            <div className="flex flex-col gap-1">
+
+            {/* Services */}
+            <div className="mt-4 flex flex-col gap-1">
+              <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Select Services <span className="text-red-500">*</span></label>
               <ServiceMultiSelect
                 services={services}
                 value={selectedServiceIds}
-                onChange={(ids) => {
-                  const names = ids
-                    .map((id) => services.find((s) => s.serviceId === id)?.serviceName ?? "")
-                    .filter(Boolean)
-                    .join(", ");
-                  setForm((f) => ({ ...f, service: names }));
-                  setFormErrors((errs) => {
-                    if (!("service" in errs)) return errs;
-                    const next = { ...errs };
-                    delete next.service;
-                    return next;
-                  });
-                }}
-                label="Service"
-                placeholder="Select services…"
+                onChange={handleServiceSelection}
+                placeholder="Search services…"
                 allLabel="Clear services"
                 required
               />
+              {formErrors.service && <p className="text-xs text-red-600">{formErrors.service}</p>}
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            {/* Line items */}
+            <div className="mt-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Itemized Services</label>
+                <button onClick={addLine} className="text-xs font-medium text-[#0E7C7B] hover:underline">+ Add line item</button>
+              </div>
+              {form.serviceList.length === 0 && (
+                <p className="text-xs text-gray-400">No line items yet.</p>
+              )}
+              <div className="border border-[rgba(0,0,0,0.08)] rounded-lg overflow-hidden">
+                <div className="grid grid-cols-[1fr_6.5rem_1.75rem] gap-2 px-3 py-2 bg-[#F7FAFC] text-[10px] font-semibold uppercase tracking-wide text-[#718096]">
+                  <span>Service</span><span className="text-right">Price</span><span />
+                </div>
+                {form.serviceList.map((item, i) => {
+                  const matched = services.find((s) => s.serviceName === item.service.trim());
+                  return (
+                    <div key={i} className="flex flex-col gap-1">
+                      <div className="grid grid-cols-[1fr_6.5rem_1.75rem] gap-2 items-center px-3 py-2 border-t border-[rgba(0,0,0,0.06)]">
+                        <div className="flex flex-col gap-1">
+                          <input
+                            value={item.service}
+                            onChange={setLineService(i)}
+                            placeholder="Type or pick a service"
+                            list="invoice-service-options"
+                            className="h-9 w-full px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                          />
+                          {formErrors[`line-${i}`] && <p className="text-xs text-red-600">{formErrors[`line-${i}`]}</p>}
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.amount}
+                          onChange={setLineAmount(i)}
+                          placeholder="0.00"
+                          className={`h-9 w-full px-2 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition text-right ${matched ? "text-[#0E7C7B]" : ""}`}
+                        />
+                        <button
+                          onClick={() => removeLine(i)}
+                          title="Remove line item"
+                          className="p-1.5 text-[#718096] hover:text-red-600 hover:bg-red-50 rounded-lg transition flex-shrink-0 justify-self-end"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      {matched && <div className="px-3 pb-1.5 -mt-0.5 text-[11px] text-[#0E7C7B]">Sale price {fmtMoney(matched.salePrice)} — edit if needed</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <datalist id="invoice-service-options">
+              {services.map((s) => <option key={s.serviceId} value={s.serviceName} />)}
+            </datalist>
+
+            {/* Amount & totals */}
+            <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Amount</label>
+                <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Total Amount</label>
                 <input
                   type="number"
                   min="0"
@@ -1154,14 +1412,26 @@ export function InvoiceScreen({ applicant }) {
               <Select label="Currency" options={CURRENCIES} value={form.currency} onChange={(v) => setForm((f) => ({ ...f, currency: v }))} />
             </div>
 
-            {derivedBalance !== null && (
-              <div className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-teal-50 border border-teal-100 text-sm">
-                <span className="text-[#0E7C7B] font-medium">Balance</span>
-                <span className="font-mono font-semibold text-[#0E7C7B]">{fmtMoney(derivedBalance)}</span>
+            {/* Totals */}
+            {(derivedBalance !== null || form.amount !== "" || form.paidAmount !== "") && (
+              <div className="mt-4 flex flex-col gap-1.5 rounded-lg border border-[rgba(0,0,0,0.08)] p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#718096]">Subtotal</span>
+                  <span className="font-mono font-medium text-[#1A202C]">{fmtMoney(toNumber(form.amount))}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#718096]">Paid</span>
+                  <span className="font-mono font-medium text-emerald-600">- {fmtMoney(toNumber(form.paidAmount))}</span>
+                </div>
+                <div className="flex items-center justify-between border-t border-[rgba(0,0,0,0.08)] pt-1.5">
+                  <span className="font-semibold text-[#1A202C]">Balance Due</span>
+                  <span className="font-mono text-lg font-semibold text-[#0E7C7B]">{derivedBalance !== null ? fmtMoney(derivedBalance) : fmtMoney(Math.max(toNumber(form.amount) - toNumber(form.paidAmount), 0))}</span>
+                </div>
               </div>
             )}
 
-            <div className="flex flex-col gap-1">
+            {/* Remarks */}
+            <div className="mt-4 flex flex-col gap-1">
               <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Remarks</label>
               <textarea
                 value={form.remarks}
@@ -1172,46 +1442,7 @@ export function InvoiceScreen({ applicant }) {
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Line Items</label>
-                <button onClick={addLine} className="text-xs font-medium text-[#0E7C7B] hover:underline">+ Add line item</button>
-              </div>
-              {form.serviceList.length === 0 && (
-                <p className="text-xs text-gray-400">No line items. Add itemized services if needed.</p>
-              )}
-              {form.serviceList.map((item, i) => (
-                <div key={i} className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <input
-                      value={item.service}
-                      onChange={setLine(i, "service")}
-                      placeholder="Line item service"
-                      className={`h-9 flex-1 px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition ${formErrors[`line-${i}`] ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={item.amount}
-                      onChange={setLine(i, "amount")}
-                      placeholder="0.00"
-                      className={`h-9 w-28 px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition ${formErrors[`line-${i}`] ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
-                    />
-                    <button
-                      onClick={() => removeLine(i)}
-                      title="Remove line item"
-                      className="p-1.5 text-[#718096] hover:text-red-600 hover:bg-red-50 rounded-lg transition flex-shrink-0"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                  {formErrors[`line-${i}`] && <p className="text-xs text-red-600">{formErrors[`line-${i}`]}</p>}
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-2 justify-end mt-2">
+            <div className="flex gap-2 justify-end border-t border-[rgba(0,0,0,0.08)] mt-5 pt-4">
               <Btn variant="ghost" onClick={() => setShowModal(false)} disabled={saving}>Cancel</Btn>
               <Btn variant="primary" onClick={handleSubmit} disabled={saving}>
                 {saving ? "Saving…" : editing ? "Save Changes" : "Create Invoice"}
@@ -1309,34 +1540,6 @@ export function InvoiceScreen({ applicant }) {
 
       {printInvoice && (
         <PrintInvoice invoice={printInvoice} onClose={() => setPrintInvoice(null)} />
-      )}
-
-      {completeModalItem && (
-        <Modal title="Complete Service" onClose={() => setCompleteModalItem(null)} className="max-w-sm">
-          <div className="flex flex-col gap-4">
-            <div>
-              <p className="text-sm font-medium text-[#1A202C]">{completeModalItem.service}</p>
-              <p className="text-xs text-[#718096]">Sale: {fmtMoney(completeModalItem.amount)} {completeModalItem.currency || ""}</p>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Purchase Amount</label>
-              <input
-                type="number"
-                step="0.01"
-                value={completePurchaseAmount}
-                onChange={(e) => setCompletePurchaseAmount(e.target.value)}
-                placeholder="0.00"
-                className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
-              />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Btn variant="ghost" onClick={() => setCompleteModalItem(null)} disabled={completeSaving}>Cancel</Btn>
-              <Btn variant="primary" onClick={handleCompleteService} disabled={completeSaving}>
-                {completeSaving ? "Saving…" : "Complete"}
-              </Btn>
-            </div>
-          </div>
-        </Modal>
       )}
 
     </div>

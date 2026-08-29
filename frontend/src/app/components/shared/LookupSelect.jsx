@@ -184,7 +184,10 @@ export function LookupMultiSelect({
             {filtered.map((o) => (
               <label key={o.id} className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-sm cursor-pointer hover:bg-[#F7FAFC] transition">
                 <input type="checkbox" checked={value.includes(o.id)} onChange={() => toggle(o.id)} className="accent-[#0E7C7B]" />
-                <span className="truncate">{o.label}</span>
+                <span className="truncate flex-1">{o.label}</span>
+                {o.price != null && (
+                  <span className="text-xs font-mono text-[#0E7C7B] whitespace-nowrap">{Number(o.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                )}
               </label>
             ))}
           </div>
@@ -195,6 +198,7 @@ export function LookupMultiSelect({
           {selected.map((o) => (
             <span key={o.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-50 text-[#0E7C7B] text-xs font-medium">
               {o.label}
+              {o.price != null && <span className="font-mono text-[#0E7C7B]">{Number(o.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
               <button type="button" onClick={() => toggle(o.id)} className="hover:text-red-600" title="Remove"><X size={11} /></button>
             </span>
           ))}
@@ -205,6 +209,10 @@ export function LookupMultiSelect({
 }
 
 export function ServiceMultiSelect({ services, ...props }) {
-  const options = (services ?? []).map((s) => ({ id: s.serviceId, label: s.serviceName }));
+  const options = (services ?? []).map((s) => ({
+    id: s.serviceId,
+    label: s.serviceName,
+    price: Number(s.salePrice ?? 0)
+  }));
   return <LookupMultiSelect options={options} {...props} />;
 }

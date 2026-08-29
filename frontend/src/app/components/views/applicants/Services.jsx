@@ -33,6 +33,8 @@ function ServicesScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formName, setFormName] = useState("");
+  const [formPurchase, setFormPurchase] = useState("");
+  const [formSale, setFormSale] = useState("");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
 
@@ -83,6 +85,8 @@ function ServicesScreen() {
   const openAdd = () => {
     setEditing(null);
     setFormName("");
+    setFormPurchase("");
+    setFormSale("");
     setFormError(null);
     setFormOpen(true);
   };
@@ -90,6 +94,8 @@ function ServicesScreen() {
   const openEdit = (s) => {
     setEditing(s);
     setFormName(s.serviceName);
+    setFormPurchase(s.purchasePrice != null ? String(s.purchasePrice) : "");
+    setFormSale(s.salePrice != null ? String(s.salePrice) : "");
     setFormError(null);
     setFormOpen(true);
   };
@@ -101,15 +107,21 @@ function ServicesScreen() {
       setFormError("Please enter a service name.");
       return;
     }
+    const purchase = formPurchase === "" ? 0 : Number(formPurchase);
+    const sale = formSale === "" ? 0 : Number(formSale);
+    if (isNaN(purchase) || isNaN(sale) || purchase < 0 || sale < 0) {
+      setFormError("Prices must be valid non-negative numbers.");
+      return;
+    }
     setSaving(true);
     setFormError(null);
     try {
       if (editing) {
-        const res = await updateService({ serviceId: editing.serviceId, serviceName: name });
+        const res = await updateService({ serviceId: editing.serviceId, serviceName: name, purchasePrice: purchase, salePrice: sale });
         const msg = typeof res === "string" ? res : "Service updated successfully";
         showToast("success", msg);
       } else {
-        const res = await saveService({ serviceName: name });
+        const res = await saveService({ serviceName: name, purchasePrice: purchase, salePrice: sale });
         const msg = typeof res === "string" ? res : "Service created successfully";
         showToast("success", msg);
       }
@@ -166,12 +178,14 @@ function ServicesScreen() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[rgba(0,0,0,0.06)] bg-[#F7FAFC]">
-                {["Service Name", "Actions"].map((h) => <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide whitespace-nowrap">{h}</th>)}
+                {["Service Name", "Purchase Price", "Sale Price", "Actions"].map((h) => <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide whitespace-nowrap">{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {pagedRows.map((s) => <tr key={s.serviceId} className="border-b border-[rgba(0,0,0,0.04)] hover:bg-[#F7FAFC] transition-colors">
                   <td className="px-4 py-3 font-medium text-[#1A202C]">{s.serviceName}</td>
+                  <td className="px-4 py-3 text-[#718096]">{Number(s.purchasePrice ?? 0).toFixed(2)}</td>
+                  <td className="px-4 py-3 text-[#718096]">{Number(s.salePrice ?? 0).toFixed(2)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <button title="Edit service" onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-[#718096] hover:text-blue-600 hover:bg-blue-50 transition"><Edit2 size={14} /></button>
@@ -222,6 +236,10 @@ function ServicesScreen() {
       {formOpen && <Modal title={editing ? "Edit Service" : "Add New Service"} onClose={() => setFormOpen(false)}>
           <form onSubmit={handleSaveService} className="flex flex-col gap-4">
             <Input label="Service Name" placeholder="e.g. Blood Test, X-Ray, MRI" value={formName} onChange={(e) => setFormName(e.target.value)} required />
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Purchase Price" type="number" min="0" step="0.01" placeholder="0.00" value={formPurchase} onChange={(e) => setFormPurchase(e.target.value)} />
+              <Input label="Sale Price" type="number" min="0" step="0.01" placeholder="0.00" value={formSale} onChange={(e) => setFormSale(e.target.value)} />
+            </div>
             {formError && <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
                 <AlertCircle size={14} /> {formError}
               </div>}
