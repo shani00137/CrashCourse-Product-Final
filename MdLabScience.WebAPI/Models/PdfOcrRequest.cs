@@ -10,6 +10,11 @@ namespace MdLabScience.Models
         public string FileName { get; set; }
     }
 
+    public class PdfOcrRemoteResult
+    {
+        public string Text { get; set; }
+    }
+
     public class PdfOcrPageResult
     {
         public int PageNumber { get; set; }

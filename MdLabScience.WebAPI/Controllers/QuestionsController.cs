@@ -10,7 +10,6 @@ using MdLabScience.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using OpenCvSharp;
 using OpenAI.Chat;
 using System;
 using System.Collections.Generic;
@@ -626,41 +625,85 @@ namespace MdLabScience.Controllers
                     return BadRequest("ImageBase64 is required.");
                 }
 
-                string apiKey = _configuration["OpenAI:ApiKey1"];
-                string model = _configuration["OpenAI:Model"] ?? "gpt-4o";
-                if (string.IsNullOrEmpty(apiKey))
+                byte[] imageBytes;
+                try
                 {
-                    return Ok(new PdfOcrResponse()
-                    {
-                        Succeeded = false,
-                        Message = "OpenAI ApiKey is not configured."
-                    });
+                    imageBytes = Convert.FromBase64String(request.ImageBase64);
+                }
+                catch (Exception bex)
+                {
+                    return BadRequest("ImageBase64 is not valid base64 data: " + bex.Message);
                 }
 
-                ChatClient client = new ChatClient(model, apiKey);
-
-                string dataUrl = "data:image/png;base64," + request.ImageBase64;
-
-                ChatCompletion completion = await client.CompleteChatAsync(new UserChatMessage(
-                    ChatMessageContentPart.CreateTextPart(
-                        "Extract all text from this image exactly as written. Preserve line breaks, numbering, indentation, and reading order. Return only the extracted text with no commentary, formatting, or markdown."),
-                    ChatMessageContentPart.CreateImagePart(new Uri(dataUrl))));
-
-                string text = string.Join("\n", completion.Content.Select(c => c.Text));
-
-                return Ok(new PdfOcrResponse()
+                if (imageBytes.Length == 0)
                 {
-                    Succeeded = true,
-                    FullText = text,
-                    Pages = new List<PdfOcrPageResult>()
+                    return BadRequest("ImageBase64 is empty.");
+                }
+
+                string serviceUrl = _configuration["Ocr:ServiceUrl"] ?? "http://localhost:5100/ocr";
+                string fileName = (string.IsNullOrWhiteSpace(request.FileName) ? "page" : System.IO.Path.GetFileNameWithoutExtension(request.FileName))
+                                  + ".png";
+
+                using (var httpClient = new HttpClient())
+                {
+                    httpClient.Timeout = TimeSpan.FromMinutes(20);
+
+                    using (var content = new MultipartFormDataContent())
+                    using (var fileStream = new MemoryStream(imageBytes))
                     {
-                        new PdfOcrPageResult()
+                        var fileContent = new StreamContent(fileStream);
+                        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+                        content.Add(fileContent, "file", fileName);
+
+                        HttpResponseMessage response;
+                        try
                         {
-                            PageNumber = 1,
-                            Text = text
+                            response = await httpClient.PostAsync(serviceUrl, content);
                         }
+                        catch (Exception httpEx)
+                        {
+                            Console.WriteLine($"[OcrPdf:Remote] {httpEx}");
+                            return Ok(new PdfOcrResponse()
+                            {
+                                Succeeded = false,
+                                Message = "Could not reach the OCR service at " + serviceUrl + ": " + httpEx.Message
+                            });
+                        }
+
+                        string body = await response.Content.ReadAsStringAsync();
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            return Ok(new PdfOcrResponse()
+                            {
+                                Succeeded = false,
+                                Message = "OCR service returned error (" + (int)response.StatusCode + "): " + body
+                            });
+                        }
+
+                        var ocrResult = System.Text.Json.JsonSerializer.Deserialize<PdfOcrRemoteResult>(body,
+                            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        string text = ocrResult?.Text ?? string.Empty;
+
+                        return Ok(new PdfOcrResponse()
+                        {
+                            Succeeded = true,
+                            Message = "OCR completed successfully.",
+                            FullText = text,
+                            Pages = new List<PdfOcrPageResult>()
+                            {
+                                new PdfOcrPageResult()
+                                {
+                                    PageNumber = 1,
+                                    Width = 0,
+                                    Height = 0,
+                                    Text = text
+                                }
+                            }
+                        });
                     }
-                });
+                }
             }
             catch (Exception ex)
             {
@@ -672,6 +715,8 @@ namespace MdLabScience.Controllers
                 });
             }
         }
+        
+        
 
         [HttpPost]
         [Route("api/Questions/ParseOcrToQuestions")]
