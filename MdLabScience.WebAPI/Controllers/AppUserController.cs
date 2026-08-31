@@ -147,6 +147,24 @@ namespace MdLabScience.Controllers
             return Ok(_response);
         }
 
+        [HttpPost]
+        [Route("api/AppUser/ChangePassword")]
+        public IActionResult ChangePassword([FromBody] AppUserModel value)
+        {
+            String _response = "User not found.";
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var Query = db.AppUserTbs.Where(x => x.AppUserId == value.AppUserId).FirstOrDefault();
+                if (Query != null && !string.IsNullOrEmpty(value.Password))
+                {
+                    Query.Password = Encrption.Encrypt(value.Password);
+                    db.SaveChanges();
+                    _response = "Password updated successfully.";
+                }
+            }
+            return Ok(_response);
+        }
+
         [HttpGet]
         [Route("api/AppUser/DeleteUser/{id}")]
         public IActionResult DeleteUser(int id)

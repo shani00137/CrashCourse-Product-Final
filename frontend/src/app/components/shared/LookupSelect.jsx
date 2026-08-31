@@ -14,6 +14,7 @@ export function LookupSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const ref = useRef(null);
 
   useEffect(() => {
@@ -27,8 +28,14 @@ export function LookupSelect({
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250);
+    return () => clearTimeout(t);
+  }, [query]);
+
   const selected = options.find((o) => o.id === value);
-  const q = query.trim().toLowerCase();
+  const searching = query.trim() !== debouncedQuery;
+  const q = debouncedQuery.toLowerCase();
   const filtered = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
 
   const pick = (id) => {
@@ -54,7 +61,13 @@ export function LookupSelect({
         <div className="absolute z-30 mt-1 w-64 bg-white rounded-lg border border-[rgba(0,0,0,0.12)] shadow-xl">
           <div className="p-2 border-b border-[rgba(0,0,0,0.06)]">
             <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              {searching ? (
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2">
+                  <span className="block h-3 w-3 rounded-full border-2 border-gray-300 border-t-transparent animate-spin" />
+                </span>
+              ) : (
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              )}
               <input
                 autoFocus
                 value={query}
@@ -68,7 +81,8 @@ export function LookupSelect({
                 placeholder={placeholder}
                 className="h-8 w-full pl-8 pr-7 rounded-md border border-[rgba(0,0,0,0.12)] text-sm focus:outline-none focus:border-[#0E7C7B]"
               />
-              {query && <button onClick={() => setQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600">
+              {searching && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">Searching…</span>}
+              {query && !searching && <button onClick={() => setQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600">
                 <X size={12} />
               </button>}
             </div>
@@ -80,7 +94,7 @@ export function LookupSelect({
             >
               {allLabel}
             </button>
-            {filtered.length === 0 && q && <p className="px-3 py-2 text-xs text-gray-400">No matches for "{query}"</p>}
+            {filtered.length === 0 && q && <p className="px-3 py-2 text-xs text-gray-400">No matches for "{debouncedQuery}"</p>}
             {filtered.map((o) => (
               <button
                 key={o.id}
@@ -121,6 +135,7 @@ export function LookupMultiSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const ref = useRef(null);
 
   useEffect(() => {
@@ -134,8 +149,14 @@ export function LookupMultiSelect({
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250);
+    return () => clearTimeout(t);
+  }, [query]);
+
   const selected = options.filter((o) => value.includes(o.id));
-  const q = query.trim().toLowerCase();
+  const searching = query.trim() !== debouncedQuery;
+  const q = debouncedQuery.toLowerCase();
   const filtered = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
 
   const toggle = (id) => {
@@ -161,7 +182,13 @@ export function LookupMultiSelect({
         <div className="absolute z-30 mt-1 w-72 bg-white rounded-lg border border-[rgba(0,0,0,0.12)] shadow-xl top-full left-0">
           <div className="p-2 border-b border-[rgba(0,0,0,0.06)]">
             <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              {searching ? (
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2">
+                  <span className="block h-3 w-3 rounded-full border-2 border-gray-300 border-t-transparent animate-spin" />
+                </span>
+              ) : (
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              )}
               <input
                 autoFocus
                 value={query}
@@ -170,7 +197,8 @@ export function LookupMultiSelect({
                 placeholder="Search…"
                 className="h-8 w-full pl-8 pr-7 rounded-md border border-[rgba(0,0,0,0.12)] text-sm focus:outline-none focus:border-[#0E7C7B]"
               />
-              {query && <button onClick={() => setQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600"><X size={12} /></button>}
+              {searching && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">Searching…</span>}
+              {query && !searching && <button onClick={() => setQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600"><X size={12} /></button>}
             </div>
           </div>
           <div className="max-h-56 overflow-y-auto py-1">
@@ -180,7 +208,7 @@ export function LookupMultiSelect({
             >
               {allLabel}
             </button>
-            {filtered.length === 0 && q && <p className="px-3 py-2 text-xs text-gray-400">No matches for "{query}"</p>}
+            {filtered.length === 0 && q && <p className="px-3 py-2 text-xs text-gray-400">No matches for "{debouncedQuery}"</p>}
             {filtered.map((o) => (
               <label key={o.id} className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-sm cursor-pointer hover:bg-[#F7FAFC] transition">
                 <input type="checkbox" checked={value.includes(o.id)} onChange={() => toggle(o.id)} className="accent-[#0E7C7B]" />

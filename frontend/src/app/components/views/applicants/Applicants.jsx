@@ -76,6 +76,7 @@ function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAdd
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * pageSize;
   const hasActiveFilters = search.trim() !== "" || statusFilter !== "All" || countryId !== null || courseId !== null;
+  const searching = search.trim() !== debouncedSearch;
   const initials = (a) => ((a.firstName?.[0] ?? "") + (a.lastName?.[0] ?? "")).toUpperCase() || "NA";
   const goToPage = (p) => setPage(Math.max(1, Math.min(p, totalPages)));
   const clearFilters = () => {
@@ -98,14 +99,21 @@ function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAdd
       <Card className="p-4">
         <div className="flex gap-3 flex-wrap items-center">
           <div className="relative flex-1 min-w-48">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            {searching ? (
+              <span className="absolute left-3 top-1/2 -translate-y-1/2">
+                <span className="block h-3.5 w-3.5 rounded-full border-2 border-gray-300 border-t-transparent animate-spin" />
+              </span>
+            ) : (
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            )}
             <input
     value={search}
     onChange={(e) => setSearch(e.target.value)}
     placeholder="Search name, reg. no, mobile, email…"
     className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
   />
-            {search && <button
+            {searching && <span className="absolute right-8 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">Searching…</span>}
+            {search && !searching && <button
     onClick={() => setSearch("")}
     title="Clear search"
     className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition"

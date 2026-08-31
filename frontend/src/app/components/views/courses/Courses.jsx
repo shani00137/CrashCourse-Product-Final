@@ -220,6 +220,7 @@ function CoursesScreen() {
   };
   const typeBadge = (t) => t === "PDF" ? "bg-red-50 text-red-600" : t === "Video" ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600";
   const materialTypeIcon = (t) => t === "PDF" ? <File size={12} /> : t === "Video" ? <Video size={12} /> : <Mic size={12} />;
+  const searching = search.trim() !== debouncedSearch;
   return <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-[#1A202C]">Courses</h1>
@@ -231,14 +232,21 @@ function CoursesScreen() {
   }
       <Card className="p-4">
         <div className="relative max-w-md">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          {searching ? (
+            <span className="absolute left-3 top-1/2 -translate-y-1/2">
+              <span className="block h-3.5 w-3.5 rounded-full border-2 border-gray-300 border-t-transparent animate-spin" />
+            </span>
+          ) : (
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          )}
           <input
     value={search}
     onChange={(e) => setSearch(e.target.value)}
     placeholder="Search course name…"
     className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
   />
-          {search && <button
+          {searching && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">Searching…</span>}
+          {search && !searching && <button
     onClick={() => setSearch("")}
     title="Clear search"
     className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition"

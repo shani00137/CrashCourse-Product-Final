@@ -18,6 +18,7 @@ function ProfitLossScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [detailInv, setDetailInv] = useState(null);
   const pageSize = 15;
@@ -44,6 +45,14 @@ function ProfitLossScreen() {
 
   useEffect(() => load(), [load]);
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const enriched = rows.map((inv) => {
     const list = inv.serviceList ?? [];
     const totalSale = list.reduce((s, i) => s + toNumber(i.amount), 0);
@@ -52,8 +61,8 @@ function ProfitLossScreen() {
   });
 
   const filtered = enriched.filter((inv) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return true;
+    const q = debouncedSearch.toLowerCase();
     return (
       (inv.invoiceNo ?? "").toLowerCase().includes(q) ||
       ((inv.firstName ?? "") + " " + (inv.lastName ?? "")).toLowerCase().includes(q) ||
@@ -82,12 +91,11 @@ function ProfitLossScreen() {
     return Object.values(map).sort((a, b) => b.revenue - a.revenue);
   }, [enriched]);
 
+  const searching = search.trim() !== debouncedSearch;
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * pageSize;
   const paged = filtered.slice(start, start + pageSize);
-
-  useEffect(() => { setPage(1); }, [search]);
 
   const handlePrint = () => {
     const printWindow = window.open("", "_blank", "width=1000,height=700");
@@ -299,14 +307,21 @@ function ProfitLossScreen() {
       {/* Search */}
       <Card className="p-4">
         <div className="relative max-w-md">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          {searching ? (
+            <span className="absolute left-3 top-1/2 -translate-y-1/2">
+              <span className="block h-3.5 w-3.5 rounded-full border-2 border-gray-300 border-t-transparent animate-spin" />
+            </span>
+          ) : (
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          )}
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by invoice, applicant, or service…"
             className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-xs focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
           />
-          {search && <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"><X size={13} /></button>}
+          {searching && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">…</span>}
+          {search && !searching && <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"><X size={13} /></button>}
         </div>
       </Card>
 

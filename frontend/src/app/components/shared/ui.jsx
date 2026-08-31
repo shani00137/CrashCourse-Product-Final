@@ -87,6 +87,7 @@ function BouncingDots({ label = "Searching\u2026", color = "#0E7C7B" }) {
 function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const ref = useRef(null);
   useEffect(() => {
     const onClickOutside = (e) => {
@@ -98,8 +99,13 @@ function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250);
+    return () => clearTimeout(t);
+  }, [query]);
   const selected = options.find((o) => o.id === value);
-  const q = query.trim().toLowerCase();
+  const searching = query.trim() !== debouncedQuery;
+  const q = debouncedQuery.toLowerCase();
   const filtered = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
   const pick = (id) => {
     onSelect(id);
@@ -118,7 +124,13 @@ function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
       {open && <div className="absolute z-30 mt-1 w-64 bg-white rounded-lg border border-[rgba(0,0,0,0.12)] shadow-xl">
           <div className="p-2 border-b border-[rgba(0,0,0,0.06)]">
             <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              {searching ? (
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2">
+                  <span className="block h-3 w-3 rounded-full border-2 border-gray-300 border-t-transparent animate-spin" />
+                </span>
+              ) : (
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              )}
               <input
     autoFocus
     value={query}
@@ -132,7 +144,8 @@ function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
     placeholder={placeholder}
     className="h-8 w-full pl-8 pr-7 rounded-md border border-[rgba(0,0,0,0.12)] text-sm focus:outline-none focus:border-[#0E7C7B]"
   />
-              {query && <button onClick={() => setQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600">
+              {searching && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">Searching…</span>}
+              {query && !searching && <button onClick={() => setQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600">
                   <X size={12} />
                 </button>}
             </div>
@@ -144,7 +157,7 @@ function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
   >
               {allLabel}
             </button>
-            {filtered.length === 0 && <p className="px-3 py-2 text-xs text-gray-400">No matches for "{query}"</p>}
+            {filtered.length === 0 && <p className="px-3 py-2 text-xs text-gray-400">No matches for "{debouncedQuery}"</p>}
             {filtered.map((o) => <button
     key={o.id}
     onClick={() => pick(o.id)}
