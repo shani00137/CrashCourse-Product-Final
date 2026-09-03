@@ -1023,6 +1023,7 @@ Return a JSON array with this exact structure:
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [Route("api/Questions/TakeExercise/{start},{end},{courseid}")]
         public IActionResult TakeExercise(int start, int end, int courseid)
         {

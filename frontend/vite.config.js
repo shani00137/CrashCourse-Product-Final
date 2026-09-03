@@ -28,7 +28,11 @@ var stdin_default = defineConfig({
     }
   },
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
-  assetsInclude: ["**/*.svg", "**/*.csv"]
+  assetsInclude: ["**/*.svg", "**/*.csv"],
+  server: {
+    port: 5008,
+    strictPort: true
+  }
 });
 export {
   stdin_default as default

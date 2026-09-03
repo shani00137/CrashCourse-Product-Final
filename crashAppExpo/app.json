@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Crash Course",
+    "slug": "crash-course",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "crashcourse",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.crashcourse.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#C41E3A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.crashcourse.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-image",
+      "expo-font",
+      "expo-status-bar",
+      ["expo-splash-screen", {
+        "backgroundColor": "#C41E3A",
+        "image": "./assets/icon.png",
+        "imageWidth": 200
+      }]
+    ]
+  }
+}

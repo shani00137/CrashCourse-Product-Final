@@ -101,6 +101,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [Route("api/AppUser/SaveAppUser")]
         public IActionResult SaveAppUser([FromBody] AppUserModel value)
         {
@@ -123,9 +124,8 @@ namespace MdLabScience.Controllers
                 appUserTb.CreateOn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
                 db.AppUserTbs.Add(appUserTb);
                 db.SaveChanges();
-                _response = "Save Succesuly";
+                return Ok(new { succeeded = true, appUserId = MaxId, applicantId = value.ApplicantId, userName = value.UserName, message = "Save Successfully" });
             }
-            return Ok(_response);
         }
 
         [HttpPost]

@@ -272,6 +272,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [Route("api/Applicant/SaveApplicants")]
         public IActionResult SaveApplicants([FromBody] ApplicantModel value)
         {
@@ -339,14 +340,14 @@ namespace MdLabScience.Controllers
                     db.AdditionalDocumentTbs.Add(additionalDocumentTb);
 
                     db.SaveChanges();
-                    _response = "Save Succesfuly..!";
+                    return Ok(new { succeeded = true, applicantId = MaxId, registrationNo = applicantsTb.RegistrationNo, message = "Save Successfully..!" });
                 }
             }
             catch (Exception ex)
             {
                 _response = ex.ToString();
             }
-            return Ok(_response);
+            return Ok(new { succeeded = false, applicantId = 0, registrationNo = "", message = _response });
         }
 
         [HttpPost]
@@ -763,6 +764,7 @@ IF NOT EXISTS (
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [Route("api/Applicant/GetApplicantCourses/{id}")]
         public IActionResult GetApplicantCourses(int id)
         {

@@ -60,6 +60,31 @@ namespace MdLabScience.Controllers
             }
         }
 
+        //Anonymous endpoint so the mobile app can list active courses before
+        //a user has signed in (registration flow requires courses without auth).
+        [HttpGet]
+        [AllowAnonymous]
+        [Route("api/Course/GetActiveCoursePublic")]
+        public IActionResult GetActiveCoursePublic()
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var Query = db.CourseTbs
+                    .Where(x => x.IsActive == true)
+                    .OrderBy(x => x.CourseName)
+                    .Select(x => new CourseModel
+                    {
+                        CourseCode = x.CourseCode,
+                        CourseId = x.CourseId,
+                        CourseName = x.CourseName,
+                        CourseUrl = x.CourseUrl,
+                        IsActive = x.IsActive
+                    })
+                    .ToList();
+                return Ok(Query);
+            }
+        }
+
         [HttpPost]
         [Route("api/Course/SaveCourse")]
         public IActionResult SaveCourse()
@@ -286,6 +311,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [Route("api/Course/GetAllExercise")]
         public IActionResult GetAllExercise()
         {
