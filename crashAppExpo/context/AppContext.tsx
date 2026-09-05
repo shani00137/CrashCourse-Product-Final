@@ -6,6 +6,7 @@ export interface User {
   appUserId?: number;
   applicantId?: number;
   courseId?: number;
+  courseName?: string;
 }
 
 export interface TestResult {

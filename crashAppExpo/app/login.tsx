@@ -16,6 +16,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, gradients, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { loginAppUser, getUserDetailById } from "@/services/api";
 
 const logoSource = require("@/assets/logo/logo.jpg");
 
@@ -34,10 +35,38 @@ export default function LoginScreen() {
     }
     setLoading(true);
     setError("");
-    await new Promise((r) => setTimeout(r, 900));
-    setLoading(false);
-    setUser({ name: username, isGuest: false });
-    router.replace("/(tabs)/dashboard");
+    try {
+      const result = await loginAppUser({
+        username: username.trim(),
+        password,
+      });
+      let courseId: number | undefined;
+      let courseName: string | undefined;
+      try {
+        const detail = result.appUserId
+          ? await getUserDetailById(result.appUserId)
+          : null;
+        if (detail && detail.courseId > 0) {
+          courseId = detail.courseId;
+          courseName = detail.courseName;
+        }
+      } catch {
+        // Course details are a nice-to-have; login still succeeds without them.
+      }
+      setUser({
+        name: result.name || username.trim(),
+        isGuest: false,
+        appUserId: result.appUserId,
+        applicantId: result.applicantId,
+        courseId,
+        courseName,
+      });
+      router.replace("/(tabs)/dashboard");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGuest = () => {

@@ -128,6 +128,53 @@ namespace MdLabScience.Controllers
             }
         }
 
+        [HttpGet]
+        [AllowAnonymous]
+        [Route("api/AppUser/GetDetailOfUserById/{id}")]
+        public IActionResult GetDetailOfUserById(int id)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var appUser = db.AppUserTbs.Where(x => x.AppUserId == id).FirstOrDefault();
+                if (appUser == null)
+                {
+                    return Ok(new
+                    {
+                        appUserId = id,
+                        applicantId = 0,
+                        courseId = 0,
+                        courseName = "",
+                        userName = "",
+                        message = "User not found"
+                    });
+                }
+
+                int? applicantId = appUser.ApplicantId;
+                var courseSelection = db.ApplicantCourseSelectionTbs
+                    .Where(x => x.ApplicantId == applicantId)
+                    .OrderByDescending(x => x.CourseSelectionId)
+                    .FirstOrDefault();
+                int? courseId = courseSelection?.CourseId;
+                string? courseName = "";
+                if (courseId.HasValue && courseId > 0)
+                {
+                    courseName = db.CourseTbs.Where(x => x.CourseId == courseId)
+                        .Select(x => x.CourseName).FirstOrDefault();
+                }
+
+                return Ok(new
+                {
+                    appUserId = appUser.AppUserId,
+                    applicantId = applicantId,
+                    userName = appUser.UserName ?? "",
+                    courseId = courseId ?? 0,
+                    courseName = courseName ?? "",
+                    status = appUser.Status,
+                    deviceId = appUser.DeviceId ?? ""
+                });
+            }
+        }
+
         [HttpPost]
         [Route("api/AppUser/UpdateAppUser")]
         public IActionResult UpdateAppUser([FromBody] AppUserModel value)

@@ -138,6 +138,68 @@ export async function getActiveCourses(): Promise<CourseInfo[]> {
     .filter((c) => c.courseId > 0);
 }
 
+export interface LoginResult {
+  isValid: boolean;
+  response: string;
+  username: string;
+  appUserId: number;
+  name: string;
+  mobile: string;
+  email: string;
+  address: string;
+  applicantId: number;
+  userToken: string;
+  courseId?: number;
+}
+
+/**
+ * Authenticates an AppUser against the backend. Returns the first result from
+ * the API's LoginModel list, throwing if the credentials are invalid.
+ */
+export async function loginAppUser({
+  username,
+  password,
+  deviceId = "mobile-app",
+}: {
+  username: string;
+  password: string;
+  deviceId?: string;
+}): Promise<LoginResult> {
+  const data = await request<unknown>(ENDPOINTS.loginAppUser, {
+    username,
+    password,
+    deviceId,
+  });
+  const list = Array.isArray(data) ? data : [];
+  const first = list[0];
+  if (!first || typeof first !== "object") {
+    throw new Error("Invalid response from server.");
+  }
+  const row = first as Record<string, unknown>;
+  const isValid = Boolean(row.isValid);
+  if (!isValid) {
+    throw new Error(
+      typeof row.response === "string" && row.response.trim()
+        ? row.response
+        : "Invalid username or password."
+    );
+  }
+  return {
+    isValid: true,
+    response:
+      typeof row.response === "string" ? row.response : "Welcome",
+    username: typeof row.username === "string" ? row.username : "",
+    appUserId: Number(row.appUserId) || 0,
+    name: typeof row.name === "string" ? row.name : "",
+    mobile: typeof row.mobile === "string" ? row.mobile : "",
+    email: typeof row.email === "string" ? row.email : "",
+    address:
+      typeof row.address === "string" ? row.address : "",
+    applicantId: Number(row.applicantId) || 0,
+    userToken: typeof row.userToken === "string" ? row.userToken : "",
+  };
+}
+
 export interface RegisterApplicantInput {
   firstName: string;
   lastName: string;
@@ -299,6 +361,36 @@ export async function getApplicantCourses(appUserId: number): Promise<ApplicantC
     .filter((c) => c.courseId > 0);
 }
 
+export interface UserDetailInfo {
+  appUserId: number;
+  applicantId: number;
+  userName: string;
+  courseId: number;
+  courseName: string;
+  status: boolean;
+  deviceId: string;
+}
+
+/**
+ * Fetches a user's profile + their registered course via
+ * AppUser/GetDetailOfUserById/{appUserId}. Returns the courseId the app
+ * should use when loading exercises.
+ */
+export async function getUserDetailById(appUserId: number): Promise<UserDetailInfo | null> {
+  const data = await get<unknown>(ENDPOINTS.getUserDetailById(appUserId));
+  if (!data || typeof data !== "object") return null;
+  const r = data as Record<string, unknown>;
+  return {
+    appUserId: Number(r.appUserId) || appUserId,
+    applicantId: Number(r.applicantId) || 0,
+    userName: typeof r.userName === "string" ? r.userName : "",
+    courseId: Number(r.courseId) || 0,
+    courseName: typeof r.courseName === "string" ? r.courseName : "",
+    status: r.status !== false,
+    deviceId: typeof r.deviceId === "string" ? r.deviceId : "",
+  };
+}
+
 export interface ExerciseInfo {
   exerciseRecordId: number;
   exercise: string;
@@ -325,6 +417,24 @@ export async function getAllExercises(): Promise<ExerciseInfo[]> {
       };
     })
     .filter((c) => c.exerciseRecordId > 0);
+}
+
+export interface QuestionCountResult {
+  courseId: number;
+  questionCount: number;
+}
+
+/**
+ * Fetches the total question count for a given courseId.
+ */
+export async function getExerciseQuestionCount(courseId: number): Promise<QuestionCountResult> {
+  const data = await get<unknown>(ENDPOINTS.getExerciseQuestionCount(courseId));
+  if (!data || typeof data !== "object") return { courseId, questionCount: 0 };
+  const r = data as Record<string, unknown>;
+  return {
+    courseId: Number(r.courseId) || courseId,
+    questionCount: Number(r.questionCount) || 0,
+  };
 }
 
 export interface TakeQuestion {

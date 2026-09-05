@@ -15,8 +15,10 @@ import { useApp } from "@/context/AppContext";
 import {
   getApplicantCourses,
   getAllExercises,
+  getUserDetailById,
   ApplicantCourse,
   ExerciseInfo,
+  UserDetailInfo,
 } from "@/services/api";
 
 export default function CoursesScreen() {
@@ -24,6 +26,7 @@ export default function CoursesScreen() {
   const { user } = useApp();
 
   const [course, setCourse] = useState<ApplicantCourse | null>(null);
+  const [userDetail, setUserDetail] = useState<UserDetailInfo | null>(null);
   const [exercises, setExercises] = useState<ExerciseInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -32,12 +35,14 @@ export default function CoursesScreen() {
     let mounted = true;
     (async () => {
       try {
-        const [courseResult, exerciseResult] = await Promise.all([
+        const [courseResult, exerciseResult, detail] = await Promise.all([
           user?.appUserId ? getApplicantCourses(user.appUserId) : Promise.resolve([]),
           getAllExercises(),
+          user?.appUserId ? getUserDetailById(user.appUserId) : Promise.resolve(null),
         ]);
         if (mounted) {
           setCourse(courseResult[0] ?? null);
+          setUserDetail(detail);
           setExercises(exerciseResult);
           setError("");
         }
@@ -56,14 +61,14 @@ export default function CoursesScreen() {
     };
   }, [user?.appUserId]);
 
-  const courseId = course?.courseId;
+  const courseId = userDetail?.courseId || course?.courseId;
 
   const openExercise = (exercise: ExerciseInfo) => {
     router.push({
       pathname: "/exercise",
       params: {
         courseId: String(courseId ?? 0),
-        courseName: course?.courseName ?? "Medical Exercise",
+        courseName: userDetail?.courseName || course?.courseName || "Medical Exercise",
         start: String(exercise.startFrom ?? 0),
         end: String(exercise.endFrom ?? 0),
       },
@@ -82,11 +87,11 @@ export default function CoursesScreen() {
         <View style={styles.headerGlow} />
         <Text style={styles.brandName}>CRASH COURSE</Text>
         <Text style={styles.pageTitle}>
-          {course?.courseName || "My Courses"}
+          {userDetail?.courseName || course?.courseName || "My Courses"}
         </Text>
         <Text style={styles.pageSubtitle}>
-          {course
-            ? `Registered course · questions and exercises`
+          {(userDetail?.courseName || course?.courseName)
+            ? `${userDetail?.courseName || course?.courseName} · exercises`
             : "Your enrolled medical course"}
         </Text>
       </LinearGradient>
@@ -112,7 +117,7 @@ export default function CoursesScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         >
-          {course ? (
+          {courseId && courseId > 0 || course ? (
             <>
               {/* Course spotlight card */}
               <View style={styles.courseCard}>
@@ -120,14 +125,18 @@ export default function CoursesScreen() {
                   <Ionicons name="book" size={24} color={colors.primary} />
                 </View>
                 <View style={styles.courseInfo}>
-                  <Text style={styles.courseCardTitle}>{course.courseName}</Text>
-                  {course.courseCode ? (
+                  <Text style={styles.courseCardTitle}>
+                    {userDetail?.courseName || course?.courseName || "My Course"}
+                  </Text>
+                  {course?.courseCode ? (
                     <Text style={styles.courseCode}>{course.courseCode}</Text>
                   ) : null}
                   <Text style={styles.courseMeta}>
-                    {course.questions > 0
+                    {course && course.questions > 0
                       ? `${course.questions} available questions`
-                      : "Questions available"}
+                      : courseId && courseId > 0
+                        ? "Questions available"
+                        : "No course registered"}
                   </Text>
                 </View>
               </View>

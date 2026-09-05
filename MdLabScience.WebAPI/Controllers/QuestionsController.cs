@@ -1024,24 +1024,22 @@ Return a JSON array with this exact structure:
 
         [HttpGet]
         [AllowAnonymous]
+        [Route("api/Questions/GetExerciseQuestionCount/{courseId}")]
+        public IActionResult GetExerciseQuestionCount(int courseId)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                int count = db.QuestionsTBs.Where(x => x.CourseId == courseId).Count();
+                return Ok(new { courseId, questionCount = count });
+            }
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
         [Route("api/Questions/TakeExercise/{start},{end},{courseid}")]
         public IActionResult TakeExercise(int start, int end, int courseid)
         {
-            DataTable dt = new DataTable();
-
-            dt.Columns.Add("QuestionId", typeof(int));
-            dt.Columns.Add("QuestionContent");
-            dt.Columns.Add("RightOption");
-            dt.Columns.Add("Option1");
-            dt.Columns.Add("Option2");
-            dt.Columns.Add("Option3");
-            dt.Columns.Add("Option4");
-            dt.Columns.Add("isSelected");
-            dt.Columns.Add("TestStartTime", typeof(DateTime));
-            dt.Columns.Add("Duration", typeof(int));
-            dt.Columns.Add("Answer");
-
-            var QuestionQuery = (dynamic)null;
+            var result = new List<object>();
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
                 if (start > 0)
@@ -1049,35 +1047,48 @@ Return a JSON array with this exact structure:
                     start = start - 1;
                 }
                 db.Database.SetCommandTimeout(TimeSpan.FromSeconds(180));
-                QuestionQuery = (from c in db.QuestionsTBs
-                                 where c.CourseId == courseid
-                                 select new
-                                 {
-                                     QuestionId = c.QuestionId,
-                                     QuestionOptions = db.QuestionOptionsTbs.Where(x => x.QuestionId == c.QuestionId).ToList(),
-                                     QuestionContent = c.QuestionContent
-                                 }).OrderBy(x => x.QuestionId).Take(end).Skip(start).ToList();
-
-                int RowIndex = 0;
+                var QuestionQuery = (from c in db.QuestionsTBs
+                                     where c.CourseId == courseid
+                                     select new
+                                     {
+                                         QuestionId = c.QuestionId,
+                                         QuestionOptions = db.QuestionOptionsTbs.Where(x => x.QuestionId == c.QuestionId).ToList(),
+                                         QuestionContent = c.QuestionContent
+                                     }).OrderBy(x => x.QuestionId).Take(end).Skip(start).ToList();
 
                 foreach (var q in QuestionQuery)
                 {
                     int OpIndex = 1;
-                    dt.Rows.Add(q.QuestionId, q.QuestionContent);
+                    int RightOption = 0;
+                    var options = new Dictionary<string, string>();
                     foreach (var w in q.QuestionOptions)
                     {
-                        dt.Rows[RowIndex]["Option" + (OpIndex)] = w.Options;
-
+                        options["Option" + OpIndex] = StripHTML(w.Options);
                         if (w.IsRightAns == true)
                         {
-                            dt.Rows[RowIndex]["RightOption"] = OpIndex;
+                            RightOption = OpIndex;
                         }
                         OpIndex++;
                     }
-                    RowIndex++;
+                    result.Add(new
+                    {
+                        QuestionId = q.QuestionId,
+                        QuestionContent = StripHTML(q.QuestionContent),
+                        RightOption,
+                        Option1 = GetOption(options, "Option1"),
+                        Option2 = GetOption(options, "Option2"),
+                        Option3 = GetOption(options, "Option3"),
+                        Option4 = GetOption(options, "Option4"),
+                        isSelected = false
+                    });
                 }
-                return Ok(dt);
+                return Ok(result);
             }
+        }
+
+        private static string GetOption(Dictionary<string, string> options, string key)
+        {
+            return options.TryGetValue(key, out var value) ? value : null;
         }
     }
 }
