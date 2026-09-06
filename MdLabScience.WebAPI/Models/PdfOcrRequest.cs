@@ -91,4 +91,19 @@ namespace MdLabScience.Models
         public string Message { get; set; }
         public List<GenerateAiQuestionItem> Questions { get; set; }
     }
+
+    public class ExplainQuestionRequest
+    {
+        public string Question { get; set; }
+        public List<string> Options { get; set; }
+        public string Prompt { get; set; }
+        public int MaxWords { get; set; }
+    }
+
+    public class ExplainQuestionResponse
+    {
+        public bool Succeeded { get; set; }
+        public string Message { get; set; }
+        public string Answer { get; set; }
+    }
 }

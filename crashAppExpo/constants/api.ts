@@ -14,4 +14,18 @@ export const ENDPOINTS = {
     `/Questions/api/Questions/TakeExercise/${start},${end},${courseId}`,
   getExerciseQuestionCount: (courseId: number) =>
     `/Questions/api/Questions/GetExerciseQuestionCount/${courseId}`,
+  explainQuestion: "/Questions/api/Questions/ExplainQuestion",
+  saveReadingTime: "/ReadingTime/api/ReadingTime/SaveReadingTime",
+  getAllReadingTime: (appUserId: number) =>
+    `/ReadingTime/api/ReadingTime/GetAllReadingTime/${appUserId}`,
+  getReadingTime: (appUserId: number, courseId: number, start: number, end: number) =>
+    `/ReadingTime/api/ReadingTime/GetReadingTime/${appUserId}/${courseId}/${start},${end}`,
+  prepareTest: "/TakeTest/api/TakeTest/PrepareTest",
+  generateTest: "/TakeTest/api/TakeTest/GenerateTest",
+  getUserTests: (appUserId: number) =>
+    `/TakeTest/api/TakeTest/GetUserTests/${appUserId}`,
+  conductTestByUser: (testId: number) =>
+    `/TakeTest/api/TakeTest/ConductTestByUser/${testId}`,
+  userTestUpdate: "/TakeTest/api/TakeTest/UserTestUpdate",
+  saveTest: (testId: number) => `/TakeTest/api/TakeTest/SaveTest/${testId}`,
 };

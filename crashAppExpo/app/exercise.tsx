@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,11 +16,19 @@ import { medicalQuestions, allCourses } from "@/constants/data";
 import { useApp } from "@/context/AppContext";
 import { ProgressBar } from "@/components/ProgressBar";
 import { ScoreRing } from "@/components/ScoreRing";
+import { QuestionAiModal } from "@/components/QuestionAiModal";
 import {
   takeExercise,
   getExerciseQuestionCount,
+  getReadingTime,
   TakeQuestion,
 } from "@/services/api";
+import { useReadingTime } from "@/hooks/useReadingTime";
+import {
+  readingPct,
+  formatReadingTime,
+  READING_TARGET_SECONDS,
+} from "@/constants/readingTime";
 
 const optionLabels = ["A", "B", "C", "D"];
 
@@ -31,7 +39,27 @@ interface ExerciseQuestion {
   explanation: string;
 }
 
+interface SavedProgress {
+  current: number;
+  answers: (number | null)[];
+  checked: boolean;
+  finished: boolean;
+  questions: ExerciseQuestion[];
+}
+
+function mapRows(rows: TakeQuestion[]): ExerciseQuestion[] {
+  return rows.map((r) => ({
+    question: r.questionContent,
+    options: r.options,
+    correct: r.rightOption > 0 ? r.rightOption - 1 : 0,
+    explanation:
+      "Check the course material and references for this topic to confirm the correct answer.",
+  }));
+}
+
 const COUNT_CACHE_KEY = (courseId: number) => `exercise_qcount_${courseId}`;
+const PROGRESS_KEY = (courseId: number, start: number, end: number) =>
+  `exercise_progress_${courseId}_${start}_${end}`;
 
 export default function ExerciseScreen() {
   const { courseId, courseName, start, end } = useLocalSearchParams<{
@@ -41,7 +69,7 @@ export default function ExerciseScreen() {
     end?: string;
   }>();
   const course = allCourses.find((c) => c.id === Number(courseId)) || null;
-  const { addTestResult } = useApp();
+  const { user, addTestResult } = useApp();
 
   const cId = Number(courseId);
   const startN = Number(start || 0);
@@ -62,7 +90,9 @@ export default function ExerciseScreen() {
   const [checked, setChecked] = useState(false);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [finished, setFinished] = useState(false);
-  const [score, setScore] = useState(0);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [readSeconds, setReadSeconds] = useState(0);
+  const [readLoaded, setReadLoaded] = useState(false);
 
   // ── Load question count on mount ─────────────────────────────────────────
   useEffect(() => {
@@ -111,6 +141,36 @@ export default function ExerciseScreen() {
     };
   }, [cId]);
 
+  // ── Load the user's reading time for this exercise ──────────────────────
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!user?.appUserId || cId <= 0) return;
+      try {
+        const row = await getReadingTime(user.appUserId, cId, startN, endN);
+        if (mounted && row) setReadSeconds(row.totalSeconds);
+      } catch {
+        // Reading time is a nice-to-have; ignore fetch failures.
+      } finally {
+        if (mounted) setReadLoaded(true);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.appUserId, cId, startN, endN]);
+
+  // ── Track active reading seconds and sync to the backend ────────────────
+  const readingActive =
+    (phase === "loading-questions" || phase === "exercise") && !finished;
+  useReadingTime({
+    appUserId: user?.appUserId,
+    courseId: cId,
+    start: startN,
+    end: endN,
+    active: readingActive,
+  });
+
   // ── Fetch questions when exercise starts ─────────────────────────────────
   const fetchQuestions = useCallback(async () => {
     setPhase("loading-questions");
@@ -118,10 +178,7 @@ export default function ExerciseScreen() {
     try {
       let rows: TakeQuestion[];
       if (cId > 0 && startN > 0 && endN > 0) {
-        var response = await takeExercise(startN, endN, cId);
-        console.log("API response:", response);
         rows = await takeExercise(startN, endN, cId);
-        console.log("Mapped questions:", rows);
       } else {
         // Fallback: use hardcoded questions
         rows = medicalQuestions.map((q, i) => ({
@@ -138,15 +195,13 @@ export default function ExerciseScreen() {
         return;
       }
 
-      setQuestions(
-        rows.map((r) => ({
-          question: r.questionContent,
-          options: r.options,
-          correct: r.rightOption > 0 ? r.rightOption - 1 : 0,
-          explanation:
-            "Check the course material and references for this topic to confirm the correct answer.",
-        }))
-      );
+      const qs = mapRows(rows);
+      setQuestions(qs);
+      setAnswers(qs.map(() => null));
+      setCurrent(0);
+      setSelected(null);
+      setChecked(false);
+      setFinished(false);
       setPhase("exercise");
     } catch (e) {
       setLoadError(
@@ -156,32 +211,120 @@ export default function ExerciseScreen() {
     }
   }, [cId, startN, endN]);
 
+  const resumeFromSaved = useCallback(
+    async (saved: SavedProgress) => {
+      setPhase("loading-questions");
+      setLoadError("");
+      let qs = saved.questions;
+      try {
+        if (cId > 0 && startN > 0 && endN > 0) {
+          const rows = await takeExercise(startN, endN, cId);
+          if (rows.length > 0) qs = mapRows(rows);
+        }
+      } catch {
+        // Keep using the saved questions if the API is unreachable.
+      }
+
+      const restoredAnswers: (number | null)[] = qs.map(
+        (_, i) => saved.answers[i] ?? null
+      );
+      const restoreIdx = Math.min(Math.max(saved.current, 0), qs.length - 1);
+
+      setQuestions(qs);
+      setAnswers(restoredAnswers);
+      setCurrent(restoreIdx);
+      setSelected(restoredAnswers[restoreIdx] ?? null);
+      setChecked(saved.checked && restoredAnswers[restoreIdx] !== null);
+      setFinished(saved.finished);
+      setPhase("exercise");
+    },
+    [cId, startN, endN]
+  );
+
+  // ── Auto-resume a saved exercise when reopening ──────────────────────────
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        if (cId <= 0) return;
+        const raw = await AsyncStorage.getItem(PROGRESS_KEY(cId, startN, endN));
+        if (!raw || !mounted) return;
+        const saved = JSON.parse(raw) as SavedProgress;
+        if (
+          !saved ||
+          !Array.isArray(saved.answers) ||
+          !Array.isArray(saved.questions) ||
+          saved.questions.length === 0
+        ) {
+          return;
+        }
+        await resumeFromSaved(saved);
+      } catch {}
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [cId, startN, endN, resumeFromSaved]);
+
   const totalQ = questions.length;
+
+  const score = useMemo(
+    () =>
+      answers.reduce<number>(
+        (sum, ans, i) => sum + (ans === questions[i]?.correct ? 1 : 0),
+        0
+      ),
+    [answers, questions]
+  );
+
+  const sweepRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    sweepRef.current?.scrollTo({
+      x: Math.max(0, current * 42 - 60),
+      animated: true,
+    });
+  }, [current]);
 
   const handleCheck = () => {
     if (selected === null) return;
     setChecked(true);
-    if (selected === questions[current].correct) setScore((s) => s + 1);
+    setAnswers((prev) => {
+      const next = [...prev];
+      next[current] = selected;
+      return next;
+    });
   };
 
   const handleNext = () => {
-    const newAnswers = [...answers, selected];
-    setAnswers(newAnswers);
     if (current + 1 >= totalQ) {
-      const finalScore = newAnswers.filter(
-        (a, i) => a === questions[i].correct
-      ).length;
       setFinished(true);
-      setScore(finalScore);
-    } else {
-      setCurrent((c) => c + 1);
-      setSelected(null);
-      setChecked(false);
+      return;
     }
+    const nextIdx = current + 1;
+    setCurrent(nextIdx);
+    setSelected(answers[nextIdx] ?? null);
+    setChecked(answers[nextIdx] !== null && answers[nextIdx] !== undefined);
   };
+
+  const jumpTo = (i: number) => {
+    if (i === current) return;
+    setCurrent(i);
+    setSelected(answers[i] ?? null);
+    setChecked(answers[i] !== null && answers[i] !== undefined);
+  };
+
+  // ── Persist progress so reopening resumes at the last question ──────────
+  useEffect(() => {
+    if (phase !== "exercise") return;
+    AsyncStorage.setItem(
+      PROGRESS_KEY(cId, startN, endN),
+      JSON.stringify({ current, answers, checked, finished, questions })
+    ).catch(() => {});
+  }, [phase, cId, startN, endN, current, answers, checked, finished, questions]);
 
   const handleComplete = () => {
     addTestResult({ name: headerCourseName, score, total: totalQ });
+    AsyncStorage.removeItem(PROGRESS_KEY(cId, startN, endN)).catch(() => {});
     router.replace("/(tabs)/dashboard");
   };
 
@@ -232,6 +375,33 @@ export default function ExerciseScreen() {
               <View style={styles.countDivider} />
               <Text style={styles.countDetail}>
                 Start from Q{startN || 1} → Q{endN || questionCount}
+              </Text>
+            </View>
+          )}
+
+          {/* Reading progress */}
+          {user?.appUserId && readLoaded && (
+            <View style={styles.readingCard}>
+              <View style={styles.readingHeaderRow}>
+                <Ionicons name="time-outline" size={18} color={colors.primary} />
+                <Text style={styles.readingTitle}>Reading Progress</Text>
+              </View>
+              <View style={styles.readingBarRow}>
+                <View style={styles.readingBarTrack}>
+                  <View
+                    style={[
+                      styles.readingBarFill,
+                      { width: `${readingPct(readSeconds)}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.readingTimeText}>
+                  {formatReadingTime(readSeconds)}
+                </Text>
+              </View>
+              <Text style={styles.readingTargetText}>
+                Target: {Math.round(READING_TARGET_SECONDS / 60)} minutes of
+                study for this exercise
               </Text>
             </View>
           )}
@@ -394,6 +564,62 @@ export default function ExerciseScreen() {
         />
       </LinearGradient>
 
+      {/* Question sweep */}
+      <View style={styles.sweepWrap}>
+        <ScrollView
+          ref={sweepRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sweepRow}
+        >
+          {questions.map((_, i) => {
+            const answered = answers[i] !== null && answers[i] !== undefined;
+            const isRight = answered && answers[i] === questions[i].correct;
+            const isCurrent = i === current;
+            return (
+              <TouchableOpacity
+                key={i}
+                style={[
+                  styles.sweepChip,
+                  answered
+                    ? isRight
+                      ? styles.sweepChipRight
+                      : styles.sweepChipWrong
+                    : styles.sweepChipTodo,
+                  isCurrent && styles.sweepChipCurrent,
+                ]}
+                onPress={() => jumpTo(i)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.sweepChipText,
+                    answered
+                      ? isRight
+                        ? styles.sweepChipTextRight
+                        : styles.sweepChipTextWrong
+                      : styles.sweepChipTextTodo,
+                    isCurrent && styles.sweepChipTextCurrent,
+                  ]}
+                >
+                  {i + 1}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* AI Tutor popup (read-only) */}
+      <QuestionAiModal
+        visible={aiOpen}
+        questionText={q.question}
+        options={q.options}
+        correct={q.correct}
+        questionNumber={current + 1}
+        onClose={() => setAiOpen(false)}
+      />
+
       {/* Question body */}
       <ScrollView
         style={styles.flex}
@@ -403,10 +629,20 @@ export default function ExerciseScreen() {
         {/* Question card */}
         <View style={styles.questionCard}>
           <View style={styles.questionLabelRow}>
-            <Ionicons name="locate" size={14} color={headerColor} />
-            <Text style={[styles.questionLabel, { color: headerColor }]}>
-              Question {current + 1}
-            </Text>
+            <View style={styles.questionLabelGroup}>
+              <Ionicons name="locate" size={14} color={headerColor} />
+              <Text style={[styles.questionLabel, { color: headerColor }]}>
+                Question {current + 1}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.aiButton}
+              onPress={() => setAiOpen(true)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="sparkles" size={14} color="#B45309" />
+              <Text style={styles.aiButtonText}>Ask AI</Text>
+            </TouchableOpacity>
           </View>
           <Text style={styles.questionText}>{q.question}</Text>
         </View>
@@ -603,6 +839,57 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
   },
+  // ── Question sweep ───────────────────────────────────────────────────────
+  sweepWrap: {
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingBottom: 4,
+  },
+  sweepRow: {
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  sweepChip: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+  },
+  sweepChipTodo: {
+    backgroundColor: "#F3F4F6",
+    borderColor: "#E5E7EB",
+  },
+  sweepChipRight: {
+    backgroundColor: "#DCFCE7",
+    borderColor: "#22C55E",
+  },
+  sweepChipWrong: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#F87171",
+  },
+  sweepChipCurrent: {
+    borderColor: colors.primary,
+  },
+  sweepChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  sweepChipTextTodo: {
+    color: "#4B5563",
+  },
+  sweepChipTextRight: {
+    color: "#166534",
+  },
+  sweepChipTextWrong: {
+    color: "#991B1B",
+  },
+  sweepChipTextCurrent: {
+    color: colors.primary,
+  },
   header: {
     paddingTop: 72,
     paddingBottom: 16,
@@ -706,6 +993,54 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.foreground,
   },
+  readingCard: {
+    width: "100%",
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  readingHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  readingTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.foreground,
+  },
+  readingBarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  readingBarTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#F3F4F6",
+    overflow: "hidden",
+  },
+  readingBarFill: {
+    height: "100%",
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  readingTimeText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  readingTargetText: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    marginTop: 8,
+  },
   countLoadingRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -747,8 +1082,29 @@ const styles = StyleSheet.create({
   questionLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
     marginBottom: 12,
+  },
+  questionLabelGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  aiButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1,
+    borderColor: "#FED7AA",
+    borderRadius: radii.round,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  aiButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.brown,
   },
   questionLabel: {
     fontSize: 12,

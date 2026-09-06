@@ -1,53 +1,81 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, gradients, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { AreaChart, BarChart } from "@/components/Charts";
 import { ProgressBar } from "@/components/ProgressBar";
-
-const weeklyActivity = [
-  { day: "Mon", minutes: 42, score: 72 },
-  { day: "Tue", minutes: 65, score: 80 },
-  { day: "Wed", minutes: 28, score: 68 },
-  { day: "Thu", minutes: 88, score: 91 },
-  { day: "Fri", minutes: 55, score: 85 },
-  { day: "Sat", minutes: 94, score: 88 },
-  { day: "Sun", minutes: 38, score: 76 },
-];
-
-const areaData = weeklyActivity.map(({ day, minutes }) => ({ day, minutes }));
-const barData = weeklyActivity.map(({ day, score }) => ({ day, score }));
-
-const subjectScores = [
-  { subject: "Anatomy", score: 87, color: "#C41E3A" },
-  { subject: "Pharmacology", score: 72, color: "#166534" },
-  { subject: "Pathology", score: 65, color: "#0891B2" },
-  { subject: "Physiology", score: 91, color: "#7C3AED" },
-  { subject: "Microbiology", score: 58, color: "#059669" },
-  { subject: "Biochemistry", score: 78, color: "#B45309" },
-];
+import { useStudyData } from "@/hooks/useStudyData";
 
 const achievements = [
-  { icon: "🔥", label: "12-Day Streak", sub: "Personal best", color: "#F59E0B" },
-  { icon: "🏆", label: "Top 10%", sub: "Global ranking", color: "#C41E3A" },
-  { icon: "📚", label: "50 Lessons", sub: "Completed", color: "#166534" },
-  { icon: "💊", label: "Pharm Master", sub: "Pharmacology ace", color: "#7C3AED" },
+  { icon: "📚", label: "First Test", sub: "Completed a test", color: "#C41E3A" },
+  { icon: "🏆", label: "Top 10%", sub: "Score 90%+ in a test", color: "#166534" },
+  { icon: "⏱️", label: "Half Hour", sub: "30+ min of reading", color: "#0891B2" },
+  { icon: "💊", label: "Exam Ready", sub: "5+ tests completed", color: "#F59E0B" },
 ];
 
+function testPct(right: number | undefined, questions: number | undefined): number {
+  const total = questions || 1;
+  const r = right || 0;
+  return Math.round((r / Math.max(total, 1)) * 100);
+}
+
 export default function StatsScreen() {
-  const { testResults } = useApp();
-  const totalMins = weeklyActivity.reduce((a, b) => a + b.minutes, 0);
-  const avgScore =
-    testResults.length > 0
-      ? Math.round(testResults.reduce((a, b) => a + (b.score / b.total) * 100, 0) / testResults.length)
-      : 81;
+  const router = useRouter();
+  const { user } = useApp();
+  const study = useStudyData(user?.appUserId);
+
+  useFocusEffect(
+    useCallback(() => {
+      study.refresh();
+    }, [study.refresh])
+  );
+
+  const totalMins = study.readingMinutes;
+
+  // Reading per lesson (ascending so the trend reads left→right)
+  const readingTrend = study.modules
+    .slice()
+    .sort((a, b) => a.exerciseStart - b.exerciseStart)
+    .slice(-8)
+    .map((m) => ({
+      day: `Q${m.exerciseStart}`,
+      minutes: m.minutes,
+    }));
+
+  // Score trend: last 8 completed tests, chronological
+  const scoreTrend = study.completedTests
+    .slice()
+    .sort((a, b) => {
+      const da = a.testDate || "";
+      const db = b.testDate || "";
+      return da < db ? -1 : db < da ? 1 : 0;
+    })
+    .slice(-8)
+    .map((t) => ({
+      day: `#${t.testId}`,
+      score: testPct(t.rightQuestions, t.questions),
+    }));
+
+  const latestTestScores = study.completedTests
+    .slice()
+    .sort((a, b) => {
+      const da = a.testDate || "";
+      const db = b.testDate || "";
+      return db < da ? -1 : da < db ? 1 : 0;
+    })
+    .slice(0, 6);
+
+  const avg = study.loading ? "…" : study.avgScore > 0 ? `${study.avgScore}%` : "—";
 
   return (
     <ScrollView
@@ -72,96 +100,121 @@ export default function StatsScreen() {
           <View style={styles.summaryCard}>
             <Ionicons name="time-outline" size={18} color="#6EE7B7" />
             <Text style={styles.summaryValue}>
-              {Math.floor(totalMins / 60)}h {totalMins % 60}m
+              {study.loading ? "…" : totalMins >= 60 ? `${(totalMins / 60).toFixed(1)}h` : `${totalMins}m`}
             </Text>
             <Text style={styles.summaryLabel}>Study Time</Text>
           </View>
           <View style={styles.summaryCard}>
             <Ionicons name="locate" size={18} color="#FCD34D" />
-            <Text style={styles.summaryValue}>{avgScore}%</Text>
+            <Text style={styles.summaryValue}>{avg}</Text>
             <Text style={styles.summaryLabel}>Avg Score</Text>
           </View>
           <View style={styles.summaryCard}>
             <Ionicons name="book-outline" size={18} color="#93C5FD" />
-            <Text style={styles.summaryValue}>{testResults.length + 14}</Text>
+            <Text style={styles.summaryValue}>{study.loading ? "…" : String(study.testsDone)}</Text>
             <Text style={styles.summaryLabel}>Tests Done</Text>
           </View>
         </View>
       </LinearGradient>
 
       <View style={styles.content}>
-        {/* Weekly reading time */}
+        {study.loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator color={colors.primary} size="small" />
+            <Text style={styles.loadingText}>Loading your stats...</Text>
+          </View>
+        ) : null}
+
+        {study.error ? (
+          <View style={styles.noticeBox}>
+            <Ionicons name="cloud-offline-outline" size={16} color={colors.primary} />
+            <Text style={styles.noticeText}>
+              Could not load tests: {study.error}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Reading time per lesson */}
         <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Weekly Reading Time</Text>
+            <Text style={styles.chartTitle}>Reading Time by Lesson</Text>
             <View style={styles.trendBadge}>
-              <Ionicons name="trending-up" size={14} color={colors.green} />
-              <Text style={styles.trendText}>+12%</Text>
+              <Ionicons name="time-outline" size={14} color={colors.teal} />
+              <Text style={styles.trendText}>{study.moduleCount} lessons</Text>
             </View>
           </View>
-          <AreaChart data={areaData} color={colors.primary} />
+          {readingTrend.length >= 2 ? (
+            <AreaChart data={readingTrend} color={colors.teal} />
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="book-outline" size={26} color={colors.mutedForeground} />
+              <Text style={styles.emptyTitle}>No reading tracked yet</Text>
+              <Text style={styles.emptyText}>
+                Open a lesson and your reading time is recorded automatically.
+              </Text>
+              <TouchableOpacity
+                style={styles.goButton}
+                onPress={() => router.push("/exercise")}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.goButtonText}>Start Reading</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* MCQ score trend */}
         <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>MCQ Score Trend</Text>
+            <Text style={styles.chartTitle}>Test Score Trend</Text>
             <View style={styles.trendBadge}>
-              <Ionicons name="flash" size={14} color={colors.green} />
-              <Text style={styles.trendText}>+6pts avg</Text>
+              <Ionicons name="trophy" size={14} color={colors.green} />
+              <Text style={styles.trendText}>{study.testsDone} tests</Text>
             </View>
           </View>
-          <BarChart data={barData} color={colors.green} />
+          {scoreTrend.length >= 1 ? (
+            <BarChart data={scoreTrend} color={colors.green} minDomain={0} />
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="document-text-outline" size={26} color={colors.mutedForeground} />
+              <Text style={styles.emptyTitle}>No tests completed</Text>
+              <Text style={styles.emptyText}>
+                Finish a test to see your score trend here.
+              </Text>
+              <TouchableOpacity
+                style={styles.goButton}
+                onPress={() => router.push("/test")}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.goButtonText}>Take a Test</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
-        {/* Subject breakdown */}
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Subject Performance</Text>
-          <View style={styles.subjectList}>
-            {subjectScores.map((sub) => (
-              <View key={sub.subject} style={styles.subjectRow}>
-                <Text style={styles.subjectName}>{sub.subject}</Text>
-                <ProgressBar
-                  progress={sub.score}
-                  color={sub.color}
-                  height={10}
-                  style={styles.subjectProgress}
-                />
-                <Text style={styles.subjectScore}>{sub.score}%</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Recent test results */}
-        {testResults.length > 0 && (
+        {/* Latest test scores */}
+        {latestTestScores.length > 0 && (
           <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Recent Tests</Text>
-            <View>
-              {[...testResults].reverse().slice(0, 5).map((res, i) => {
-                const pct = Math.round((res.score / res.total) * 100);
-                const passed = pct >= 60;
+            <Text style={styles.chartTitle}>Latest Test Scores</Text>
+            <View style={styles.subjectList}>
+              {latestTestScores.map((t) => {
+                const right = t.rightQuestions || 0;
+                const total = t.questions || 1;
+                const p = testPct(right, total);
+                const passed = p >= 60;
                 return (
-                  <View key={i} style={[styles.testRow, i < 4 && styles.testRowBorder]}>
-                    <View
-                      style={[
-                        styles.testIconBox,
-                        { backgroundColor: passed ? "#F0FDF4" : "#FFF0F2" },
-                      ]}
-                    >
-                      <Ionicons
-                        name={passed ? "checkmark" : "close"}
-                        size={14}
-                        color={passed ? colors.green : colors.primary}
-                        style={styles.testIcon}
-                      />
-                    </View>
-                    <View style={styles.testInfo}>
-                      <Text style={styles.testName} numberOfLines={1}>{res.name}</Text>
-                      <Text style={styles.testMeta}>{res.score}/{res.total} correct</Text>
-                    </View>
-                    <Text style={[styles.testScore, { color: passed ? colors.green : colors.primary }]}>
-                      {pct}%
+                  <View key={t.testId} style={styles.subjectRow}>
+                    <Text style={styles.subjectName} numberOfLines={1}>
+                      {t.courseName || "Test"} #{t.testId}
+                    </Text>
+                    <ProgressBar
+                      progress={p}
+                      color={passed ? colors.green : colors.primary}
+                      height={10}
+                      style={styles.subjectProgress}
+                    />
+                    <Text style={styles.subjectScore}>
+                      {right}/{total}
                     </Text>
                   </View>
                 );
@@ -174,20 +227,38 @@ export default function StatsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Achievements</Text>
           <View style={styles.achievementsGrid}>
-            {achievements.map((a) => (
-              <View
-                key={a.label}
-                style={[styles.achievementCard, { borderColor: colors.border }]}
-              >
-                <View style={[styles.achievementIconBox, { backgroundColor: a.color + "18" }]}>
-                  <Text style={styles.achievementIcon}>{a.icon}</Text>
+            {achievements.map((a) => {
+              const earned =
+                (a.label === "First Test" && study.testsDone >= 1) ||
+                (a.label === "Top 10%" && study.bestScore >= 90) ||
+                (a.label === "Half Hour" && study.readingMinutes >= 30) ||
+                (a.label === "Exam Ready" && study.testsDone >= 5);
+              return (
+                <View
+                  key={a.label}
+                  style={[
+                    styles.achievementCard,
+                    { borderColor: colors.border },
+                    !earned && styles.achievementLocked,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.achievementIconBox,
+                      { backgroundColor: earned ? a.color + "18" : colors.muted },
+                    ]}
+                  >
+                    <Text style={styles.achievementIcon}>{a.icon}</Text>
+                  </View>
+                  <View style={styles.achievementInfo}>
+                    <Text style={styles.achievementLabel}>{a.label}</Text>
+                    <Text style={styles.achievementSub}>
+                      {earned ? a.sub : "Locked · keep going"}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.achievementInfo}>
-                  <Text style={styles.achievementLabel}>{a.label}</Text>
-                  <Text style={styles.achievementSub}>{a.sub}</Text>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
 
@@ -263,6 +334,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
   },
+  loadingBox: {
+    alignItems: "center",
+    paddingVertical: 4,
+    gap: 8,
+    marginBottom: 8,
+  },
+  loadingText: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
+  noticeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.primaryLight,
+    borderRadius: radii.md,
+    padding: 12,
+    marginBottom: 12,
+  },
+  noticeText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.primary,
+  },
   chartCard: {
     backgroundColor: colors.card,
     borderRadius: radii.lg,
@@ -293,6 +388,35 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.green,
   },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 18,
+    gap: 6,
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.foreground,
+    marginTop: 4,
+  },
+  emptyText: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    textAlign: "center",
+    lineHeight: 17,
+  },
+  goButton: {
+    marginTop: 8,
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  goButtonText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "700",
+  },
   subjectList: {
     marginTop: 16,
     gap: 12,
@@ -318,42 +442,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.foreground,
   },
-  testRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
-  },
-  testRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  testIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  testIcon: {
-    fontWeight: "bold",
-  },
-  testInfo: {
-    flex: 1,
-  },
-  testName: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.foreground,
-  },
-  testMeta: {
-    fontSize: 11,
-    color: colors.mutedForeground,
-  },
-  testScore: {
-    fontSize: 15,
-    fontWeight: "700",
-  },
   section: {
     marginTop: 4,
   },
@@ -378,6 +466,9 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     ...shadows.sm,
+  },
+  achievementLocked: {
+    opacity: 0.55,
   },
   achievementIconBox: {
     width: 40,

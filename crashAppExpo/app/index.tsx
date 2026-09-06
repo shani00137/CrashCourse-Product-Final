@@ -11,10 +11,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import { colors, gradients } from "@/constants/theme";
+import { useApp } from "@/context/AppContext";
 
 const logoSource = require("@/assets/logo/logo.jpg");
 
 export default function SplashScreen() {
+  const { user, userLoaded } = useApp();
   const scale = useRef(new Animated.Value(0.6)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const titleY = useRef(new Animated.Value(20)).current;
@@ -88,13 +90,16 @@ export default function SplashScreen() {
         ])
       ).start();
     });
-
-    const timer = setTimeout(() => {
-      router.replace("/login");
-    }, 3200);
-
-    return () => clearTimeout(timer);
   }, []);
+
+  // Route to the dashboard when a session was restored, otherwise to login.
+  useEffect(() => {
+    if (!userLoaded) return;
+    const timer = setTimeout(() => {
+      router.replace(user ? "/(tabs)/dashboard" : "/login");
+    }, 3200);
+    return () => clearTimeout(timer);
+  }, [user, userLoaded]);
 
   return (
     <LinearGradient

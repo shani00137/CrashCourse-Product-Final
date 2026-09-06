@@ -1,54 +1,120 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  RefreshControl,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Image } from "expo-image";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, gradients, shadows, radii } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { ProgressBar } from "@/components/ProgressBar";
+import { useStudyData } from "@/hooks/useStudyData";
 
 const logoSource = require("@/assets/logo/logo.jpg");
 
-const featuredCourses = [
-  { id: 1, title: "Anatomy", subtitle: "Human Body Systems", color: colors.primary, bg: "#FFF0F2", icon: "🫀", progress: 72, lessons: 32 },
-  { id: 2, title: "Pharmacology", subtitle: "Drugs & Therapeutics", color: colors.green, bg: "#F0F9F0", icon: "💊", progress: 45, lessons: 28 },
-  { id: 3, title: "Pathology", subtitle: "Disease Mechanisms", color: colors.teal, bg: "#ECFEFF", icon: "🔬", progress: 30, lessons: 24 },
-];
+const WEEKLY_GOAL_MINUTES = 180;
 
-const quickStats = [
-  { label: "Streak", value: "12", unit: "days", icon: "flame", color: "#F59E0B", bg: "#FFFBEB" },
-  { label: "Score", value: "87", unit: "%", icon: "star", color: colors.primary, bg: "#FFF0F2" },
-  { label: "Rank", value: "#24", unit: "global", icon: "trophy", color: colors.green, bg: "#F0F9F0" },
-  { label: "Hours", value: "48", unit: "total", icon: "time", color: colors.teal, bg: "#ECFEFF" },
-];
-
-const statIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
-  flame: "flame",
-  star: "star",
-  trophy: "trophy",
-  time: "time-outline",
-};
+interface StatMeta {
+  key: string;
+  label: string;
+  value: string;
+  unit?: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  bg: string;
+}
 
 export default function DashboardScreen() {
   const router = useRouter();
   const { user } = useApp();
 
+  const appUserId = user?.appUserId;
+  const courseId = user?.courseId ?? 0;
+  const courseName = user?.courseName || "your course";
+
+  const study = useStudyData(appUserId);
+
+  useFocusEffect(
+    useCallback(() => {
+      study.refresh();
+    }, [study.refresh])
+  );
+
   const firstName = user?.name?.split(" ")[0] || "Student";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+
+  const readingLabel =
+    study.readingMinutes >= 60
+      ? `${(study.readingMinutes / 60).toFixed(1)}h`
+      : `${study.readingMinutes}m`;
+
+  const goalPct = Math.min(
+    100,
+    Math.round((study.readingMinutes / WEEKLY_GOAL_MINUTES) * 100)
+  );
+
+  const stats: StatMeta[] = [
+    {
+      key: "reading",
+      label: "Reading",
+      value: study.loading ? "…" : readingLabel,
+      unit: "total",
+      icon: "time-outline",
+      color: colors.teal,
+      bg: "#ECFEFF",
+    },
+    {
+      key: "tests",
+      label: "Tests Done",
+      value: study.loading ? "…" : String(study.testsDone),
+      unit: "completed",
+      icon: "document-text-outline",
+      color: colors.primary,
+      bg: "#FFF0F2",
+    },
+    {
+      key: "avg",
+      label: "Avg Score",
+      value: study.loading ? "…" : study.avgScore > 0 ? `${study.avgScore}%` : "—",
+      unit: "overall",
+      icon: "star-outline",
+      color: "#F59E0B",
+      bg: "#FFFBEB",
+    },
+    {
+      key: "best",
+      label: "Best Score",
+      value: study.loading ? "…" : study.bestScore > 0 ? `${study.bestScore}%` : "—",
+      unit: "personal",
+      icon: "trophy-outline",
+      color: colors.green,
+      bg: "#F0F9F0",
+    },
+  ];
+
+  const topModules = study.modules.slice(0, 3);
+  const maxModuleMinutes = study.modules[0]?.minutes || 1;
 
   return (
     <ScrollView
       style={styles.flex}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={study.loading}
+          onRefresh={study.refresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
+      }
     >
       {/* Header */}
       <LinearGradient
@@ -80,15 +146,19 @@ export default function DashboardScreen() {
         <View style={styles.goalCard}>
           <View style={styles.goalHeader}>
             <Text style={styles.goalLabel}>Weekly Study Goal</Text>
-            <Text style={styles.goalValue}>68%</Text>
+            <Text style={styles.goalValue}>{goalPct}%</Text>
           </View>
           <ProgressBar
-            progress={68}
+            progress={goalPct / 100}
             color="#FACC15"
             bgColor="rgba(255,255,255,0.2)"
             height={8}
           />
-          <Text style={styles.goalHint}>17 of 25 lessons completed this week</Text>
+          <Text style={styles.goalHint}>
+            {study.loading
+              ? "Loading your progress..."
+              : `${study.readingMinutes} min of ${WEEKLY_GOAL_MINUTES} min goal · ${study.testsDone} tests completed`}
+          </Text>
         </View>
       </LinearGradient>
 
@@ -96,19 +166,18 @@ export default function DashboardScreen() {
       <View style={styles.content}>
         {/* Stats row */}
         <View style={styles.statsRow}>
-          {quickStats.map((stat) => {
-            const Icon = statIcons[stat.icon] || "star";
-            return (
-              <View key={stat.label} style={[styles.statCard, { backgroundColor: stat.bg }]}>
-                <View style={[styles.statIconBox, { backgroundColor: stat.color + "20" }]}>
-                  <Ionicons name={Icon} size={15} color={stat.color} />
-                </View>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statUnit}>{stat.unit}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
+          {stats.map((stat) => (
+            <View key={stat.key} style={[styles.statCard, { backgroundColor: stat.bg }]}>
+              <View style={[styles.statIconBox, { backgroundColor: stat.color + "20" }]}>
+                <Ionicons name={stat.icon} size={15} color={stat.color} />
               </View>
-            );
-          })}
+              <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+                {stat.value}
+              </Text>
+              <Text style={styles.statUnit}>{stat.unit}</Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+            </View>
+          ))}
         </View>
 
         {/* Smart AI Assistant card */}
@@ -156,46 +225,155 @@ export default function DashboardScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Continue Learning */}
+        {/* Continue Reading (real reading-time data) */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Continue Learning</Text>
+            <Text style={styles.sectionTitle}>Continue Reading</Text>
             <TouchableOpacity
               style={styles.seeAllLink}
-              onPress={() => router.push("/(tabs)/courses")}
+              onPress={() => router.push("/(tabs)/stats")}
             >
-              <Text style={styles.seeAllText}>See all</Text>
+              <Text style={styles.seeAllText}>Stats</Text>
               <Ionicons name="chevron-forward" size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
-          {featuredCourses.map((course) => (
+          {study.loading ? (
+            <View style={styles.courseCard}>
+              <Text style={styles.emptyText}>Loading your reading progress...</Text>
+            </View>
+          ) : topModules.length > 0 ? (
+            topModules.map((mod) => (
+              <TouchableOpacity
+                key={`${mod.exerciseStart}-${mod.exerciseEnd}`}
+                style={styles.courseCard}
+                onPress={() =>
+                  router.push({
+                    pathname: "/exercise",
+                    params: {
+                      courseId: String(courseId),
+                      courseName: courseName,
+                      start: String(mod.exerciseStart),
+                      end: String(mod.exerciseEnd),
+                    },
+                  })
+                }
+                activeOpacity={0.9}
+              >
+                <View style={[styles.courseIconBox, { backgroundColor: "#FFFBEB" }]}>
+                  <Ionicons name="book-outline" size={20} color={colors.brown} />
+                </View>
+                <View style={styles.courseInfo}>
+                  <Text style={styles.courseTitle} numberOfLines={1}>
+                    Lesson Q{mod.exerciseStart}–{mod.exerciseEnd}
+                  </Text>
+                  <Text style={styles.courseSubtitle}>
+                    {mod.minutes} min read · {courseName}
+                  </Text>
+                  <ProgressBar
+                    progress={Math.round((mod.minutes / maxModuleMinutes) * 100)}
+                    color={colors.brown}
+                    height={6}
+                    style={styles.courseProgress}
+                  />
+                </View>
+                <Text style={[styles.coursePct, { color: colors.brown }]}>{mod.minutes}m</Text>
+              </TouchableOpacity>
+            ))
+          ) : (
             <TouchableOpacity
-              key={course.id}
               style={styles.courseCard}
-              onPress={() => router.push({ pathname: "/exercise", params: { courseId: String(course.id) } })}
+              onPress={() =>
+                router.push({
+                  pathname: "/exercise",
+                  params: { courseId: String(courseId), courseName: courseName },
+                })
+              }
               activeOpacity={0.9}
             >
-              <View style={[styles.courseIconBox, { backgroundColor: course.bg }]}>
-                <Text style={styles.courseIcon}>{course.icon}</Text>
+              <View style={[styles.courseIconBox, { backgroundColor: "#FFFBEB" }]}>
+                <Ionicons name="book-outline" size={20} color={colors.brown} />
               </View>
               <View style={styles.courseInfo}>
-                <Text style={styles.courseTitle}>{course.title}</Text>
+                <Text style={styles.courseTitle}>Start reading a lesson</Text>
                 <Text style={styles.courseSubtitle}>
-                  {course.subtitle} · {course.lessons} lessons
+                  Your reading time is tracked automatically
                 </Text>
-                <ProgressBar
-                  progress={course.progress}
-                  color={course.color}
-                  height={6}
-                  style={styles.courseProgress}
-                />
               </View>
-              <Text style={[styles.coursePct, { color: course.color }]}>
-                {course.progress}%
-              </Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
             </TouchableOpacity>
-          ))}
+          )}
+        </View>
+
+        {/* Recent tests */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Tests</Text>
+            <TouchableOpacity style={styles.seeAllLink} onPress={() => router.push("/test")}>
+              <Text style={styles.seeAllText}>Take a test</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {study.loading ? (
+            <View style={styles.courseCard}>
+              <Text style={styles.emptyText}>Loading your tests...</Text>
+            </View>
+          ) : study.recentCompleted.length > 0 ? (
+            study.recentCompleted.map((test) => {
+              const p = Math.round(
+                ((test.rightQuestions || 0) / Math.max(test.questions || 1, 1)) * 100
+              );
+              const passed = p >= 60;
+              return (
+                <TouchableOpacity
+                  key={test.testId}
+                  style={styles.testCard}
+                  onPress={() => router.push("/test")}
+                  activeOpacity={0.9}
+                >
+                  <View
+                    style={[
+                      styles.testIconBox,
+                      { backgroundColor: passed ? "#F0FDF4" : "#FFF0F2" },
+                    ]}
+                  >
+                    <Ionicons
+                      name={passed ? "checkmark" : "close"}
+                      size={15}
+                      color={passed ? colors.green : colors.primary}
+                    />
+                  </View>
+                  <View style={styles.testInfo}>
+                    <Text style={styles.testName} numberOfLines={1}>
+                      {test.courseName || `Test #${test.testId}`} · #{test.testId}
+                    </Text>
+                    <Text style={styles.testMeta}>
+                      {test.rightQuestions || 0}/{test.questions || 0} correct
+                    </Text>
+                  </View>
+                  <Text style={[styles.testScore, { color: passed ? colors.green : colors.primary }]}>
+                    {p}%
+                  </Text>
+                </TouchableOpacity>
+              );
+            })
+          ) : (
+            <TouchableOpacity
+              style={styles.courseCard}
+              onPress={() => router.push("/test")}
+              activeOpacity={0.9}
+            >
+              <View style={[styles.courseIconBox, { backgroundColor: "#FFF0F2" }]}>
+                <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.courseInfo}>
+                <Text style={styles.courseTitle}>No tests completed yet</Text>
+                <Text style={styles.courseSubtitle}>Create a timed MCQ test to get started</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Quick Actions */}
@@ -541,9 +719,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  courseIcon: {
-    fontSize: 20,
-  },
   courseInfo: {
     flex: 1,
   },
@@ -562,6 +737,46 @@ const styles = StyleSheet.create({
   coursePct: {
     fontSize: 15,
     fontWeight: "700",
+  },
+  testCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
+    ...shadows.sm,
+  },
+  testIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  testInfo: {
+    flex: 1,
+  },
+  testName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.foreground,
+  },
+  testMeta: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    marginTop: 2,
+  },
+  testScore: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  emptyText: {
+    fontSize: 13,
+    color: colors.mutedForeground,
   },
   quickActionsRow: {
     flexDirection: "row",

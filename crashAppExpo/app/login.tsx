@@ -21,7 +21,7 @@ import { loginAppUser, getUserDetailById } from "@/services/api";
 const logoSource = require("@/assets/logo/logo.jpg");
 
 export default function LoginScreen() {
-  const { setUser } = useApp();
+  const { login } = useApp();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -53,14 +53,17 @@ export default function LoginScreen() {
       } catch {
         // Course details are a nice-to-have; login still succeeds without them.
       }
-      setUser({
-        name: result.name || username.trim(),
-        isGuest: false,
-        appUserId: result.appUserId,
-        applicantId: result.applicantId,
-        courseId,
-        courseName,
-      });
+login(
+        {
+          name: result.name || username.trim(),
+          isGuest: false,
+          appUserId: result.appUserId,
+          applicantId: result.applicantId,
+          courseId,
+          courseName,
+        },
+        result.userToken
+      );
       router.replace("/(tabs)/dashboard");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed. Please try again.");
@@ -70,7 +73,7 @@ export default function LoginScreen() {
   };
 
   const handleGuest = () => {
-    setUser({ name: "Guest Student", isGuest: true });
+    login({ name: "Guest Student", isGuest: true });
     router.replace("/(tabs)/dashboard");
   };
 

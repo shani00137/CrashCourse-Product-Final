@@ -72,10 +72,24 @@ export interface AppUserRequest {
 
 const DEFAULT_COURSE_MD = { courseId: 0, courseCode: "", courseName: "", isActive: true };
 
+let authToken = "";
+
+/**
+ * Sets the Bearer token attached to subsequent requests. Called by AppContext
+ * when a session is restored/logged in (and cleared on logout).
+ */
+export function setSessionToken(token: string) {
+  authToken = token || "";
+}
+
 async function request<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", accept: "*/*" },
+    headers: {
+      "Content-Type": "application/json",
+      accept: "*/*",
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -88,7 +102,10 @@ async function request<T>(path: string, body: unknown): Promise<T> {
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method: "GET",
-    headers: { accept: "*/*" },
+    headers: {
+      accept: "*/*",
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    },
   });
   if (!res.ok) {
     const text = await res.text();
@@ -444,6 +461,39 @@ export interface TakeQuestion {
   options: string[];
 }
 
+export interface ExplainQuestionInput {
+  question: string;
+  options: string[];
+  prompt: string;
+  maxWords?: number;
+}
+
+export interface ExplainQuestionResult {
+  succeeded: boolean;
+  message?: string;
+  answer?: string;
+}
+
+/**
+ * Sends a student's question + custom prompt to the backend AI tutor
+ * and returns a short, exam-focused explanation. The returned answer
+ * is rendered read-only (never mutates exercise state).
+ */
+export async function explainQuestion(
+  input: ExplainQuestionInput
+): Promise<ExplainQuestionResult> {
+  const data = await request<unknown>(ENDPOINTS.explainQuestion, input);
+  if (!data || typeof data !== "object") {
+    return { succeeded: false, message: "Invalid response from server." };
+  }
+  const r = data as Record<string, unknown>;
+  return {
+    succeeded: r.succeeded !== false,
+    message: typeof r.message === "string" ? r.message : "",
+    answer: typeof r.answer === "string" ? r.answer : "",
+  };
+}
+
 /**
  * Fetches the questions of an exercise range for a course via
  * TakeExercise/{start},{end},{courseId}. The backend returns flat rows with
@@ -460,16 +510,287 @@ export async function takeExercise(
     .filter((it) => it && typeof it === "object")
     .map((it) => {
       const r = it as Record<string, unknown>;
-      const options = ["Option1", "Option2", "Option3", "Option4"]
+      const options = ["option1", "option2", "option3", "option4"]
         .map((key) => (typeof r[key] === "string" ? (r[key] as string) : ""))
         .filter((o) => o.trim().length > 0);
       return {
-        questionId: Number(r.QuestionId) || 0,
+        questionId: Number(r.questionId) || 0,
         questionContent:
-          typeof r.QuestionContent === "string" ? r.QuestionContent : "",
-        rightOption: Number(r.RightOption) || 0,
+          typeof r.questionContent === "string" ? r.questionContent : "",
+        rightOption: Number(r.rightOption) || 0,
         options,
       };
     })
     .filter((c) => c.questionId > 0 && c.options.length > 0);
+}
+
+export interface ReadingTimeRow {
+  appUserId: number;
+  courseId: number;
+  exerciseStart: number;
+  exerciseEnd: number;
+  totalSeconds: number;
+}
+
+/**
+ * Adds a delta of reading seconds to an exercise for a user (upsert). The
+ * backend adds `seconds` to the stored TotalSeconds and returns the new total.
+ */
+export async function saveReadingTime(input: {
+  appUserId: number;
+  courseId: number;
+  exerciseStart: number;
+  exerciseEnd: number;
+  seconds: number;
+}): Promise<{ succeeded: boolean; totalSeconds: number }> {
+  const data = await request<unknown>(ENDPOINTS.saveReadingTime, input);
+  if (!data || typeof data !== "object") {
+    return { succeeded: false, totalSeconds: 0 };
+  }
+  const r = data as Record<string, unknown>;
+  return {
+    succeeded: r.succeeded !== false,
+    totalSeconds: Number(r.totalSeconds) || 0,
+  };
+}
+
+/**
+ * Fetches all reading-time rows for a user (one per exercise range).
+ */
+export async function getAllReadingTime(appUserId: number): Promise<ReadingTimeRow[]> {
+  const data = await get<unknown>(ENDPOINTS.getAllReadingTime(appUserId));
+  if (!Array.isArray(data)) return [];
+  return data.filter((it) => it && typeof it === "object").map((it) => {
+      const r = it as Record<string, unknown>;
+      return {
+        appUserId: Number(r.appUserId) || 0,
+        courseId: Number(r.courseId) || 0,
+        exerciseStart: Number(r.exerciseStart) || 0,
+        exerciseEnd: Number(r.exerciseEnd) || 0,
+        totalSeconds: Number(r.totalSeconds) || 0,
+      };
+    });
+}
+
+/**
+ * Fetches the reading-time row for a single exercise range. Returns a zeroed
+ * row when the user has not started that exercise yet.
+ */
+export async function getReadingTime(
+  appUserId: number,
+  courseId: number,
+  start: number,
+  end: number
+): Promise<ReadingTimeRow | null> {
+  const data = await get<unknown>(ENDPOINTS.getReadingTime(appUserId, courseId, start, end));
+  if (!data || typeof data !== "object") return null;
+  const r = data as Record<string, unknown>;
+  return {
+    appUserId: Number(r.appUserId) || appUserId,
+    courseId: Number(r.courseId) || courseId,
+    exerciseStart: Number(r.exerciseStart) || start,
+    exerciseEnd: Number(r.exerciseEnd) || end,
+    totalSeconds: Number(r.totalSeconds) || 0,
+  };
+}
+
+export interface UserTestInfo {
+  testId: number;
+  courseId: number;
+  courseName: string;
+  isCompleted: boolean;
+  testDate: string | null;
+  questions: number;
+  duration: number;
+  rightQuestions: number;
+  remarks: string;
+  percentage: number;
+  answeredQuestions: number;
+  testStartTime: string | null;
+}
+
+/**
+ * Fetches the test list for an AppUser. `answeredQuestions` is the number of
+ * questions with a saved answer (0 for tests never opened).
+ */
+export async function getUserTests(appUserId: number): Promise<UserTestInfo[]> {
+  const data = await get<unknown>(ENDPOINTS.getUserTests(appUserId));
+  if (!Array.isArray(data)) return [];
+  return data
+    .filter((it) => it && typeof it === "object")
+    .map((it) => {
+      const r = it as Record<string, unknown>;
+      const total = Number(r.questions) || 0;
+      const right = Number(r.rightQuestions) || 0;
+      return {
+        testId: Number(r.testId) || 0,
+        courseId: Number(r.courseId) || 0,
+        courseName: typeof r.courseName === "string" ? r.courseName : "",
+        isCompleted: r.isCompleted === true || r.isCompleted === "true",
+        testDate: typeof r.testDate === "string" ? (r.testDate as string) : null,
+        questions: total,
+        duration: Number(r.duration) || 0,
+        rightQuestions: right,
+        remarks: typeof r.remarks === "string" ? (r.remarks as string) : "",
+        percentage: total > 0 ? Math.round((right / total) * 100) : Number(r.percentage) || 0,
+        answeredQuestions: Number(r.answeredQuestions) || 0,
+        testStartTime: typeof r.testStartTime === "string" ? (r.testStartTime as string) : null,
+      };
+    });
+}
+
+export interface PrepareTestInput {
+  courseId: number;
+  questions: number;
+  duration: number;
+  applicantId: number[];
+  createdBy?: number;
+  testDate?: string;
+}
+
+/**
+ * Creates a fresh test for the current applicant via PrepareTest. The backend
+ * picks random questions for the course and returns a plain-text result.
+ */
+export async function prepareTest(input: PrepareTestInput): Promise<string> {
+  const data = await request<unknown>(ENDPOINTS.prepareTest, {
+    courseId: input.courseId,
+    questions: input.questions,
+    duration: input.duration,
+    applicantId: input.applicantId,
+    createdBy: input.createdBy || 0,
+    testDate: input.testDate || new Date().toISOString(),
+  });
+  return typeof data === "string" ? data : JSON.stringify(data);
+}
+
+export interface GenerateTestInput {
+  appUserId: number;
+  courseId: number;
+  questions: number;
+  duration?: number;
+  mode: "random" | "ai";
+  difficulty?: string;
+}
+
+export interface GenerateTestResult {
+  succeeded: boolean;
+  message?: string;
+  testId?: number;
+  durationMinutes?: number;
+  questions?: number;
+}
+
+/**
+ * Creates a test on demand for the current user. `mode` "random" picks
+ * questions from the course question bank; "ai" has the backend generate
+ * questions at the requested difficulty via OpenAI. The created test is saved
+ * server-side and its testId returned so the app can open it immediately.
+ */
+export async function generateTest(input: GenerateTestInput): Promise<GenerateTestResult> {
+  const data = await request<unknown>(ENDPOINTS.generateTest, {
+    appUserId: input.appUserId,
+    courseId: input.courseId,
+    questions: input.questions,
+    duration: input.duration || 0,
+    mode: input.mode,
+    difficulty: input.difficulty || "",
+  });
+  if (!data || typeof data !== "object") {
+    return { succeeded: false, message: "Invalid response from server." };
+  }
+  const r = data as Record<string, unknown>;
+  return {
+    succeeded: r.succeeded === true,
+    message: typeof r.message === "string" ? (r.message as string) : "",
+    testId: Number(r.testId) || 0,
+    durationMinutes: Number(r.durationMinutes) || 0,
+    questions: Number(r.questions) || 0,
+  };
+}
+
+export interface TestQuestion {
+  testId: number;
+  questionId: number;
+  questionContent: string;
+  rightOption: number;
+  option1: string;
+  option2: string;
+  option3: string;
+  option4: string;
+  isSelected: number;
+  answer: string;
+  durationMinutes: number;
+  testStartTime: string | null;
+}
+
+export interface ConductTestResult {
+  succeeded: boolean;
+  questions: TestQuestion[];
+  durationMinutes: number;
+  testStartTime: string | null;
+}
+
+/**
+ * Fetches a test's questions (with saved answers) for the conduct screen.
+ * Uses the same camelCase rows as TakeExercise so option text is already
+ * HTML-stripped and answer/save comparisons match server-side.
+ */
+export async function conductTestByUser(testId: number): Promise<ConductTestResult> {
+  const data = await get<unknown>(ENDPOINTS.conductTestByUser(testId));
+  if (!data || typeof data !== "object") {
+    return { succeeded: false, questions: [], durationMinutes: 0, testStartTime: null };
+  }
+  const r = data as Record<string, unknown>;
+  const rows = Array.isArray(r.data) ? r.data : [];
+  const questions = rows
+    .filter((it) => it && typeof it === "object")
+    .map((it) => {
+      const q = it as Record<string, unknown>;
+      return {
+        testId: Number(q.testId) || testId,
+        questionId: Number(q.questionId) || 0,
+        questionContent: typeof q.questionContent === "string" ? (q.questionContent as string) : "",
+        rightOption: Number(q.rightOption) || 0,
+        option1: typeof q.option1 === "string" ? (q.option1 as string) : "",
+        option2: typeof q.option2 === "string" ? (q.option2 as string) : "",
+        option3: typeof q.option3 === "string" ? (q.option3 as string) : "",
+        option4: typeof q.option4 === "string" ? (q.option4 as string) : "",
+        isSelected: Number(q.isSelected) || 0,
+        answer: typeof q.answer === "string" ? (q.answer as string) : "",
+        durationMinutes: Number(q.durationMinutes) || 0,
+        testStartTime: typeof q.testStartTime === "string" ? (q.testStartTime as string) : null,
+      };
+    })
+    .filter((q) => q.questionId > 0);
+  return {
+    succeeded: r.succeeded !== false,
+    questions,
+    durationMinutes: Number(r.durationMinutes) || 0,
+    testStartTime: typeof r.testStartTime === "string" ? (r.testStartTime as string) : null,
+  };
+}
+
+export interface UserTestAnswerInput {
+  testId: number;
+  questionId: number;
+  isSelected: number;
+  answer: string;
+}
+
+/**
+ * Persists the selected option for a question as the user goes (server-side
+ * autosave, matching UserTestUpdate).
+ */
+export async function userTestUpdate(input: UserTestAnswerInput): Promise<void> {
+  await request<unknown>(ENDPOINTS.userTestUpdate, input);
+}
+
+/**
+ * Marks the test as completed and scores it server-side. Returns the backend's
+ * plain-text confirmation.
+ */
+export async function saveTest(testId: number): Promise<string> {
+  const data = await get<unknown>(ENDPOINTS.saveTest(testId));
+  return typeof data === "string" ? data : JSON.stringify(data);
 }

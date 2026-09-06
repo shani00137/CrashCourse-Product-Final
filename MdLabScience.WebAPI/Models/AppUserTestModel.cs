@@ -22,6 +22,8 @@ namespace MdLabScience.Models
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public int Percentage { get; set; }
+        public Nullable<System.DateTime> TestStartTime { get; set; }
+        public int AnsweredQuestions { get; set; }
     }
 
     public class AppUserTestDetailsModel
@@ -32,5 +34,15 @@ namespace MdLabScience.Models
         public int QuestionId { get; set; }
         public string Options { get; set; }
         public bool IsChooseRight { get; set; }
+    }
+
+    public class GenerateTestRequest
+    {
+        public int AppUserId { get; set; }
+        public int CourseId { get; set; }
+        public int Questions { get; set; }
+        public int Duration { get; set; }
+        public string Mode { get; set; }
+        public string Difficulty { get; set; }
     }
 }

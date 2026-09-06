@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -15,11 +16,17 @@ import { useApp } from "@/context/AppContext";
 import {
   getApplicantCourses,
   getAllExercises,
+  getAllReadingTime,
   getUserDetailById,
   ApplicantCourse,
   ExerciseInfo,
+  ReadingTimeRow,
   UserDetailInfo,
 } from "@/services/api";
+import {
+  readingPct,
+  formatReadingTime,
+} from "@/constants/readingTime";
 
 export default function CoursesScreen() {
   const router = useRouter();
@@ -28,40 +35,60 @@ export default function CoursesScreen() {
   const [course, setCourse] = useState<ApplicantCourse | null>(null);
   const [userDetail, setUserDetail] = useState<UserDetailInfo | null>(null);
   const [exercises, setExercises] = useState<ExerciseInfo[]>([]);
+  const [readingTimes, setReadingTimes] = useState<ReadingTimeRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const [courseResult, exerciseResult, detail] = await Promise.all([
-          user?.appUserId ? getApplicantCourses(user.appUserId) : Promise.resolve([]),
+  const loadCourses = useCallback(async () => {
+    try {
+      const [courseResult, exerciseResult, detail, readingResult] =
+        await Promise.all([
+          user?.appUserId
+            ? getApplicantCourses(user.appUserId)
+            : Promise.resolve([]),
           getAllExercises(),
-          user?.appUserId ? getUserDetailById(user.appUserId) : Promise.resolve(null),
+          user?.appUserId
+            ? getUserDetailById(user.appUserId)
+            : Promise.resolve(null),
+          user?.appUserId
+            ? getAllReadingTime(user.appUserId)
+            : Promise.resolve([]),
         ]);
-        if (mounted) {
-          setCourse(courseResult[0] ?? null);
-          setUserDetail(detail);
-          setExercises(exerciseResult);
-          setError("");
-        }
-      } catch (e) {
-        if (mounted) {
-          setError(
-            e instanceof Error ? e.message : "Unable to load courses."
-          );
-        }
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
+      setCourse(courseResult[0] ?? null);
+      setUserDetail(detail);
+      setExercises(exerciseResult);
+      setReadingTimes(readingResult);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to load courses.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [user?.appUserId]);
 
+  useEffect(() => {
+    setLoading(true);
+    loadCourses();
+  }, [loadCourses]);
+
+  const handleRefresh = () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    loadCourses();
+  };
+
   const courseId = userDetail?.courseId || course?.courseId;
+
+  // Row lookup: courseId_start_end → totalSeconds
+  const readingMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    readingTimes.forEach((r) => {
+      map[`${r.courseId}_${r.exerciseStart}_${r.exerciseEnd}`] = r.totalSeconds;
+    });
+    return map;
+  }, [readingTimes]);
 
   const openExercise = (exercise: ExerciseInfo) => {
     router.push({
@@ -101,7 +128,7 @@ export default function CoursesScreen() {
           <ActivityIndicator color={colors.primary} size="large" />
           <Text style={styles.centerText}>Loading your course...</Text>
         </View>
-      ) : error ? (
+      ) : error && !course && exercises.length === 0 ? (
         <View style={styles.center}>
           <Ionicons
             name="cloud-offline-outline"
@@ -116,6 +143,15 @@ export default function CoursesScreen() {
           style={styles.flex}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          alwaysBounceVertical
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
         >
           {courseId && courseId > 0 || course ? (
             <>
@@ -153,31 +189,57 @@ export default function CoursesScreen() {
                   <Text style={styles.emptyText}>No exercises available yet</Text>
                 </View>
               ) : (
-                exercises.map((exercise) => (
-                  <TouchableOpacity
-                    key={exercise.exerciseRecordId}
-                    style={styles.exerciseCard}
-                    activeOpacity={0.85}
-                    onPress={() => openExercise(exercise)}
-                  >
-                    <View style={styles.exerciseIconBox}>
-                      <Ionicons name="pencil" size={20} color={colors.primary} />
-                    </View>
-                    <View style={styles.exerciseInfo}>
-                      <Text style={styles.exerciseTitle}>
-                        {exercise.exercise || "Untitled Exercise"}
-                      </Text>
-                      <Text style={styles.exerciseRange}>
-                        {exercise.startFrom || 0} – {exercise.endFrom || 0} question range
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={18}
-                      color={colors.mutedForeground}
-                    />
-                  </TouchableOpacity>
-                ))
+                exercises.map((exercise) => {
+                  const rtSecs =
+                    readingMap[
+                      `${courseId ?? 0}_${exercise.startFrom ?? 0}_${exercise.endFrom ?? 0}`
+                    ] ?? 0;
+                  return (
+                    <TouchableOpacity
+                      key={exercise.exerciseRecordId}
+                      style={styles.exerciseCard}
+                      activeOpacity={0.85}
+                      onPress={() => openExercise(exercise)}
+                    >
+                      <View style={styles.exerciseIconBox}>
+                        <Ionicons
+                          name="pencil"
+                          size={20}
+                          color={colors.primary}
+                        />
+                      </View>
+                      <View style={styles.exerciseInfo}>
+                        <Text style={styles.exerciseTitle}>
+                          {exercise.exercise || "Untitled Exercise"}
+                        </Text>
+                        <Text style={styles.exerciseRange}>
+                          {exercise.startFrom || 0} – {exercise.endFrom || 0}{" "}
+                          question range
+                        </Text>
+                        {user?.appUserId && (
+                          <View style={styles.readingRow}>
+                            <View style={styles.readingTrack}>
+                              <View
+                                style={[
+                                  styles.readingFill,
+                                  { width: `${readingPct(rtSecs)}%` },
+                                ]}
+                              />
+                            </View>
+                            <Text style={styles.readingLabel}>
+                              {formatReadingTime(rtSecs)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={18}
+                        color={colors.mutedForeground}
+                      />
+                    </TouchableOpacity>
+                  );
+                })
               )}
             </>
           ) : (
@@ -352,6 +414,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.mutedForeground,
     marginTop: 3,
+  },
+  readingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 8,
+  },
+  readingTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#F3F4F6",
+    overflow: "hidden",
+  },
+  readingFill: {
+    height: "100%",
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  readingLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.mutedForeground,
   },
   emptyBox: {
     alignItems: "center",

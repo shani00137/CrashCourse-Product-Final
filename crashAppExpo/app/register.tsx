@@ -20,7 +20,7 @@ import { useApp } from "@/context/AppContext";
 import { registerApplicantWithAppUser, getActiveCourses, CourseInfo } from "@/services/api";
 
 export default function RegisterScreen() {
-  const { setUser } = useApp();
+  const { login } = useApp();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -114,7 +114,7 @@ const filteredCourses = courses.filter((c) => {
         countryId: 0,
         applyForCountry: 0,
       });
-      setUser({
+      login({
         name: `${firstName.trim()} ${lastName.trim()}`,
         isGuest: false,
         applicantId,

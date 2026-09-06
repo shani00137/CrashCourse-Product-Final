@@ -13,10 +13,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#C41E3A",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        // "backgroundColor": "#C41E3A",
+        // "foregroundImage": "./assets/android-icon-foreground.png",
+        // "backgroundImage": "./assets/android-icon-background.png",
+        // "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.crashcourse.app"
@@ -31,7 +31,7 @@
       "expo-status-bar",
       ["expo-splash-screen", {
         "backgroundColor": "#C41E3A",
-        "image": "./assets/icon.png",
+        "image": "./assets/splash-icon.png",
         "imageWidth": 200
       }]
     ]

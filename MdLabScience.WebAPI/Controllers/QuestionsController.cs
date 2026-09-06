@@ -1086,6 +1086,84 @@ Return a JSON array with this exact structure:
             }
         }
 
+        [HttpPost]
+        [AllowAnonymous]
+        [Route("api/Questions/ExplainQuestion")]
+        public async Task<IActionResult> ExplainQuestion([FromBody] ExplainQuestionRequest request)
+        {
+            try
+            {
+                string questionText = request?.Question?.Trim();
+                if (string.IsNullOrEmpty(questionText))
+                {
+                    return Ok(new ExplainQuestionResponse()
+                    {
+                        Succeeded = false,
+                        Message = "Question text is required."
+                    });
+                }
+
+                string apiKey = _configuration["OpenAI:ApiKey1"];
+                string model = _configuration["OpenAI:Model"] ?? "gpt-4o";
+                if (string.IsNullOrEmpty(apiKey))
+                {
+                    return Ok(new ExplainQuestionResponse()
+                    {
+                        Succeeded = false,
+                        Message = "OpenAI ApiKey is not configured."
+                    });
+                }
+
+                string optionsText = "";
+                if (request.Options != null && request.Options.Count > 0)
+                {
+                    optionsText = string.Join("\n", request.Options
+                        .Where(o => !string.IsNullOrWhiteSpace(o))
+                        .Select((o, i) => $"{(char)('A' + i)}. {o.Trim()}"));
+                }
+
+                string userPrompt = string.IsNullOrWhiteSpace(request?.Prompt)
+                    ? "Please explain this question in simple, easy-to-understand terms."
+                    : request.Prompt.Trim();
+
+                int maxWords = request.MaxWords > 0 ? request.MaxWords : 130;
+
+                string prompt = $@"You are a friendly medical tutor helping a student who is doing an MCQ exercise. Keep answers short and exam-focused.
+
+Question: ""{StripHTML(questionText)}""
+
+Options:
+{optionsText}
+
+The student asks: ""{userPrompt}""
+
+Rules:
+1. Answer the student's request directly and keep the answer concise (under {maxWords} words).
+2. If relevant, state which option is correct and briefly explain why.
+3. Use short bullet points only when helpful.
+4. Return the answer as plain formatted text using **bold** for key terms and simple bullet points. Do not ask follow-up questions.";
+
+                ChatClient client = new ChatClient(model, apiKey);
+                ChatCompletion completion = await client.CompleteChatAsync(new UserChatMessage(prompt));
+                string answer = string.Join("", completion.Content.Select(c => c.Text)).Trim();
+
+                return Ok(new ExplainQuestionResponse()
+                {
+                    Succeeded = string.IsNullOrEmpty(answer) ? false : true,
+                    Message = string.IsNullOrEmpty(answer) ? "The AI returned an empty answer." : "OK",
+                    Answer = answer
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ExplainQuestionResponse()
+                {
+                    Succeeded = false,
+                    Message = "Failed to get AI answer: " + ex.Message
+                });
+            }
+        }
+
         private static string GetOption(Dictionary<string, string> options, string key)
         {
             return options.TryGetValue(key, out var value) ? value : null;

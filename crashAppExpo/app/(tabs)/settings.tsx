@@ -44,7 +44,7 @@ const settingGroups = [
 ];
 
 export default function SettingsScreen() {
-  const { user, setUser } = useApp();
+  const { user, logout } = useApp();
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState("student@quizmaster.com");
   const [phone, setPhone] = useState("+1 234 567 8901");
@@ -70,7 +70,7 @@ export default function SettingsScreen() {
   ];
 
   const handleLogout = () => {
-    setUser(null);
+    logout();
     router.replace("/login");
   };
 
