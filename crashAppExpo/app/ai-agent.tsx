@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, gradients, radii, shadows } from "@/constants/theme";
 import { RichText } from "@/components/RichText";
+import { useApp } from "@/context/AppContext";
 
 interface Message {
   id: string;
@@ -105,6 +106,7 @@ const welcomeMessage: Message = {
 };
 
 export default function AIAgentScreen() {
+  const { user } = useApp();
   const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -141,6 +143,54 @@ export default function AIAgentScreen() {
 
   const formatTime = (date: Date) =>
     date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  const isTrial = !!user?.isTrial;
+
+  if (isTrial) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <LinearGradient
+          colors={gradients.darkRedGrad}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="arrow-back" size={18} color={colors.white} />
+            </TouchableOpacity>
+            <View style={styles.headerAvatar}>
+              <MaterialCommunityIcons name="brain" size={22} color="#FDE047" />
+            </View>
+            <View style={styles.headerTextBlock}>
+              <Text style={styles.headerTitle}>Smart AI Assistant</Text>
+              <View style={styles.onlineRow}>
+                <Text style={styles.onlineText}>Premium feature</Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.lockedContent}>
+          <View style={styles.lockedIconBox}>
+            <Ionicons name="lock-closed" size={30} color={colors.primary} />
+          </View>
+          <Text style={styles.lockedTitle}>AI Assistant is premium</Text>
+          <Text style={styles.lockedText}>
+            Your 5-day trial doesn't include the AI Medical Tutor. Upgrade to
+            unlock chat, per-question explanations, and AI test generation.
+          </Text>
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -545,5 +595,34 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     paddingBottom: 24,
     backgroundColor: colors.background,
+  },
+  lockedContent: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 40,
+    gap: 12,
+    backgroundColor: colors.background,
+  },
+  lockedIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "#FFF0F2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  lockedTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.foreground,
+    textAlign: "center",
+  },
+  lockedText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.mutedForeground,
+    textAlign: "center",
   },
 });

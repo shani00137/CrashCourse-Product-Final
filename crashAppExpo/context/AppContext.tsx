@@ -18,6 +18,11 @@ export interface User {
   applicantId?: number;
   courseId?: number;
   courseName?: string;
+  isTrial?: boolean;
+  username?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
 }
 
 export interface TestResult {

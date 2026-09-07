@@ -46,8 +46,10 @@ const settingGroups = [
 export default function SettingsScreen() {
   const { user, logout } = useApp();
   const [name, setName] = useState(user?.name || "");
-  const [email, setEmail] = useState("student@quizmaster.com");
-  const [phone, setPhone] = useState("+1 234 567 8901");
+  const [email, setEmail] = useState(user?.email || "");
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [address, setAddress] = useState(user?.address || "");
+  const [username, setUsername] = useState(user?.username || "");
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     "Push Notifications": true,
     "Email Notifications": false,
@@ -65,8 +67,10 @@ export default function SettingsScreen() {
 
   const profileFields = [
     { icon: "person-outline", label: "Full Name", value: name, setter: setName },
+    { icon: "at-outline", label: "Username", value: username, setter: setUsername },
     { icon: "mail-outline", label: "Email", value: email, setter: setEmail },
     { icon: "call-outline", label: "Phone", value: phone, setter: setPhone },
+    { icon: "location-outline", label: "Address", value: address, setter: setAddress },
   ];
 
   const handleLogout = () => {
@@ -107,7 +111,11 @@ export default function SettingsScreen() {
             <Text style={styles.userName}>{name}</Text>
             <View style={styles.userTypeBadge}>
               <Text style={styles.userTypeText}>
-                {user?.isGuest ? "Guest" : "Premium Student"}
+                {user?.isGuest
+                  ? "Guest"
+                  : user?.isTrial
+                    ? "Trial · 5 days"
+                    : "Premium Student"}
               </Text>
             </View>
           </View>

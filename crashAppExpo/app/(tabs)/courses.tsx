@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -80,6 +81,15 @@ export default function CoursesScreen() {
   };
 
   const courseId = userDetail?.courseId || course?.courseId;
+  const isTrial = !!user?.isTrial;
+  const TRIAL_EXERCISE_LIMIT = 2;
+
+  const openLockedExercise = () => {
+    Alert.alert(
+      "Locked in the trial",
+      `Your 5-day trial includes the first ${TRIAL_EXERCISE_LIMIT} exercises. Upgrade to unlock all exercises.`
+    );
+  };
 
   // Row lookup: courseId_start_end → totalSeconds
   const readingMap = useMemo(() => {
@@ -183,29 +193,50 @@ export default function CoursesScreen() {
                 <Text style={styles.sectionCount}>{exercises.length}</Text>
               </View>
 
+              {isTrial && exercises.length > 0 && (
+                <View style={styles.trialBanner}>
+                  <Ionicons name="sparkles-outline" size={14} color="#B45309" />
+                  <Text style={styles.trialBannerText}>
+                    5-day trial — the first {TRIAL_EXERCISE_LIMIT} of{" "}
+                    {exercises.length} exercises are unlocked.
+                  </Text>
+                </View>
+              )}
+
               {exercises.length === 0 ? (
                 <View style={styles.emptyBox}>
                   <Ionicons name="fitness-outline" size={30} color={colors.mutedForeground} />
                   <Text style={styles.emptyText}>No exercises available yet</Text>
                 </View>
               ) : (
-                exercises.map((exercise) => {
+                exercises.map((exercise, index) => {
                   const rtSecs =
                     readingMap[
                       `${courseId ?? 0}_${exercise.startFrom ?? 0}_${exercise.endFrom ?? 0}`
                     ] ?? 0;
+                  const locked = isTrial && index >= TRIAL_EXERCISE_LIMIT;
                   return (
                     <TouchableOpacity
                       key={exercise.exerciseRecordId}
-                      style={styles.exerciseCard}
+                      style={[
+                        styles.exerciseCard,
+                        locked && styles.exerciseCardLocked,
+                      ]}
                       activeOpacity={0.85}
-                      onPress={() => openExercise(exercise)}
+                      onPress={() =>
+                        locked ? openLockedExercise() : openExercise(exercise)
+                      }
                     >
-                      <View style={styles.exerciseIconBox}>
+                      <View
+                        style={[
+                          styles.exerciseIconBox,
+                          locked && styles.exerciseIconBoxLocked,
+                        ]}
+                      >
                         <Ionicons
-                          name="pencil"
+                          name={locked ? "lock-closed" : "pencil"}
                           size={20}
-                          color={colors.primary}
+                          color={locked ? colors.mutedForeground : colors.primary}
                         />
                       </View>
                       <View style={styles.exerciseInfo}>
@@ -216,26 +247,34 @@ export default function CoursesScreen() {
                           {exercise.startFrom || 0} – {exercise.endFrom || 0}{" "}
                           question range
                         </Text>
-                        {user?.appUserId && (
-                          <View style={styles.readingRow}>
-                            <View style={styles.readingTrack}>
-                              <View
-                                style={[
-                                  styles.readingFill,
-                                  { width: `${readingPct(rtSecs)}%` },
-                                ]}
-                              />
-                            </View>
-                            <Text style={styles.readingLabel}>
-                              {formatReadingTime(rtSecs)}
+                        {locked ? (
+                          <View style={styles.lockedBadge}>
+                            <Text style={styles.lockedBadgeText}>
+                              Locked · upgrade to unlock
                             </Text>
                           </View>
+                        ) : (
+                          user?.appUserId && (
+                            <View style={styles.readingRow}>
+                              <View style={styles.readingTrack}>
+                                <View
+                                  style={[
+                                    styles.readingFill,
+                                    { width: `${readingPct(rtSecs)}%` },
+                                  ]}
+                                />
+                              </View>
+                              <Text style={styles.readingLabel}>
+                                {formatReadingTime(rtSecs)}
+                              </Text>
+                            </View>
+                          )
                         )}
                       </View>
                       <Ionicons
-                        name="chevron-forward"
+                        name={locked ? "lock-closed" : "chevron-forward"}
                         size={18}
-                        color={colors.mutedForeground}
+                        color={locked ? colors.mutedForeground : colors.mutedForeground}
                       />
                     </TouchableOpacity>
                   );
@@ -381,6 +420,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 999,
+  },
+  trialBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FFF7E6",
+    borderColor: "#FCD34D",
+    borderWidth: 1,
+    borderRadius: radii.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  trialBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#92400E",
+  },
+  exerciseCardLocked: {
+    opacity: 0.6,
+    borderColor: "#E5E7EB",
+  },
+  exerciseIconBoxLocked: {
+    backgroundColor: "#F3F4F6",
+  },
+  lockedBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 8,
+  },
+  lockedBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.mutedForeground,
   },
   exerciseCard: {
     flexDirection: "row",

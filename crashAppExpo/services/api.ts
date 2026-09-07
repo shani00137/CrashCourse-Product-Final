@@ -386,6 +386,27 @@ export interface UserDetailInfo {
   courseName: string;
   status: boolean;
   deviceId: string;
+  registrationDate?: string;
+  expiryDate?: string;
+  isActive?: boolean;
+}
+
+/**
+ * True when the account was created as a 5-day trial: the expiry is still in
+ * the future and the registration→expiry span is ~5 days (not a full
+ * subscription). Used to gate exercises/tests/AI during the trial.
+ */
+export function isTrialByDates(
+  registrationDate?: string,
+  expiryDate?: string
+): boolean {
+  if (!registrationDate || !expiryDate) return false;
+  const start = new Date(registrationDate).getTime();
+  const end = new Date(expiryDate).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end)) return false;
+  if (Date.now() >= end) return false;
+  const spanDays = (end - start) / (24 * 60 * 60 * 1000);
+  return spanDays > 0 && spanDays <= 6;
 }
 
 /**
@@ -405,6 +426,10 @@ export async function getUserDetailById(appUserId: number): Promise<UserDetailIn
     courseName: typeof r.courseName === "string" ? r.courseName : "",
     status: r.status !== false,
     deviceId: typeof r.deviceId === "string" ? r.deviceId : "",
+    registrationDate:
+      typeof r.registrationDate === "string" ? r.registrationDate : undefined,
+    expiryDate: typeof r.expiryDate === "string" ? r.expiryDate : undefined,
+    isActive: typeof r.isActive === "boolean" ? r.isActive : undefined,
   };
 }
 

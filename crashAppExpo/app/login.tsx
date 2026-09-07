@@ -16,7 +16,11 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, gradients, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import { loginAppUser, getUserDetailById } from "@/services/api";
+import {
+  loginAppUser,
+  getUserDetailById,
+  isTrialByDates,
+} from "@/services/api";
 
 const logoSource = require("@/assets/logo/logo.jpg");
 
@@ -42,6 +46,7 @@ export default function LoginScreen() {
       });
       let courseId: number | undefined;
       let courseName: string | undefined;
+      let isTrial = false;
       try {
         const detail = result.appUserId
           ? await getUserDetailById(result.appUserId)
@@ -49,6 +54,9 @@ export default function LoginScreen() {
         if (detail && detail.courseId > 0) {
           courseId = detail.courseId;
           courseName = detail.courseName;
+        }
+        if (detail) {
+          isTrial = isTrialByDates(detail.registrationDate, detail.expiryDate);
         }
       } catch {
         // Course details are a nice-to-have; login still succeeds without them.
@@ -61,6 +69,11 @@ login(
           applicantId: result.applicantId,
           courseId,
           courseName,
+          isTrial,
+          username: result.username || username.trim(),
+          email: result.email || "",
+          phone: result.mobile || "",
+          address: result.address || "",
         },
         result.userToken
       );

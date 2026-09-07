@@ -162,6 +162,10 @@ namespace MdLabScience.Controllers
                         .Select(x => x.CourseName).FirstOrDefault();
                 }
 
+                var applicant = applicantId.HasValue
+                    ? db.ApplicantsTbs.Where(x => x.ApplicantId == applicantId.Value).FirstOrDefault()
+                    : null;
+
                 return Ok(new
                 {
                     appUserId = appUser.AppUserId,
@@ -170,7 +174,10 @@ namespace MdLabScience.Controllers
                     courseId = courseId ?? 0,
                     courseName = courseName ?? "",
                     status = appUser.Status,
-                    deviceId = appUser.DeviceId ?? ""
+                    deviceId = appUser.DeviceId ?? "",
+                    registrationDate = applicant != null ? applicant.RegistrationDate : (DateTime?)null,
+                    expiryDate = applicant != null ? applicant.ExpiryDate : (DateTime?)null,
+                    isActive = applicant != null ? applicant.IsActive : (bool?)null
                 });
             }
         }

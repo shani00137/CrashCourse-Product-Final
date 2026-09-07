@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -70,6 +71,7 @@ export default function ExerciseScreen() {
   }>();
   const course = allCourses.find((c) => c.id === Number(courseId)) || null;
   const { user, addTestResult } = useApp();
+  const isTrial = !!user?.isTrial;
 
   const cId = Number(courseId);
   const startN = Number(start || 0);
@@ -636,12 +638,30 @@ export default function ExerciseScreen() {
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.aiButton}
-              onPress={() => setAiOpen(true)}
+              style={[styles.aiButton, isTrial && styles.aiButtonLocked]}
+              onPress={() =>
+                isTrial
+                  ? Alert.alert(
+                      "Premium feature",
+                      "AI question explanations are available after upgrading from the trial."
+                    )
+                  : setAiOpen(true)
+              }
               activeOpacity={0.85}
             >
-              <Ionicons name="sparkles" size={14} color="#B45309" />
-              <Text style={styles.aiButtonText}>Ask AI</Text>
+              <Ionicons
+                name={isTrial ? "lock-closed" : "sparkles"}
+                size={14}
+                color={isTrial ? "#6B7280" : "#B45309"}
+              />
+              <Text
+                style={[
+                  styles.aiButtonText,
+                  isTrial && styles.aiButtonTextLocked,
+                ]}
+              >
+                Ask AI
+              </Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.questionText}>{q.question}</Text>
@@ -1105,6 +1125,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: colors.brown,
+  },
+  aiButtonLocked: {
+    backgroundColor: "#F3F4F6",
+    borderColor: "#E5E7EB",
+  },
+  aiButtonTextLocked: {
+    color: "#6B7280",
   },
   questionLabel: {
     fontSize: 12,

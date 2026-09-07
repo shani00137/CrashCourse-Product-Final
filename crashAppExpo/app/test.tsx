@@ -32,6 +32,7 @@ const optionLabels = ["A", "B", "C", "D"];
 const TEST_QUESTION_COUNT = 10;
 const TEST_DURATION_MINUTES = 15;
 const MAX_TEST_QUESTIONS = 50;
+const TRIAL_TEST_LIMIT = 2;
 
 type TestPhase = "select" | "running" | "result";
 type CreateMode = "random" | "ai";
@@ -63,6 +64,7 @@ export default function TestScreen() {
   const appUserId = user?.appUserId ?? 0;
   const applicantId = user?.applicantId ?? 0;
   const courseId = user?.courseId ?? 0;
+  const isTrial = !!user?.isTrial;
 
   const loadTests = useCallback(async () => {
     if (!appUserId) return;
@@ -179,17 +181,31 @@ export default function TestScreen() {
       Alert.alert("Missing details", "Log in with a registered course to create a test.");
       return;
     }
+    if (isTrial && tests.length >= TRIAL_TEST_LIMIT) {
+      Alert.alert(
+        "Trial limit reached",
+        "Your 5-day trial includes 2 tests. Upgrade to create unlimited tests."
+      );
+      return;
+    }
     setQuestionCount("20");
     setCreateMode(null);
     setDifficulty("Medium");
     setCreateDialog(true);
-  }, [courseId]);
+  }, [courseId, isTrial, tests.length]);
 
   const handleGenerate = useCallback(async () => {
     const parsed = parseInt(questionCount, 10);
     const count = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), MAX_TEST_QUESTIONS) : 20;
     if (!courseId) {
       Alert.alert("Missing details", "Log in with a registered course to create a test.");
+      return;
+    }
+    if (isTrial && tests.length >= TRIAL_TEST_LIMIT) {
+      Alert.alert(
+        "Trial limit reached",
+        "Your 5-day trial includes 2 tests. Upgrade to create unlimited tests."
+      );
       return;
     }
     if (!createMode) {
@@ -232,7 +248,7 @@ export default function TestScreen() {
     } finally {
       setCreating(false);
     }
-  }, [questionCount, createMode, difficulty, courseId, appUserId, user, loadTests, openTest]);
+  }, [questionCount, createMode, difficulty, courseId, appUserId, user, isTrial, tests.length, loadTests, openTest]);
 
   const pickOption = useCallback(
     (idx: number) => {
@@ -498,6 +514,11 @@ export default function TestScreen() {
               <Text style={styles.dialogHint}>
                 Between 1 and {MAX_TEST_QUESTIONS}. AI generation takes a few seconds.
               </Text>
+              {isTrial && (
+                <Text style={styles.dialogHint}>
+                  Trial: {tests.length} of {TRIAL_TEST_LIMIT} tests used.
+                </Text>
+              )}
 
               <Text style={styles.dialogLabel}>Generate with</Text>
               <View style={styles.modeRow}>

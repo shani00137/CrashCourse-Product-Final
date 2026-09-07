@@ -17,7 +17,12 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, gradients, radii, shadows } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import { registerApplicantWithAppUser, getActiveCourses, CourseInfo } from "@/services/api";
+import {
+  registerApplicantWithAppUser,
+  loginAppUser,
+  getActiveCourses,
+  CourseInfo,
+} from "@/services/api";
 
 export default function RegisterScreen() {
   const { login } = useApp();
@@ -114,13 +119,33 @@ const filteredCourses = courses.filter((c) => {
         countryId: 0,
         applyForCountry: 0,
       });
-      login({
-        name: `${firstName.trim()} ${lastName.trim()}`,
-        isGuest: false,
-        applicantId,
-        appUserId,
-        courseId: courseId as number,
-      });
+
+      let token = "";
+      try {
+        const auth = await loginAppUser({
+          username: userName.trim(),
+          password,
+        });
+        token = auth.userToken;
+      } catch {
+        // Registration succeeded; continue without a token on login failure.
+      }
+
+login(
+        {
+          name: `${firstName.trim()} ${lastName.trim()}`,
+          isGuest: false,
+          applicantId,
+          appUserId,
+          courseId: courseId as number,
+          isTrial: true,
+          username: userName.trim(),
+          email: email.trim(),
+          phone: mobile.trim(),
+          address: address.trim(),
+        },
+        token
+      );
       router.replace("/(tabs)/dashboard");
     } catch (e) {
       setError(

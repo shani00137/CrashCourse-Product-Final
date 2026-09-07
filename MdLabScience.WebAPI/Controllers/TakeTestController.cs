@@ -763,6 +763,26 @@ ORDER BY o.TestQuestionOptionId";
                 {
                     var appUser = db.AppUserTbs.Where(x => x.AppUserId == value.AppUserId).FirstOrDefault();
                     int applicantId = appUser != null ? appUser.ApplicantId : 0;
+
+                    if (appUser != null && appUser.ApplicantId > 0)
+                    {
+                        var applicant = db.ApplicantsTbs.Where(x => x.ApplicantId == appUser.ApplicantId).FirstOrDefault();
+                        if (applicant != null && applicant.RegistrationDate.HasValue && applicant.ExpiryDate.HasValue)
+                        {
+                            DateTime reg = applicant.RegistrationDate.Value;
+                            DateTime exp = applicant.ExpiryDate.Value;
+                            bool isTrial = exp > DateTime.Now && (exp - reg).TotalDays <= 6;
+                            if (isTrial)
+                            {
+                                int ExistingTests = db.AppUserTestTbs.Where(x => x.ApplicantId == appUser.ApplicantId).Count();
+                                if (ExistingTests >= 2)
+                                {
+                                    return Ok(new { succeeded = false, message = "Trial limit reached — you can create up to 2 tests. Upgrade your subscription for unlimited tests.", testId = 0 });
+                                }
+                            }
+                        }
+                    }
+
                     string courseName = db.CourseTbs.Where(x => x.CourseId == value.CourseId).Select(x => x.CourseName).FirstOrDefault() ?? "";
 
                     List<PickedQuestion> picked = new List<PickedQuestion>();
