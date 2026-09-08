@@ -21,7 +21,9 @@ import {
   registerApplicantWithAppUser,
   loginAppUser,
   getActiveCourses,
+  getCountries,
   CourseInfo,
+  CountryInfo,
 } from "@/services/api";
 
 export default function RegisterScreen() {
@@ -43,6 +45,15 @@ export default function RegisterScreen() {
   const [coursesError, setCoursesError] = useState("");
   const [courseModalOpen, setCourseModalOpen] = useState(false);
   const [courseSearch, setCourseSearch] = useState("");
+
+  const [countryId, setCountryId] = useState<number | null>(null);
+  const [countryName, setCountryName] = useState("");
+
+  const [countries, setCountries] = useState<CountryInfo[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(true);
+  const [countriesError, setCountriesError] = useState("");
+  const [countryModalOpen, setCountryModalOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -66,6 +77,22 @@ export default function RegisterScreen() {
       } finally {
         if (mounted) setCoursesLoading(false);
       }
+
+      try {
+        const data = await getCountries();
+        if (mounted) {
+          setCountries(data);
+          setCountriesError("");
+        }
+      } catch (e) {
+        if (mounted) {
+          setCountriesError(
+            e instanceof Error ? e.message : "Unable to load countries."
+          );
+        }
+      } finally {
+        if (mounted) setCountriesLoading(false);
+      }
     })();
     return () => {
       mounted = false;
@@ -81,12 +108,19 @@ const filteredCourses = courses.filter((c) => {
     );
   });
 
+  const filteredCountries = countries.filter((c) => {
+    const q = countrySearch.trim().toLowerCase();
+    if (!q) return true;
+    return (c.coutryName ?? "").toLowerCase().includes(q);
+  });
+
   const validate = (): string | null => {
     if (!firstName.trim() || !lastName.trim()) return "Please enter your full name";
     if (!mobile.trim() || mobile.trim().replace(/\D/g, "").length < 10)
       return "Please enter a valid mobile number";
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Please enter a valid email address";
     if (!address.trim()) return "Please enter your address";
+    if (countryId == null) return "Please select your country";
     if (!userName.trim() || userName.trim().length < 4)
       return "Username must be at least 4 characters";
     if (!password.trim() || password.trim().length < 6)
@@ -116,7 +150,7 @@ const filteredCourses = courses.filter((c) => {
         password,
         courseId: courseId as number,
         courseName,
-        countryId: 0,
+        countryId: countryId as number,
         applyForCountry: 0,
       });
 
@@ -161,6 +195,13 @@ login(
     setCourseName(name);
     setCourseModalOpen(false);
     setCourseSearch("");
+  };
+
+  const selectCountry = (id: number, name: string) => {
+    setCountryId(id);
+    setCountryName(name);
+    setCountryModalOpen(false);
+    setCountrySearch("");
   };
 
   const field = (
@@ -256,6 +297,127 @@ login(
             icon: "location-outline",
             multiline: true,
           })}
+
+          <Text style={[styles.formSectionTitle, styles.sectionSpacing]}>
+            Select Country
+          </Text>
+
+          {/* Country searchable dropdown */}
+          <TouchableOpacity
+            style={[
+              styles.inputWrapper,
+              countryId != null && styles.courseFieldSelected,
+            ]}
+            onPress={() => setCountryModalOpen(true)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="globe-outline" size={18} color={colors.mutedForeground} />
+            {countriesLoading ? (
+              <ActivityIndicator color={colors.mutedForeground} style={styles.courseFieldSpinner} />
+            ) : (
+              <Text
+                style={[
+                  styles.courseFieldText,
+                  countryId == null && styles.courseFieldPlaceholder,
+                ]}
+              >
+                {countryName
+                  ? countryName
+                  : countriesError
+                  ? "Unable to load countries"
+                  : "Choose your country"}
+              </Text>
+            )}
+            <Ionicons name="chevron-down" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+
+          {countriesError && !countriesLoading ? (
+            <View style={styles.courseErrorBox}>
+              <Ionicons name="cloud-offline-outline" size={15} color="#B91C1C" />
+              <Text style={styles.courseErrorText}>{countriesError}</Text>
+            </View>
+          ) : null}
+
+          {/* Country picker modal */}
+          <Modal
+            visible={countryModalOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setCountryModalOpen(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalCard}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Choose a Country</Text>
+                  <TouchableOpacity
+                    style={styles.modalClose}
+                    onPress={() => setCountryModalOpen(false)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="close" size={18} color={colors.foreground} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.searchWrapper}>
+                  <Ionicons name="search-outline" size={18} color={colors.mutedForeground} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search countries..."
+                    placeholderTextColor={colors.mutedForeground}
+                    value={countrySearch}
+                    onChangeText={setCountrySearch}
+                    autoCapitalize="words"
+                  />
+                </View>
+
+                <FlatList
+                  data={filteredCountries}
+                  keyExtractor={(item) => String(item.countryId)}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={styles.modalList}
+                  ListEmptyComponent={
+                    <View style={styles.modalEmpty}>
+                      <Text style={styles.modalEmptyText}>
+                        {countriesLoading
+                          ? "Loading countries..."
+                          : "No countries match your search"}
+                      </Text>
+                    </View>
+                  }
+                  renderItem={({ item }) => {
+                    const selected = countryId === item.countryId;
+                    return (
+                      <TouchableOpacity
+                        style={[styles.modalRow, selected && styles.modalRowSelected]}
+                        onPress={() =>
+                          selectCountry(item.countryId, item.coutryName)
+                        }
+                        activeOpacity={0.85}
+                      >
+                        <View style={styles.modalRowTextBlock}>
+                          <Text
+                            style={[
+                              styles.modalRowName,
+                              selected && styles.modalRowNameSelected,
+                            ]}
+                          >
+                            {item.coutryName}
+                          </Text>
+                        </View>
+                        {selected && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={18}
+                            color={colors.primary}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              </View>
+            </View>
+          </Modal>
 
           <Text style={[styles.formSectionTitle, styles.sectionSpacing]}>
             Login Credentials

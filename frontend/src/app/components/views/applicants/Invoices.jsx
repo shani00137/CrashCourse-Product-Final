@@ -772,7 +772,7 @@ export function InvoiceScreen({ applicant }) {
                     value={drawerDetail.applicationStatusId ?? ""}
                     onChange={handleStatusSelect}
                     disabled={statusSaving}
-                    className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition disabled:opacity-60"
+                    className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition disabled:opacity-60"
                   >
                     <option value="">Select status</option>
                     {statuses.map((s) => (
@@ -878,7 +878,7 @@ export function InvoiceScreen({ applicant }) {
                                 return (
                                   <div key={item.certificateInoviceId ?? idx} className="relative flex gap-4 pb-5 last:pb-0">
                                     <div className="relative flex flex-col items-center">
-                                      <span className={`relative z-10 flex h-6 w-6 items-center justify-center rounded-full transition-colors ${isCompleted ? "bg-[#0E7C7B] text-white ring-4 ring-teal-100" : "border-2 border-amber-400 bg-white"}`}>
+                                      <span className={`relative z-10 flex h-6 w-6 items-center justify-center rounded-full transition-colors ${isCompleted ? "bg-[#C41E3A] text-white ring-4 ring-red-100" : "border-2 border-amber-400 bg-white"}`}>
                                         {isCompleted
                                           ? <Check size={13} strokeWidth={3} />
                                           : <span className="h-2 w-2 rounded-full bg-amber-400" />}
@@ -898,7 +898,7 @@ export function InvoiceScreen({ applicant }) {
                                           {!isCompleted && (
                                             <button
                                               onClick={() => openCompleteModal(item)}
-                                              className="text-[10px] font-semibold px-2.5 py-1 text-[#0E7C7B] bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition whitespace-nowrap"
+                                              className="text-[10px] font-semibold px-2.5 py-1 text-[#C41E3A] bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition whitespace-nowrap"
                                             >
                                               Mark done
                                             </button>
@@ -930,8 +930,8 @@ export function InvoiceScreen({ applicant }) {
         {showPaymentModal && (
           <Modal title="Record payment" onClose={closePaymentModal} className="max-w-md">
             <div className="flex flex-col gap-4">
-              <div className="rounded-xl border border-teal-100 bg-teal-50 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0E7C7B]">Current outstanding balance</p>
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#C41E3A]">Current outstanding balance</p>
                 <p className="mt-1 text-2xl font-semibold text-[#1A202C]">{fmtMoney(ledgerOutstanding)}</p>
               </div>
 
@@ -953,7 +953,7 @@ export function InvoiceScreen({ applicant }) {
                     if (paymentError) setPaymentError("");
                   }}
                   placeholder="0.00"
-                  className={'h-10 px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition ' + (paymentError ? "border-red-400" : "border-[rgba(0,0,0,0.12)]")}
+                  className={'h-10 px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition ' + (paymentError ? "border-red-400" : "border-[rgba(0,0,0,0.12)]")}
                 />
                 {paymentError && <p className="text-xs text-red-600">{paymentError}</p>}
               </div>
@@ -969,7 +969,7 @@ export function InvoiceScreen({ applicant }) {
                   value={paymentRemarks}
                   onChange={(e) => setPaymentRemarks(e.target.value)}
                   placeholder="Payment method or reference"
-                  className="px-3 py-2 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition resize-none"
+                  className="px-3 py-2 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition resize-none"
                 />
               </div>
 
@@ -1000,7 +1000,7 @@ export function InvoiceScreen({ applicant }) {
                   }}
                   rows={3}
                   placeholder="Why are you changing this status?"
-                  className={`px-3 py-2 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition resize-none ${statusReasonError ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
+                  className={`px-3 py-2 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition resize-none ${statusReasonError ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
                 />
                 {statusReasonError && <p className="text-xs text-red-600">{statusReasonError}</p>}
               </div>
@@ -1054,7 +1054,7 @@ export function InvoiceScreen({ applicant }) {
                         onChange={(e) => setCompletePurchaseAmount(e.target.value)}
                         placeholder="0.00"
                         autoFocus
-                        className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                        className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                       />
                       <p className="text-[11px] text-[#718096]">The purchase amount will be recorded against this service and reflected in the invoice.</p>
                     </div>
@@ -1167,7 +1167,7 @@ export function InvoiceScreen({ applicant }) {
                       <button
                         onClick={() => openDrawer(inv)}
                         title="View applicant details"
-                        className="text-left hover:text-[#0E7C7B] hover:underline transition"
+                        className="text-left hover:text-[#C41E3A] hover:underline transition"
                       >
                         {`${inv.firstName ?? ""} ${inv.lastName ?? ""}`.trim()}
                       </button>
@@ -1190,7 +1190,7 @@ export function InvoiceScreen({ applicant }) {
                       <button
                         title="Print invoice"
                         onClick={() => setPrintInvoice(inv)}
-                        className="p-1.5 text-[#718096] hover:text-[#0E7C7B] hover:bg-teal-50 rounded-lg transition"
+                        className="p-1.5 text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 rounded-lg transition"
                       >
                         <Printer size={14} />
                       </button>
@@ -1220,7 +1220,7 @@ export function InvoiceScreen({ applicant }) {
               <AlertCircle size={28} className="mx-auto text-red-400 mb-2" />
               <p className="text-sm text-red-600 font-medium">{error}</p>
               <p className="text-xs text-gray-400 mt-1">Make sure you are logged in and the API is running.</p>
-              <button onClick={load} className="mt-3 text-sm font-medium text-[#0E7C7B] hover:underline">Retry</button>
+              <button onClick={load} className="mt-3 text-sm font-medium text-[#C41E3A] hover:underline">Retry</button>
             </div>
           )}
           {!loading && !error && rows.length === 0 && (
@@ -1329,7 +1329,7 @@ export function InvoiceScreen({ applicant }) {
             <div className="mt-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Itemized Services</label>
-                <button onClick={addLine} className="text-xs font-medium text-[#0E7C7B] hover:underline">+ Add line item</button>
+                <button onClick={addLine} className="text-xs font-medium text-[#C41E3A] hover:underline">+ Add line item</button>
               </div>
               {form.serviceList.length === 0 && (
                 <p className="text-xs text-gray-400">No line items yet.</p>
@@ -1349,7 +1349,7 @@ export function InvoiceScreen({ applicant }) {
                             onChange={setLineService(i)}
                             placeholder="Type or pick a service"
                             list="invoice-service-options"
-                            className="h-9 w-full px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                            className="h-9 w-full px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                           />
                           {formErrors[`line-${i}`] && <p className="text-xs text-red-600">{formErrors[`line-${i}`]}</p>}
                         </div>
@@ -1360,7 +1360,7 @@ export function InvoiceScreen({ applicant }) {
                           value={item.amount}
                           onChange={setLineAmount(i)}
                           placeholder="0.00"
-                          className={`h-9 w-full px-2 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition text-right ${matched ? "text-[#0E7C7B]" : ""}`}
+                          className={`h-9 w-full px-2 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition text-right ${matched ? "text-[#C41E3A]" : ""}`}
                         />
                         <button
                           onClick={() => removeLine(i)}
@@ -1370,7 +1370,7 @@ export function InvoiceScreen({ applicant }) {
                           <X size={14} />
                         </button>
                       </div>
-                      {matched && <div className="px-3 pb-1.5 -mt-0.5 text-[11px] text-[#0E7C7B]">Sale price {fmtMoney(matched.salePrice)} — edit if needed</div>}
+                      {matched && <div className="px-3 pb-1.5 -mt-0.5 text-[11px] text-[#C41E3A]">Sale price {fmtMoney(matched.salePrice)} — edit if needed</div>}
                     </div>
                   );
                 })}
@@ -1392,7 +1392,7 @@ export function InvoiceScreen({ applicant }) {
                   value={form.amount}
                   onChange={setField("amount")}
                   placeholder="0.00"
-                  className={`h-10 px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition ${formErrors.amount ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
+                  className={`h-10 px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition ${formErrors.amount ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
                 />
                 {formErrors.amount && <p className="text-xs text-red-600">{formErrors.amount}</p>}
               </div>
@@ -1405,7 +1405,7 @@ export function InvoiceScreen({ applicant }) {
                   value={form.paidAmount}
                   onChange={setField("paidAmount")}
                   placeholder="0.00"
-                  className={`h-10 px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition ${formErrors.paidAmount ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
+                  className={`h-10 px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition ${formErrors.paidAmount ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
                 />
                 {formErrors.paidAmount && <p className="text-xs text-red-600">{formErrors.paidAmount}</p>}
               </div>
@@ -1425,7 +1425,7 @@ export function InvoiceScreen({ applicant }) {
                 </div>
                 <div className="flex items-center justify-between border-t border-[rgba(0,0,0,0.08)] pt-1.5">
                   <span className="font-semibold text-[#1A202C]">Balance Due</span>
-                  <span className="font-mono text-lg font-semibold text-[#0E7C7B]">{derivedBalance !== null ? fmtMoney(derivedBalance) : fmtMoney(Math.max(toNumber(form.amount) - toNumber(form.paidAmount), 0))}</span>
+                  <span className="font-mono text-lg font-semibold text-[#C41E3A]">{derivedBalance !== null ? fmtMoney(derivedBalance) : fmtMoney(Math.max(toNumber(form.amount) - toNumber(form.paidAmount), 0))}</span>
                 </div>
               </div>
             )}
@@ -1438,7 +1438,7 @@ export function InvoiceScreen({ applicant }) {
                 onChange={setField("remarks")}
                 rows={2}
                 placeholder="Optional notes"
-                className="px-3 py-2 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition resize-none"
+                className="px-3 py-2 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition resize-none"
               />
             </div>
 
@@ -1478,7 +1478,7 @@ export function InvoiceScreen({ applicant }) {
                 value={regForm.fullName}
                 onChange={(e) => setRegForm((f) => ({ ...f, fullName: e.target.value }))}
                 placeholder="e.g. Zara Ahmed"
-                className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -1489,7 +1489,7 @@ export function InvoiceScreen({ applicant }) {
                   value={regForm.mobile}
                   onChange={(e) => setRegForm((f) => ({ ...f, mobile: e.target.value }))}
                   placeholder="+971 50 000 0000"
-                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -1499,7 +1499,7 @@ export function InvoiceScreen({ applicant }) {
                   value={regForm.email}
                   onChange={(e) => setRegForm((f) => ({ ...f, email: e.target.value }))}
                   placeholder="applicant@email.com"
-                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                 />
               </div>
             </div>
@@ -1509,7 +1509,7 @@ export function InvoiceScreen({ applicant }) {
                 <select
                   value={regForm.countryId}
                   onChange={(e) => setRegForm((f) => ({ ...f, countryId: Number(e.target.value) }))}
-                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                 >
                   <option value={0}>Select Country</option>
                   {regCountries.map((c) => <option key={c.countryId} value={c.countryId}>{c.coutryName}</option>)}
@@ -1520,7 +1520,7 @@ export function InvoiceScreen({ applicant }) {
                 <select
                   value={regForm.courseId}
                   onChange={(e) => setRegForm((f) => ({ ...f, courseId: Number(e.target.value) }))}
-                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                 >
                   <option value={0}>Select Course</option>
                   {regCourses.map((c) => <option key={c.courseId} value={c.courseId}>{c.courseName}</option>)}

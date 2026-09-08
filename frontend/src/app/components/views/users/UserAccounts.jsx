@@ -85,7 +85,7 @@ export function UserAccountsScreen() {
                   <tr key={u.userNo} className="border-b border-[rgba(0,0,0,0.04)] hover:bg-[#F7FAFC] transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-[#718096]">{u.userNo}</td>
                     <td className="px-4 py-3">
-                      <span className="text-xs font-medium text-[#0E7C7B] bg-teal-50 px-2 py-0.5 rounded-md">{u.roleName}</span>
+                      <span className="text-xs font-medium text-[#C41E3A] bg-red-50 px-2 py-0.5 rounded-md">{u.roleName}</span>
                     </td>
                     <td className="px-4 py-3 font-medium text-[#1A202C]">{u.userName}</td>
                     <td className="px-4 py-3 text-[#718096]">{u.email}</td>

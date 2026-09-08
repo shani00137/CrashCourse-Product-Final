@@ -15,6 +15,7 @@ import { colors, gradients, shadows, radii } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useStudyData } from "@/hooks/useStudyData";
+import { resolveDomain } from "@/utils/aiTutor";
 
 const logoSource = require("@/assets/logo/logo.jpg");
 
@@ -37,6 +38,7 @@ export default function DashboardScreen() {
   const appUserId = user?.appUserId;
   const courseId = user?.courseId ?? 0;
   const courseName = user?.courseName || "your course";
+  const aiDomain = resolveDomain(user?.courseName);
 
   const study = useStudyData(appUserId);
 
@@ -207,7 +209,7 @@ export default function DashboardScreen() {
                   </View>
                 </View>
                 <Text style={styles.aiSubtitle}>
-                  Ask any medical question — anatomy, pharmacology, clinical topics
+                  {courseName} · ask questions about this course only
                 </Text>
               </View>
               <View style={styles.aiSparkleBox}>
@@ -216,7 +218,7 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.aiPrompts}>
-              {["Beta-blockers?", "Cardiac cycle", "Anaphylaxis Tx"].map((q) => (
+              {aiDomain.suggestions.slice(0, 3).map((q) => (
                 <View key={q} style={styles.aiPromptChip}>
                   <Text style={styles.aiPromptText}>{q}</Text>
                 </View>

@@ -20,13 +20,13 @@ export function CertificatesScreen() {
           </div>
         </Card>
         <Card className="p-6 flex flex-col items-center justify-center gap-4">
-          <div className="w-full max-w-xs border-2 border-[#0E7C7B] rounded-2xl p-6 text-center bg-gradient-to-br from-teal-50 to-white">
-            <div className="w-12 h-12 bg-[#0E7C7B] rounded-full flex items-center justify-center mx-auto mb-3">
+          <div className="w-full max-w-xs border-2 border-[#C41E3A] rounded-2xl p-6 text-center bg-gradient-to-br from-red-50 to-white">
+            <div className="w-12 h-12 bg-[#C41E3A] rounded-full flex items-center justify-center mx-auto mb-3">
               <Award size={24} className="text-white" />
             </div>
             <div className="text-[10px] font-semibold text-[#718096] uppercase tracking-widest mb-1">Certificate of Completion</div>
             <div className="text-sm font-semibold text-[#1A202C] mb-0.5">This certifies that</div>
-            <div className="text-base font-bold text-[#0E7C7B] mb-1">Zara Ahmed</div>
+            <div className="text-base font-bold text-[#C41E3A] mb-1">Zara Ahmed</div>
             <div className="text-xs text-[#718096] mb-2">has successfully completed</div>
             <div className="text-sm font-semibold text-[#1A202C] mb-2">Medical Dental Science</div>
             <div className="text-[10px] text-[#718096]">Serial: CERT-2024-0089 · Oct 21, 2024</div>

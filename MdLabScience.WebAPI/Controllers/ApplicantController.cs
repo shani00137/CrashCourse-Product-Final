@@ -47,6 +47,10 @@ namespace MdLabScience.Controllers
                     baseQuery = baseQuery.Where(x =>
                         (x.c.FirstName ?? "").Contains(token)
                         || (x.c.LastName ?? "").Contains(token)
+                        || ((x.c.FirstName ?? "") + " " + (x.c.LastName ?? "")).Contains(token)
+                        || ((x.c.LastName ?? "") + " " + (x.c.FirstName ?? "")).Contains(token)
+                        || ((x.c.FirstName ?? "") + (x.c.LastName ?? "")).Contains(token)
+                        || ((x.c.LastName ?? "") + (x.c.FirstName ?? "")).Contains(token)
                         || (x.c.RegistrationNo ?? "").Contains(token)
                         || (x.c.Mobile ?? "").Contains(token)
                         || (x.c.Email ?? "").Contains(token)
@@ -99,7 +103,8 @@ namespace MdLabScience.Controllers
                 var totalRecords = await query.CountAsync();
 
                 var pagedData = await query
-                    .OrderByDescending(x => x.ApplicantId)
+                    .OrderByDescending(x => x.IsActive)
+                    .ThenByDescending(x => x.ApplicantId)
                     .Skip((filter.PageNumber - 1) * filter.PageSize)
                     .Take(filter.PageSize)
                     .ToListAsync();
@@ -307,7 +312,13 @@ namespace MdLabScience.Controllers
                     {
                         applicantsTb.ApplicationStatusId = pendingStatusId.Value;
                     }
-                    applicantsTb.UserNo = value.UserNo;
+                    applicantsTb.UserNo = value.UserNo > 0
+                        ? (int?)value.UserNo
+                        : ((db.ApplicantsTbs
+                               .Where(x => x.UserNo.HasValue)
+                               .OrderByDescending(x => x.UserNo)
+                               .Select(x => (int?)x.UserNo)
+                               .FirstOrDefault() ?? 0) + 1);
                     applicantsTb.CreatedOn = DateTime.Now;
                     applicantsTb.CountryId = value.CountryId;
                     if (!String.IsNullOrEmpty(value.PhotoUrl))
@@ -368,7 +379,10 @@ namespace MdLabScience.Controllers
                         Query.Mobile = value.Mobile;
                         Query.OtherMobile = value.OtherMobile;
                         Query.Address = value.Address;
-                        Query.UserNo = value.UserNo;
+                        if (value.UserNo > 0)
+                        {
+                            Query.UserNo = value.UserNo;
+                        }
                         Query.ExpiryDate = value.ExpiryDate;
                         Query.CountryId = value.CountryId;
                         if (!String.IsNullOrEmpty(value.PhotoUrl))

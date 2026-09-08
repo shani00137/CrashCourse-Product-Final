@@ -38,8 +38,8 @@ function PrintInvoice({ invoice, onClose }) {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; padding: 40px; }
     .invoice-container { max-width: 750px; margin: 0 auto; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 3px solid #0E7C7B; padding-bottom: 20px; }
-    .company-name { font-size: 24px; font-weight: 700; color: #0E7C7B; letter-spacing: -0.5px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 3px solid #C41E3A; padding-bottom: 20px; }
+    .company-name { font-size: 24px; font-weight: 700; color: #C41E3A; letter-spacing: -0.5px; }
     .company-sub { font-size: 11px; color: #718096; margin-top: 4px; }
     .invoice-title { font-size: 28px; font-weight: 700; color: #1a1a1a; text-align: right; }
     .invoice-no { font-size: 13px; color: #718096; margin-top: 4px; text-align: right; }
@@ -48,7 +48,7 @@ function PrintInvoice({ invoice, onClose }) {
     .info-label { font-size: 10px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
     .info-value { font-size: 13px; color: #1a1a1a; font-weight: 500; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    th { background: #0E7C7B; color: white; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 14px; text-align: left; }
+    th { background: #C41E3A; color: white; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 14px; text-align: left; }
     th:last-child, th:nth-child(3) { text-align: right; }
     th:nth-child(4) { text-align: center; }
     td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid rgba(0,0,0,0.06); }
@@ -57,7 +57,7 @@ function PrintInvoice({ invoice, onClose }) {
     .totals { display: flex; justify-content: flex-end; margin-bottom: 30px; }
     .totals-box { width: 280px; }
     .totals-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; }
-    .totals-row.total { border-top: 2px solid #0E7C7B; font-weight: 700; font-size: 15px; padding-top: 12px; margin-top: 4px; }
+    .totals-row.total { border-top: 2px solid #C41E3A; font-weight: 700; font-size: 15px; padding-top: 12px; margin-top: 4px; }
     .totals-row .label { color: #718096; }
     .totals-row .value { font-family: 'Courier New', monospace; color: #1a1a1a; }
     .footer { margin-top: 40px; border-top: 1px solid rgba(0,0,0,0.06); padding-top: 20px; }
@@ -145,7 +145,7 @@ function PrintInvoice({ invoice, onClose }) {
     </div>
 
     <div style="text-align:center;margin-top:30px" class="no-print">
-      <button onclick="window.print()" style="padding:10px 24px;background:#0E7C7B;color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">Print Invoice</button>
+      <button onclick="window.print()" style="padding:10px 24px;background:#C41E3A;color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">Print Invoice</button>
       <button onclick="window.close()" style="padding:10px 24px;background:#e2e8f0;color:#1a1a1a;border:none;border-radius:8px;font-size:13px;cursor:pointer;margin-left:8px">Close</button>
     </div>
   </div>

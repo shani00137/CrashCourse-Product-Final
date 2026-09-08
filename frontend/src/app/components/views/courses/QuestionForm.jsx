@@ -149,7 +149,7 @@ export function QuestionFormScreen({ question, onBack }) {
               <button
                 type="button"
                 onClick={addOptions}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#0E7C7B] bg-[#E6F4F4] border border-[#0E7C7B]/20 hover:bg-[#d4eded] transition"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#C41E3A] bg-[#FFF0F2] border border-[#C41E3A]/20 hover:bg-[#F5DCE2] transition"
               >
                 <Plus size={13} />
                 Add {options.length + 2 > MAX_OPTIONS ? MAX_OPTIONS - options.length : 2} More
@@ -217,7 +217,7 @@ export function QuestionFormScreen({ question, onBack }) {
             <button
               type="button"
               onClick={addOptions}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[rgba(0,0,0,0.12)] text-sm font-medium text-[#718096] hover:border-[#0E7C7B] hover:text-[#0E7C7B] hover:bg-[#E6F4F4]/40 transition-all duration-150"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[rgba(0,0,0,0.12)] text-sm font-medium text-[#718096] hover:border-[#C41E3A] hover:text-[#C41E3A] hover:bg-[#FFF0F2]/40 transition-all duration-150"
             >
               <Plus size={14} />
               Add More Options ({options.length}/{MAX_OPTIONS})
@@ -243,7 +243,7 @@ export function QuestionFormScreen({ question, onBack }) {
       </form>
 
       {toast && (
-        <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-[#0E7C7B]" : "bg-red-500"}`}>
+        <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-[#C41E3A]" : "bg-red-500"}`}>
           {toast.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
           {toast.message}
         </div>

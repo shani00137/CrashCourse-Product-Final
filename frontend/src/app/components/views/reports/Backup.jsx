@@ -25,14 +25,14 @@ export function BackupScreen() {
                 <tr key={b.file} className="border-b border-[rgba(0,0,0,0.04)] hover:bg-[#F7FAFC] transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Database size={14} className="text-[#0E7C7B]" />
+                      <Database size={14} className="text-[#C41E3A]" />
                       <span className="font-mono text-xs text-[#1A202C]">{b.file}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-[#718096]">{b.created}</td>
                   <td className="px-4 py-3 font-mono text-xs text-[#718096]">{b.size}</td>
                   <td className="px-4 py-3">
-                    <button className="flex items-center gap-1.5 text-[#0E7C7B] hover:text-[#0a6665] text-xs font-medium transition">
+                    <button className="flex items-center gap-1.5 text-[#C41E3A] hover:text-[#A0192F] text-xs font-medium transition">
                       <Download size={13} />Download
                     </button>
                   </td>

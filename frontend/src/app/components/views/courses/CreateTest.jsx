@@ -297,7 +297,7 @@ export function CreateTestScreen({ user }) {
                     <td className="px-4 py-3"><StatusBadge status={statusFor(t)} /></td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
-                        <button onClick={() => handleView(t)} title="View questions" className="p-1.5 text-[#718096] hover:text-[#0E7C7B] hover:bg-teal-50 rounded-lg transition"><Eye size={14} /></button>
+                        <button onClick={() => handleView(t)} title="View questions" className="p-1.5 text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 rounded-lg transition"><Eye size={14} /></button>
                         <button
                           onClick={() => handleDelete(t)}
                           disabled={deletingId === t.testId}
@@ -332,7 +332,7 @@ export function CreateTestScreen({ user }) {
                   <button
                     key={n}
                     onClick={() => setPage(n)}
-                    className={`min-w-8 h-8 px-2 text-xs font-medium rounded-lg transition ${n === page ? "bg-[#0E7C7B] text-white" : "border border-[rgba(0,0,0,0.12)] text-[#718096] hover:bg-[#F7FAFC]"}`}
+                    className={`min-w-8 h-8 px-2 text-xs font-medium rounded-lg transition ${n === page ? "bg-[#C41E3A] text-white" : "border border-[rgba(0,0,0,0.12)] text-[#718096] hover:bg-[#F7FAFC]"}`}
                   >
                     {n}
                   </button>
@@ -370,7 +370,7 @@ export function CreateTestScreen({ user }) {
                   type="number" min="1"
                   value={formQuestions}
                   onChange={e => setFormQuestions(e.target.value)}
-                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -379,7 +379,7 @@ export function CreateTestScreen({ user }) {
                   type="number" min="1"
                   value={formDuration}
                   onChange={e => setFormDuration(e.target.value)}
-                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -388,7 +388,7 @@ export function CreateTestScreen({ user }) {
                   type="date"
                   value={formDate}
                   onChange={e => setFormDate(e.target.value)}
-                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                 />
               </div>
             </div>
@@ -398,14 +398,14 @@ export function CreateTestScreen({ user }) {
                 <button
                   type="button"
                   onClick={() => setFormMode("all")}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition ${formMode === "all" ? "border-[#0E7C7B] bg-[#E6F4F4] text-[#0E7C7B] font-medium" : "border-[rgba(0,0,0,0.12)] text-[#718096] hover:border-[#0E7C7B]"}`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition ${formMode === "all" ? "border-[#C41E3A] bg-[#FFF0F2] text-[#C41E3A] font-medium" : "border-[rgba(0,0,0,0.12)] text-[#718096] hover:border-[#C41E3A]"}`}
                 >
                   <Users size={14} /> All active applicants of course
                 </button>
                 <button
                   type="button"
                   onClick={() => setFormMode("select")}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition ${formMode === "select" ? "border-[#0E7C7B] bg-[#E6F4F4] text-[#0E7C7B] font-medium" : "border-[rgba(0,0,0,0.12)] text-[#718096] hover:border-[#0E7C7B]"}`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition ${formMode === "select" ? "border-[#C41E3A] bg-[#FFF0F2] text-[#C41E3A] font-medium" : "border-[rgba(0,0,0,0.12)] text-[#718096] hover:border-[#C41E3A]"}`}
                 >
                   <FileQuestion size={14} /> Select applicants
                 </button>
@@ -429,7 +429,7 @@ export function CreateTestScreen({ user }) {
                           type="checkbox"
                           checked={selectedApplicants.includes(a.applicantId)}
                           onChange={() => toggleApplicant(a.applicantId)}
-                          className="accent-[#0E7C7B]"
+                          className="accent-[#C41E3A]"
                         />
                         <span>{a.firstName} {a.lastName}</span>
                         {a.registrationNo && <span className="ml-auto font-mono text-[10px] text-[#718096]">{a.registrationNo}</span>}
@@ -509,7 +509,7 @@ export function CreateTestScreen({ user }) {
       )}
 
       {toast && (
-        <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-[#0E7C7B]" : "bg-red-500"}`}>
+        <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-[#C41E3A]" : "bg-red-500"}`}>
           {toast.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
           {toast.message}
           <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100"><X size={14} /></button>

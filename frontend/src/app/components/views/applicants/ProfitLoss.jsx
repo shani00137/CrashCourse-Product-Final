@@ -143,7 +143,7 @@ function ProfitLossScreen() {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px; color: #1a202c; }
-          .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #0E7C7B; }
+          .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #C41E3A; }
           .header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
           .header p { font-size: 12px; color: #718096; }
           .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 28px; }
@@ -169,7 +169,7 @@ function ProfitLossScreen() {
         </div>
 
         <div class="summary">
-          <div class="summary-card"><div class="label">Total Revenue</div><div class="value" style="color:#0E7C7B">${fmtMoney(totalSaleAll)}</div></div>
+          <div class="summary-card"><div class="label">Total Revenue</div><div class="value" style="color:#C41E3A">${fmtMoney(totalSaleAll)}</div></div>
           <div class="summary-card"><div class="label">Total Purchase</div><div class="value" style="color:#c05621">${fmtMoney(totalPurchaseAll)}</div></div>
           <div class="summary-card"><div class="label">Net Profit</div><div class="value" style="color:${totalProfitAll >= 0 ? "#059669" : "#dc2626"}">${fmtMoney(totalProfitAll)}</div></div>
           <div class="summary-card"><div class="label">Total Paid</div><div class="value" style="color:#2563eb">${fmtMoney(totalPaidAll)}</div></div>
@@ -233,7 +233,7 @@ function ProfitLossScreen() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: "Total Revenue", value: fmtMoney(totalSaleAll), icon: DollarSign, color: "text-[#0E7C7B]", bg: "bg-teal-50" },
+          { label: "Total Revenue", value: fmtMoney(totalSaleAll), icon: DollarSign, color: "text-[#C41E3A]", bg: "bg-red-50" },
           { label: "Total Purchase", value: fmtMoney(totalPurchaseAll), icon: TrendingDown, color: "text-orange-600", bg: "bg-orange-50" },
           { label: "Net Profit", value: fmtMoney(totalProfitAll), icon: TrendingUp, color: totalProfitAll >= 0 ? "text-emerald-600" : "text-red-600", bg: totalProfitAll >= 0 ? "bg-emerald-50" : "bg-red-50" },
           { label: "Total Paid", value: fmtMoney(totalPaidAll), icon: DollarSign, color: "text-blue-600", bg: "bg-blue-50" },
@@ -275,7 +275,7 @@ function ProfitLossScreen() {
                   <tr key={row.currency} className="border-b border-[rgba(0,0,0,0.04)] hover:bg-[#F7FAFC] transition-colors">
                     <td className="py-3 px-3">
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="w-6 h-6 rounded-md bg-teal-50 flex items-center justify-center text-sm font-bold text-[#0E7C7B]">{row.currency[0]}</span>
+                        <span className="w-6 h-6 rounded-md bg-red-50 flex items-center justify-center text-sm font-bold text-[#C41E3A]">{row.currency[0]}</span>
                         <span className="font-semibold text-[#1A202C]">{row.currency}</span>
                       </span>
                     </td>
@@ -318,7 +318,7 @@ function ProfitLossScreen() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by invoice, applicant, or service…"
-            className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-xs focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+            className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-xs focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
           />
           {searching && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">…</span>}
           {search && !searching && <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"><X size={13} /></button>}
@@ -367,9 +367,9 @@ function ProfitLossScreen() {
               </tbody>
             </table>
             <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-lg bg-teal-50 p-3">
+              <div className="rounded-lg bg-red-50 p-3">
                 <p className="text-sm text-[#718096] uppercase">Revenue</p>
-                <p className="text-xs font-semibold text-[#0E7C7B]">{fmtMoney(detailInv.totalSale)}</p>
+                <p className="text-xs font-semibold text-[#C41E3A]">{fmtMoney(detailInv.totalSale)}</p>
               </div>
               <div className="rounded-lg bg-orange-50 p-3">
                 <p className="text-sm text-[#718096] uppercase">Purchase</p>
@@ -407,7 +407,7 @@ function ProfitLossScreen() {
                   <td className="px-4 py-3 text-right font-mono text-xs text-blue-600">{fmtMoney(inv.paidAmount)}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-red-600">{fmtMoney(inv.balance)}</td>
                   <td className="px-4 py-3">
-                    <button onClick={() => setDetailInv(inv)} className="text-xs font-medium text-[#0E7C7B] hover:underline">Details</button>
+                    <button onClick={() => setDetailInv(inv)} className="text-xs font-medium text-[#C41E3A] hover:underline">Details</button>
                   </td>
                 </tr>
               ))}

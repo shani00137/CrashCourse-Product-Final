@@ -1,8 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Lock, Trash2, Search, X, ChevronLeft, ChevronRight, AlertCircle, Users, RefreshCw, Eye, EyeOff, Check, Wand2 } from "lucide-react";
+import { Plus, Lock, Trash2, Search, X, ChevronLeft, ChevronRight, AlertCircle, Users, RefreshCw, Eye, EyeOff, Check, Wand2, Zap } from "lucide-react";
 import { Avatar, Btn, BouncingDots, Card, Input, Modal, SearchableSelect, StatusBadge } from "../../shared/ui";
-import { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId } from "../../../../services/appUserService";
+import { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan } from "../../../../services/appUserService";
 import { getActiveApplicants } from "../../../../services/applicantService";
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const addYearsISO = (n) => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + n);
+  return d.toISOString().slice(0, 10);
+};
+const parseDate = (s) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((s || "").trim());
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+};
 
 export function MobileUsersScreen() {
   const pageSize = 20;
@@ -35,6 +48,24 @@ export function MobileUsersScreen() {
   const [resetDone, setResetDone] = useState("");
   const resetCloseTimer = useRef(null);
   const newPwdRef = useRef(null);
+  const [planTarget, setPlanTarget] = useState(null);
+  const [planFrom, setPlanFrom] = useState(todayISO());
+  const [planTo, setPlanTo] = useState(addYearsISO(1));
+  const [planSaving, setPlanSaving] = useState(false);
+  const [planError, setPlanError] = useState("");
+  const [planSuccess, setPlanSuccess] = useState("");
+  const planCloseTimer = useRef(null);
+
+  const planPreview = (() => {
+    const from = parseDate(planFrom);
+    const to = parseDate(planTo);
+    if (!to) return null;
+    const trial =
+      !!from &&
+      to.getTime() > Date.now() &&
+      to.getTime() - from.getTime() <= 6 * 24 * 60 * 60 * 1000;
+    return trial ? "Trial (5 days)" : "Pro";
+  })();
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -142,6 +173,7 @@ export function MobileUsersScreen() {
 
   useEffect(() => () => {
     if (resetCloseTimer.current) clearTimeout(resetCloseTimer.current);
+    if (planCloseTimer.current) clearTimeout(planCloseTimer.current);
   }, []);
 
   const pwdStrength = newPassword.length === 0 ? 0 : newPassword.length < 6 ? 1 : newPassword.length < 10 ? 2 : newPassword.length < 14 ? 3 : 4;
@@ -215,6 +247,79 @@ export function MobileUsersScreen() {
     }
   }
 
+  async function openPlan(u) {
+    setPlanTarget(u);
+    setPlanError("");
+    setPlanSuccess("");
+    setPlanFrom(todayISO());
+    setPlanTo(addYearsISO(1));
+    try {
+      const detail = await getAppUserDetail(u.appUserId);
+      if (detail && typeof detail === "object") {
+        const r = detail;
+        if (typeof r.registrationDate === "string" && r.registrationDate) {
+          setPlanFrom(r.registrationDate.slice(0, 10));
+        }
+        if (typeof r.expiryDate === "string" && r.expiryDate) {
+          setPlanTo(r.expiryDate.slice(0, 10));
+        }
+      }
+    } catch {
+      // detail lookup is best-effort; keep default dates
+    }
+  }
+
+  async function handleApplyPlan() {
+    if (!planTarget) return;
+    const fromDate = parseDate(planFrom);
+    const toDate = parseDate(planTo);
+    if (!toDate) {
+      setPlanError("Use a valid To date in YYYY-MM-DD format.");
+      return;
+    }
+    setPlanSaving(true);
+    setPlanError("");
+    setPlanSuccess("");
+    try {
+      const res = await changeAppUserPlan({
+        appUserId: planTarget.appUserId,
+        fromDate: fromDate ? planFrom : undefined,
+        toDate: planTo,
+      });
+      const ok = res && typeof res === "object" && res.succeeded !== false;
+      if (ok) {
+        setPlanSuccess(
+          res && typeof res.message === "string" && res.message
+            ? res.message
+            : "Plan updated."
+        );
+        if (planCloseTimer.current) clearTimeout(planCloseTimer.current);
+        planCloseTimer.current = setTimeout(() => {
+          setPlanTarget(null);
+          load();
+        }, 1500);
+      } else {
+        setPlanError(
+          res && typeof res.message === "string" && res.message
+            ? res.message
+            : "Failed to update the plan."
+        );
+      }
+    } catch (err) {
+      setPlanError(err instanceof Error ? err.message : "Failed to update the plan.");
+    } finally {
+      setPlanSaving(false);
+    }
+  }
+
+  function closePlan() {
+    if (planCloseTimer.current) {
+      clearTimeout(planCloseTimer.current);
+      planCloseTimer.current = null;
+    }
+    setPlanTarget(null);
+  }
+
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * pageSize;
@@ -247,7 +352,7 @@ export function MobileUsersScreen() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name or username…"
-            className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+            className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
           />
           {searching && <span className="absolute right-8 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">Searching…</span>}
           {search && !searching && <button
@@ -264,7 +369,7 @@ export function MobileUsersScreen() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[rgba(0,0,0,0.06)] bg-[#F7FAFC]">
-                {["User", "App ID", "Device", "Status", "Last Login", "Actions"].map(h => (
+                {["Name", "Username", "Registration No.", "Course", "App ID", "Device", "Status", "Last Login", "Actions"].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -275,9 +380,15 @@ export function MobileUsersScreen() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Avatar initials={initials(u)} />
-                      <span className="font-medium text-[#1A202C]">{displayName(u)}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-[#1A202C]">{u.firstName || "—"}</span>
+                        <span className="text-xs text-[#718096]">{u.lastName || "—"}</span>
+                      </div>
                     </div>
                   </td>
+                  <td className="px-4 py-3 font-mono text-xs text-[#718096]">{u.userName || "—"}</td>
+                  <td className="px-4 py-3 text-xs text-[#718096]">{u.registrationNo || "—"}</td>
+                  <td className="px-4 py-3 text-[#718096] max-w-52 truncate">{u.course || "—"}</td>
                   <td className="px-4 py-3 font-mono text-xs text-[#718096]">{u.appUserId}</td>
                   <td className="px-4 py-3 text-[#718096] max-w-40 truncate">{u.deviceId || "—"}</td>
                   <td className="px-4 py-3"><StatusBadge status={u.status ? "Active" : "Inactive"} /></td>
@@ -288,9 +399,14 @@ export function MobileUsersScreen() {
                       <button
                         onClick={() => { setMessage(""); setDeviceResetTarget(u); }}
                         disabled={!u.deviceId}
-                        className="p-1.5 text-[#718096] hover:text-[#0E7C7B] hover:bg-teal-50 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="p-1.5 text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
                         title={u.deviceId ? "Reset Device Id" : "No device bound"}
                       ><RefreshCw size={14} /></button>
+                      <button
+                        onClick={() => { setMessage(""); openPlan(u); }}
+                        className="p-1.5 text-[#718096] hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                        title="Change Plan (Trial/Pro)"
+                      ><Zap size={14} /></button>
                       <button onClick={() => { setMessage(""); setDeleteTarget(u); }} className="p-1.5 text-[#718096] hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete User"><Trash2 size={14} /></button>
                     </div>
                   </td>
@@ -389,7 +505,7 @@ export function MobileUsersScreen() {
             <p className="text-xs text-[#718096] -mt-1">{displayName(resetTarget)} must use this new password on their next mobile login.</p>
             <div className="flex items-center justify-between">
               <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">New Password</label>
-              <button type="button" onClick={generatePassword} className="text-[11px] font-medium text-[#0E7C7B] hover:text-[#0a6665] inline-flex items-center gap-1 transition">
+              <button type="button" onClick={generatePassword} className="text-[11px] font-medium text-[#C41E3A] hover:text-[#A0192F] inline-flex items-center gap-1 transition">
                 <Wand2 size={12} /> Generate
               </button>
             </div>
@@ -434,6 +550,31 @@ export function MobileUsersScreen() {
           </form>
         </Modal>
       )}
+      {planTarget && (
+        <Modal title={`Change Plan — ${displayName(planTarget)}`} onClose={closePlan}>
+          <div className="flex flex-col gap-4">
+            <p className="text-xs text-[#718096] -mt-1">
+              {displayName(planTarget)} ({planTarget.userName}) {planTarget.status ? "is currently Active" : "is currently Inactive"}. Set the Pro-active window below.
+            </p>
+            <Input label="Active From" type="date" value={planFrom} onChange={e => setPlanFrom(e.target.value)} />
+            <Input label="Active Until" type="date" value={planTo} onChange={e => setPlanTo(e.target.value)} />
+            {planPreview && (
+              <div className="flex items-center gap-2 text-sm rounded-lg px-3 py-2.5 border bg-[#F7FAFC] border-[rgba(0,0,0,0.08)]">
+                <Zap size={14} className={planPreview === "Pro" ? "text-emerald-600" : "text-amber-500"} />
+                <span className="text-[#1A202C]">
+                  Resulting plan: <span className={`font-semibold ${planPreview === "Pro" ? "text-emerald-600" : "text-amber-600"}`}>{planPreview}</span>
+                </span>
+              </div>
+            )}
+            {planSuccess && <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 inline-flex items-center gap-1.5"><Check size={15} /> {planSuccess} Closing…</div>}
+            {planError && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">{planError}</div>}
+            <div className="flex gap-2 justify-end mt-2">
+              <Btn variant="ghost" onClick={closePlan}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleApplyPlan} disabled={planSaving || !planPreview}>{planSaving ? "Applying…" : "Apply Plan"}</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -447,7 +588,7 @@ function PasswordField({ inputRef, value, onChange, placeholder, show, onToggleS
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="h-10 w-full pr-10 pl-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+        className="h-10 w-full pr-10 pl-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
       />
       <button
         type="button"

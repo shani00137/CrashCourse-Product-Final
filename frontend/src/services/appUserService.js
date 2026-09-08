@@ -23,4 +23,13 @@ async function resetAppUserPassword(payload) {
 async function resetAppUserDeviceId(appUserId) {
   return apiFetch(`/api/AppUser/api/AppUser/ResetDeviceId/${appUserId}`);
 }
-export { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId };
+async function getAppUserDetail(appUserId) {
+  return apiFetch(`/api/AppUser/api/AppUser/GetDetailOfUserById/${appUserId}`);
+}
+async function changeAppUserPlan(payload) {
+  return apiFetch("/api/AppUser/api/AppUser/ChangePlan", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+export { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan };

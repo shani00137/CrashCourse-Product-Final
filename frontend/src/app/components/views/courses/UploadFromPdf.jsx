@@ -419,7 +419,7 @@ export function UploadFromPdfScreen({ onBack }) {
         <Card className="p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-9 h-9 rounded-lg bg-teal-50 text-[#0E7C7B] flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-red-50 text-[#C41E3A] flex items-center justify-center flex-shrink-0">
                 <FileText size={16} />
               </div>
               <div className="min-w-0">
@@ -439,7 +439,7 @@ export function UploadFromPdfScreen({ onBack }) {
 
           {loadingDoc && (
             <div className="h-80 flex flex-col items-center justify-center gap-3">
-              <Loader2 size={22} className="animate-spin text-[#0E7C7B]" />
+              <Loader2 size={22} className="animate-spin text-[#C41E3A]" />
               <p className="text-xs text-[#718096]">Loading PDF...</p>
             </div>
           )}
@@ -447,9 +447,9 @@ export function UploadFromPdfScreen({ onBack }) {
           {!loadingDoc && !pdfDoc && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="h-80 rounded-xl border-2 border-dashed border-[rgba(0,0,0,0.15)] hover:border-[#0E7C7B] hover:bg-teal-50/40 transition flex flex-col items-center justify-center gap-3 group"
+              className="h-80 rounded-xl border-2 border-dashed border-[rgba(0,0,0,0.15)] hover:border-[#C41E3A] hover:bg-red-50/40 transition flex flex-col items-center justify-center gap-3 group"
             >
-              <div className="w-14 h-14 rounded-full bg-teal-50 text-[#0E7C7B] flex items-center justify-center group-hover:scale-105 transition">
+              <div className="w-14 h-14 rounded-full bg-red-50 text-[#C41E3A] flex items-center justify-center group-hover:scale-105 transition">
                 <Upload size={24} />
               </div>
               <p className="text-sm font-medium text-[#1A202C]">Browse to upload a PDF</p>
@@ -461,10 +461,10 @@ export function UploadFromPdfScreen({ onBack }) {
             <>
               <div className="flex items-center justify-between gap-2 bg-[#F7FAFC] border border-[rgba(0,0,0,0.06)] rounded-lg px-3 py-2">
                 <div className="flex items-center gap-1">
-                  <button onClick={goPrev} disabled={currentPage <= 1} title="Previous page" className="w-7 h-7 rounded-md text-[#718096] hover:bg-white hover:text-[#0E7C7B] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition disabled:opacity-40 disabled:cursor-not-allowed">
+                  <button onClick={goPrev} disabled={currentPage <= 1} title="Previous page" className="w-7 h-7 rounded-md text-[#718096] hover:bg-white hover:text-[#C41E3A] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition disabled:opacity-40 disabled:cursor-not-allowed">
                     <ChevronLeft size={14} className="mx-auto" />
                   </button>
-                  <button onClick={goNext} disabled={currentPage >= numPages} title="Next page" className="w-7 h-7 rounded-md text-[#718096] hover:bg-white hover:text-[#0E7C7B] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition disabled:opacity-40 disabled:cursor-not-allowed">
+                  <button onClick={goNext} disabled={currentPage >= numPages} title="Next page" className="w-7 h-7 rounded-md text-[#718096] hover:bg-white hover:text-[#C41E3A] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition disabled:opacity-40 disabled:cursor-not-allowed">
                     <ChevronRight size={14} className="mx-auto" />
                   </button>
                   <span className="text-xs font-semibold text-[#1A202C] whitespace-nowrap">
@@ -475,16 +475,16 @@ export function UploadFromPdfScreen({ onBack }) {
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={zoomOut} disabled={zoom <= ZOOM_MIN} title="Zoom out" className="w-7 h-7 rounded-md text-[#718096] hover:bg-white hover:text-[#0E7C7B] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition disabled:opacity-40 disabled:cursor-not-allowed">
+                  <button onClick={zoomOut} disabled={zoom <= ZOOM_MIN} title="Zoom out" className="w-7 h-7 rounded-md text-[#718096] hover:bg-white hover:text-[#C41E3A] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition disabled:opacity-40 disabled:cursor-not-allowed">
                     <ZoomOut size={14} className="mx-auto" />
                   </button>
-                  <button onClick={resetZoom} title="Reset zoom" className="px-2 h-7 rounded-md text-[11px] font-semibold text-[#718096] hover:bg-white hover:text-[#0E7C7B] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition whitespace-nowrap">
+                  <button onClick={resetZoom} title="Reset zoom" className="px-2 h-7 rounded-md text-[11px] font-semibold text-[#718096] hover:bg-white hover:text-[#C41E3A] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition whitespace-nowrap">
                     {zoom}%
                   </button>
-                  <button onClick={zoomIn} disabled={zoom >= ZOOM_MAX} title="Zoom in" className="w-7 h-7 rounded-md text-[#718096] hover:bg-white hover:text-[#0E7C7B] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition disabled:opacity-40 disabled:cursor-not-allowed">
+                  <button onClick={zoomIn} disabled={zoom >= ZOOM_MAX} title="Zoom in" className="w-7 h-7 rounded-md text-[#718096] hover:bg-white hover:text-[#C41E3A] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition disabled:opacity-40 disabled:cursor-not-allowed">
                     <ZoomIn size={14} className="mx-auto" />
                   </button>
-                  <button onClick={resetZoom} title="Fit to width" className="w-7 h-7 rounded-md text-[#718096] hover:bg-white hover:text-[#0E7C7B] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition">
+                  <button onClick={resetZoom} title="Fit to width" className="w-7 h-7 rounded-md text-[#718096] hover:bg-white hover:text-[#C41E3A] border border-transparent hover:border-[rgba(0,0,0,0.1)] transition">
                     <Maximize2 size={14} className="mx-auto" />
                   </button>
                 </div>
@@ -534,7 +534,7 @@ export function UploadFromPdfScreen({ onBack }) {
             {ocrText && (
               <button
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold text-[#0E7C7B] border border-[#0E7C7B]/30 hover:bg-[#E6F4F4] transition"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold text-[#C41E3A] border border-[#C41E3A]/30 hover:bg-[#FFF0F2] transition"
               >
                 {copied ? <Check size={12} /> : <Copy size={12} />}
                 {copied ? "Copied" : "Copy OCR text"}
@@ -551,7 +551,7 @@ export function UploadFromPdfScreen({ onBack }) {
 
           {submitting && (
             <div className="flex flex-col items-center justify-center gap-3 py-8">
-              <Loader2 size={22} className="animate-spin text-[#0E7C7B]" />
+              <Loader2 size={22} className="animate-spin text-[#C41E3A]" />
               <p className="text-xs text-[#718096]">Running OCR and parsing questions...</p>
             </div>
           )}
@@ -572,7 +572,7 @@ export function UploadFromPdfScreen({ onBack }) {
                 return (
                   <div key={idx} className="border border-[rgba(0,0,0,0.08)] rounded-lg p-3 bg-[#F7FAFC]">
                     <div className="flex items-start justify-between mb-2">
-                      <span className="text-[11px] font-bold text-[#0E7C7B] bg-teal-50 px-2 py-0.5 rounded">
+                      <span className="text-[11px] font-bold text-[#C41E3A] bg-red-50 px-2 py-0.5 rounded">
                         Q{idx + 1}
                       </span>
                       <div className="flex gap-1">
@@ -612,7 +612,7 @@ export function UploadFromPdfScreen({ onBack }) {
                               name={`correct-${idx}`}
                               checked={editData.correctIndex === oi}
                               onChange={() => setEditData({ ...editData, correctIndex: oi })}
-                              className="accent-[#0E7C7B] mt-1"
+                              className="accent-[#C41E3A] mt-1"
                             />
                             <span className="text-[10px] font-bold text-[#718096] w-4 mt-1">{String.fromCharCode(65 + oi)}</span>
                             <RichTextEditor

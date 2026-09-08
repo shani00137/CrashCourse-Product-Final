@@ -21,17 +21,17 @@ function StatusBadge({ status }) {
 }
 function Avatar({ initials, size = "sm" }) {
   const sizes = { sm: "w-7 h-7 text-xs", md: "w-9 h-9 text-sm", lg: "w-14 h-14 text-lg" };
-  return <div className={`${sizes[size]} rounded-full bg-teal-100 text-teal-700 font-semibold flex items-center justify-center flex-shrink-0`}>
+  return <div className={`${sizes[size]} rounded-full bg-red-100 text-red-700 font-semibold flex items-center justify-center flex-shrink-0`}>
       {initials}
     </div>;
 }
 function Btn({ children, variant = "primary", onClick, className = "", icon, disabled, type = "button" }) {
   const styles = {
-    primary: "bg-[#0E7C7B] text-white hover:bg-[#0a6665] shadow-sm",
+    primary: "bg-[#C41E3A] text-white hover:bg-[#A0192F] shadow-sm",
     secondary: "bg-[#F4A425] text-[#1A202C] hover:bg-[#e09520] shadow-sm",
     danger: "bg-red-500 text-white hover:bg-red-600 shadow-sm",
     ghost: "bg-transparent text-[#718096] hover:bg-gray-100",
-    outline: "border border-[#0E7C7B] text-[#0E7C7B] hover:bg-[#E6F4F4] bg-white"
+    outline: "border border-[#C41E3A] text-[#C41E3A] hover:bg-[#FFF0F2] bg-white"
   };
   return <button
     type={type}
@@ -51,7 +51,7 @@ function Input({ label, type = "text", placeholder, value, onChange, required })
     value={value}
     onChange={onChange}
     required={required}
-    className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+    className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
   />
     </div>;
 }
@@ -61,7 +61,7 @@ function Select({ label, options, value, onChange }) {
       <select
     value={value}
     onChange={(e) => onChange?.(e.target.value)}
-    className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition appearance-none"
+    className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition appearance-none"
   >
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
@@ -72,7 +72,7 @@ function Card({ children, className = "" }) {
       {children}
     </div>;
 }
-function BouncingDots({ label = "Searching\u2026", color = "#0E7C7B" }) {
+function BouncingDots({ label = "Searching\u2026", color = "#C41E3A" }) {
   return <div className="py-10 flex flex-col items-center gap-3">
       <div className="flex items-center justify-center gap-1.5">
         {[0, 1, 2].map((i) => <span
@@ -116,7 +116,7 @@ function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
       <button
     onClick={() => setOpen((o) => !o)}
     title={selected ? selected.label : allLabel}
-    className={`h-9 px-3 rounded-lg border bg-white text-sm flex items-center justify-between gap-2 min-w-44 transition ${open ? "border-[#0E7C7B] ring-1 ring-[#0E7C7B]" : "border-[rgba(0,0,0,0.12)] hover:border-[#0E7C7B]"}`}
+    className={`h-9 px-3 rounded-lg border bg-white text-sm flex items-center justify-between gap-2 min-w-44 transition ${open ? "border-[#C41E3A] ring-1 ring-[#C41E3A]" : "border-[rgba(0,0,0,0.12)] hover:border-[#C41E3A]"}`}
   >
         <span className={`truncate ${selected ? "text-[#1A202C]" : "text-[#718096]"}`}>{selected ? selected.label : allLabel}</span>
         <ChevronDown size={13} className={`text-[#718096] transition-transform ${open ? "rotate-180" : ""}`} />
@@ -142,7 +142,7 @@ function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
       }
     }}
     placeholder={placeholder}
-    className="h-8 w-full pl-8 pr-7 rounded-md border border-[rgba(0,0,0,0.12)] text-sm focus:outline-none focus:border-[#0E7C7B]"
+    className="h-8 w-full pl-8 pr-7 rounded-md border border-[rgba(0,0,0,0.12)] text-sm focus:outline-none focus:border-[#C41E3A]"
   />
               {searching && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">Searching…</span>}
               {query && !searching && <button onClick={() => setQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600">
@@ -153,7 +153,7 @@ function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
           <div className="max-h-56 overflow-y-auto py-1">
             <button
     onClick={() => pick(null)}
-    className={`w-full text-left px-3 py-1.5 text-sm transition ${value === null ? "bg-teal-50 text-[#0E7C7B] font-medium" : "text-[#1A202C] hover:bg-[#F7FAFC]"}`}
+    className={`w-full text-left px-3 py-1.5 text-sm transition ${value === null ? "bg-red-50 text-[#C41E3A] font-medium" : "text-[#1A202C] hover:bg-[#F7FAFC]"}`}
   >
               {allLabel}
             </button>
@@ -162,7 +162,7 @@ function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
     key={o.id}
     onClick={() => pick(o.id)}
     title={o.label}
-    className={`w-full text-left px-3 py-1.5 text-sm truncate transition ${value === o.id ? "bg-teal-50 text-[#0E7C7B] font-medium" : "text-[#1A202C] hover:bg-[#F7FAFC]"}`}
+    className={`w-full text-left px-3 py-1.5 text-sm truncate transition ${value === o.id ? "bg-red-50 text-[#C41E3A] font-medium" : "text-[#1A202C] hover:bg-[#F7FAFC]"}`}
   >
                 {o.label}
               </button>)}

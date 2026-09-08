@@ -155,6 +155,30 @@ export async function getActiveCourses(): Promise<CourseInfo[]> {
     .filter((c) => c.courseId > 0);
 }
 
+export interface CountryInfo {
+  countryId: number;
+  coutryName: string;
+}
+
+/**
+ * Fetches the list of countries from the backend for use in the
+ * registration form's searchable country dropdown.
+ */
+export async function getCountries(): Promise<CountryInfo[]> {
+  const data = await get<unknown>(ENDPOINTS.getCountryName);
+  if (!Array.isArray(data)) return [];
+  return data
+    .filter((it) => it && typeof it === "object")
+    .map((it) => {
+      const c = it as Record<string, unknown>;
+      return {
+        countryId: Number(c.countryId) || 0,
+        coutryName: typeof c.coutryName === "string" ? c.coutryName : "",
+      };
+    })
+    .filter((c) => c.countryId > 0 && c.coutryName.length > 0);
+}
+
 export interface LoginResult {
   isValid: boolean;
   response: string;
@@ -426,6 +450,37 @@ export async function getUserDetailById(appUserId: number): Promise<UserDetailIn
     courseName: typeof r.courseName === "string" ? r.courseName : "",
     status: r.status !== false,
     deviceId: typeof r.deviceId === "string" ? r.deviceId : "",
+    registrationDate:
+      typeof r.registrationDate === "string" ? r.registrationDate : undefined,
+    expiryDate: typeof r.expiryDate === "string" ? r.expiryDate : undefined,
+    isActive: typeof r.isActive === "boolean" ? r.isActive : undefined,
+  };
+}
+
+export interface ChangePlanInput {
+  appUserId: number;
+  fromDate?: string;
+  toDate: string;
+}
+
+export interface ChangePlanResult {
+  succeeded: boolean;
+  message: string;
+  registrationDate?: string;
+  expiryDate?: string;
+  isActive?: boolean;
+}
+
+/**
+ * Changes the applicant's active plan (Trial → Pro) by setting the Pro
+ * activation date range. Returns the new registration/expiry dates.
+ */
+export async function changePlan(input: ChangePlanInput): Promise<ChangePlanResult> {
+  const data = await request<unknown>(ENDPOINTS.changePlan, input);
+  const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+  return {
+    succeeded: r.succeeded !== false,
+    message: typeof r.message === "string" ? r.message : "",
     registrationDate:
       typeof r.registrationDate === "string" ? r.registrationDate : undefined,
     expiryDate: typeof r.expiryDate === "string" ? r.expiryDate : undefined,

@@ -85,11 +85,6 @@ login(
     }
   };
 
-  const handleGuest = () => {
-    login({ name: "Guest Student", isGuest: true });
-    router.replace("/(tabs)/dashboard");
-  };
-
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -193,23 +188,6 @@ login(
             ) : (
               <Text style={styles.loginButtonText}>Sign In</Text>
             )}
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Guest button */}
-          <TouchableOpacity
-            style={styles.guestButton}
-            onPress={handleGuest}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="person-circle-outline" size={20} color={colors.green} />
-            <Text style={styles.guestButtonText}>Continue as Guest</Text>
           </TouchableOpacity>
 
           <Text style={styles.signupText}>
@@ -397,22 +375,6 @@ const styles = StyleSheet.create({
   dividerText: {
     fontSize: 12,
     color: colors.mutedForeground,
-  },
-  guestButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
-  },
-  guestButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: colors.green,
   },
   signupText: {
     textAlign: "center",

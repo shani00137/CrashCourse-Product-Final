@@ -13,7 +13,7 @@ function fmtMoney(v) {
   return toNumber(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const COLORS = ["#0E7C7B", "#F4A425", "#E53E3E", "#3182CE", "#805AD5"];
+const COLORS = ["#C41E3A", "#F4A425", "#E53E3E", "#3182CE", "#805AD5"];
 
 function InvoiceDashboardScreen() {
   const [rows, setRows] = useState([]);
@@ -107,9 +107,9 @@ function InvoiceDashboardScreen() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: "Total Invoices", value: rows.length, icon: FileText, color: "text-[#0E7C7B]", bg: "bg-teal-50" },
+          { label: "Total Invoices", value: rows.length, icon: FileText, color: "text-[#C41E3A]", bg: "bg-red-50" },
           { label: "Applicants", value: stats.uniqueApplicants, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Revenue", value: fmtMoney(stats.totalRevenue), icon: DollarSign, color: "text-[#0E7C7B]", bg: "bg-teal-50" },
+          { label: "Revenue", value: fmtMoney(stats.totalRevenue), icon: DollarSign, color: "text-[#C41E3A]", bg: "bg-red-50" },
           { label: "Purchase Cost", value: fmtMoney(stats.totalPurchase), icon: TrendingDown, color: "text-orange-600", bg: "bg-orange-50" },
           { label: "Net Profit", value: fmtMoney(stats.netProfit), icon: TrendingUp, color: stats.netProfit >= 0 ? "text-emerald-600" : "text-red-600", bg: stats.netProfit >= 0 ? "bg-emerald-50" : "bg-red-50" },
           { label: "Outstanding", value: fmtMoney(stats.totalOutstanding), icon: AlertCircle, color: "text-red-600", bg: "bg-red-50" },
@@ -142,7 +142,7 @@ function InvoiceDashboardScreen() {
                 <YAxis tick={{ fontSize: 11, fill: "#718096" }} />
                 <Tooltip formatter={(v) => fmtMoney(v)} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="revenue" name="Revenue" fill="#0E7C7B" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="revenue" name="Revenue" fill="#C41E3A" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="purchase" name="Purchase" fill="#F4A425" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="profit" name="Profit" fill="#38A169" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -194,7 +194,7 @@ function InvoiceDashboardScreen() {
                 <XAxis type="number" tick={{ fontSize: 11, fill: "#718096" }} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#718096" }} width={120} />
                 <Tooltip formatter={(v) => fmtMoney(v)} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                <Bar dataKey="revenue" fill="#0E7C7B" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="revenue" fill="#C41E3A" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -213,7 +213,7 @@ function InvoiceDashboardScreen() {
                 <YAxis tick={{ fontSize: 11, fill: "#718096" }} />
                 <Tooltip formatter={(v) => fmtMoney(v)} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#0E7C7B" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="revenue" name="Revenue" stroke="#C41E3A" strokeWidth={2} dot={{ r: 3 }} />
                 <Line type="monotone" dataKey="purchase" name="Purchase" stroke="#F4A425" strokeWidth={2} dot={{ r: 3 }} />
                 <Line type="monotone" dataKey="profit" name="Profit" stroke="#38A169" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>

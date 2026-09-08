@@ -243,7 +243,7 @@ function CoursesScreen() {
     value={search}
     onChange={(e) => setSearch(e.target.value)}
     placeholder="Search course name…"
-    className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+    className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
   />
           {searching && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">Searching…</span>}
           {search && !searching && <button
@@ -269,13 +269,13 @@ function CoursesScreen() {
             </thead>
             <tbody>
               {rows.map((c) => <tr key={c.courseId} className="border-b border-[rgba(0,0,0,0.04)] hover:bg-[#F7FAFC] transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-[#0E7C7B] font-medium whitespace-nowrap">{c.courseCode}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[#C41E3A] font-medium whitespace-nowrap">{c.courseCode}</td>
                   <td className="px-4 py-3 font-medium text-[#1A202C]">{c.courseName}</td>
                   <td className="px-4 py-3">
                     <button
     onClick={() => openAttachments(c)}
     title="View attachments"
-    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#0E7C7B] bg-[#E6F4F4] hover:bg-[#d4ecec] transition"
+    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#C41E3A] bg-[#FFF0F2] hover:bg-[#F5DCE2] transition"
   >
                       <Paperclip size={12} /> Attachment
                     </button>
@@ -286,7 +286,7 @@ function CoursesScreen() {
     aria-checked={c.isActive}
     onClick={() => toggleStatus(c)}
     title={c.isActive ? "Active \u2014 click to deactivate" : "Inactive \u2014 click to activate"}
-    className={`w-11 h-6 rounded-full transition-colors duration-200 relative ${c.isActive ? "bg-[#0E7C7B]" : "bg-gray-300"}`}
+    className={`w-11 h-6 rounded-full transition-colors duration-200 relative ${c.isActive ? "bg-[#C41E3A]" : "bg-gray-300"}`}
   >
                       <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${c.isActive ? "translate-x-5" : "translate-x-0"}`} />
                     </button>
@@ -381,7 +381,7 @@ function CoursesScreen() {
                       </td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-1">
-                          <button title="Download" onClick={() => downloadMaterial(m)} className="p-1.5 rounded-lg text-[#718096] hover:text-[#0E7C7B] hover:bg-teal-50 transition"><Download size={14} /></button>
+                          <button title="Download" onClick={() => downloadMaterial(m)} className="p-1.5 rounded-lg text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 transition"><Download size={14} /></button>
                           <button title="Delete attachment" onClick={() => handleDeleteMaterial(m)} className="p-1.5 rounded-lg text-[#718096] hover:text-red-600 hover:bg-red-50 transition"><Trash2 size={14} /></button>
                         </div>
                       </td>
@@ -412,17 +412,17 @@ function CoursesScreen() {
     type="file"
     accept=".pdf,video/*,audio/*"
     onChange={(e) => setMaterialFile(e.target.files?.[0] ?? null)}
-    className="h-10 px-2 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#E6F4F4] file:text-[#0E7C7B] file:text-xs file:font-medium"
+    className="h-10 px-2 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#FFF0F2] file:text-[#C41E3A] file:text-xs file:font-medium"
   />
                 </div>
               </div>
               {uploading && <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-[#718096] flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Uploading…</span>
-                    <span className="font-medium text-[#0E7C7B]">{uploadProgress}%</span>
+                    <span className="font-medium text-[#C41E3A]">{uploadProgress}%</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-[#EDF2F7] overflow-hidden">
-                    <div className="h-full bg-[#0E7C7B] transition-all duration-200" style={{ width: `${uploadProgress}%` }} />
+                    <div className="h-full bg-[#C41E3A] transition-all duration-200" style={{ width: `${uploadProgress}%` }} />
                   </div>
                 </div>}
               <div className="flex gap-2 justify-end">
@@ -439,7 +439,7 @@ function CoursesScreen() {
       {
     /* Toast */
   }
-      {toast && <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-[#0E7C7B]" : "bg-red-500"}`}>
+      {toast && <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-[#C41E3A]" : "bg-red-500"}`}>
           {toast.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
           {toast.message}
           <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100"><X size={14} /></button>

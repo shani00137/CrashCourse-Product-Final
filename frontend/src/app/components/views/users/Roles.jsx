@@ -34,7 +34,7 @@ export function RolesScreen() {
                     <td key={role} className="px-4 py-3 text-center">
                       <button
                         onClick={() => setPerms(prev => ({ ...prev, [role]: { ...prev[role], [page]: !prev[role][page] } }))}
-                        className={`w-9 h-5 rounded-full transition-all duration-200 relative ${perms[role]?.[page] ? "bg-[#0E7C7B]" : "bg-gray-200"}`}
+                        className={`w-9 h-5 rounded-full transition-all duration-200 relative ${perms[role]?.[page] ? "bg-[#C41E3A]" : "bg-gray-200"}`}
                       >
                         <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${perms[role]?.[page] ? "left-4" : "left-0.5"}`} />
                       </button>

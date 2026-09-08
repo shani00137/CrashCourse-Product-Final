@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -14,6 +14,7 @@ import {
   Lock,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Bell,
   Search,
   LogOut,
@@ -111,6 +112,30 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set(navGroups.map(g => g.label)));
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    if (!firedRef.current) {
+      firedRef.current = true;
+      return;
+    }
+    const activeGroup = navGroups.find(g => g.items.some(it => it.screen === screen));
+    if (activeGroup) {
+      setCollapsedGroups(prev => {
+        const next = new Set(prev);
+        next.delete(activeGroup.label);
+        return next;
+      });
+    }
+  }, [screen]);
+
+  const toggleGroup = (label) => setCollapsedGroups(prev => {
+    const next = new Set(prev);
+    if (next.has(label)) next.delete(label);
+    else next.add(label);
+    return next;
+  });
   const breadcrumb = {
     dashboard: ["Dashboard"],
     applicants: ["Applicants", "List"],
@@ -184,7 +209,7 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
       <aside className={`${sidebarOpen ? "w-56" : "w-14"} bg-white border-r border-[rgba(0,0,0,0.07)] flex flex-col transition-all duration-300 ease-in-out flex-shrink-0`}>
         {/* Logo */}
         <div className={`flex items-center gap-3 px-4 py-4 border-b border-[rgba(0,0,0,0.07)] ${!sidebarOpen ? "justify-center" : ""}`}>
-          <div className="w-8 h-8 rounded-lg bg-[#0E7C7B] flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-[#C41E3A] flex items-center justify-center flex-shrink-0">
             <Activity size={16} className="text-white" />
           </div>
           {sidebarOpen && <span className="font-bold text-sm text-[#1A202C] tracking-tight">HealthEdu Pro</span>}
@@ -192,10 +217,10 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 scrollbar-hide">
-          {navGroups.map(group => (
-            <div key={group.label} className="mb-1">
-              {sidebarOpen && <p className="text-[10px] font-bold text-[#A0AEC0] uppercase tracking-widest px-2 py-1.5 mt-2">{group.label}</p>}
-              {group.items.map(item => {
+          {navGroups.map(group => {
+            const open = sidebarOpen && !collapsedGroups.has(group.label);
+            if (!sidebarOpen) {
+              return group.items.map(item => {
                 const active = screen === item.screen;
                 return (
                   <button
@@ -205,18 +230,54 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
                       if (item.screen === "question-form") return onAddQuestion();
                       setScreen(item.screen);
                     }}
-                    title={!sidebarOpen ? item.label : void 0}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all mb-0.5
-                      ${active ? "bg-[#E6F4F4] text-[#0E7C7B] font-semibold" : "text-[#718096] hover:bg-[#F7FAFC] hover:text-[#1A202C]"}
-                      ${!sidebarOpen ? "justify-center" : ""}`}
+                    title={item.label}
+                    className={`w-full flex items-center justify-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all mb-0.5
+                      ${active ? "bg-[#FFF0F2] text-[#C41E3A] font-semibold" : "text-[#4A5568] hover:bg-[#F7FAFC] hover:text-[#1A202C]"}`}
                   >
-                    <item.icon size={16} className={`flex-shrink-0 ${active ? "text-[#0E7C7B]" : ""}`} />
-                    {sidebarOpen && <span>{item.label}</span>}
+                    <item.icon size={16} className={`flex-shrink-0 ${active ? "text-[#C41E3A]" : ""}`} />
                   </button>
                 );
-              })}
-            </div>
-          ))}
+              });
+            }
+            return (
+              <div key={group.label} className="mb-1">
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className={`w-full flex items-center justify-between px-2 py-2 mt-2 rounded-md text-[10px] font-bold text-[#718096] uppercase tracking-widest transition
+                    ${open ? "text-[#4A5568]" : ""} hover:text-[#4A5568] hover:bg-[#F7FAFC]`}
+                  title={open ? `Collapse ${group.label}` : `Expand ${group.label}`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="h-1 w-1 rounded-full bg-current opacity-40" />
+                    {group.label}
+                  </span>
+                  <ChevronDown size={13} className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+                </button>
+                <div className={`grid transition-all duration-200 ease-in-out pr-0.5 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                  <div className="overflow-hidden">
+                    {group.items.map(item => {
+                      const active = screen === item.screen;
+                      return (
+                        <button
+                          key={item.label}
+                          onClick={() => {
+                            if (item.screen === "registration") return onAddApplicant();
+                            if (item.screen === "question-form") return onAddQuestion();
+                            setScreen(item.screen);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all mb-0.5
+                            ${active ? "bg-[#FFF0F2] text-[#C41E3A] font-semibold" : "text-[#4A5568] hover:bg-[#F7FAFC] hover:text-[#1A202C]"}`}
+                        >
+                          <item.icon size={16} className={`flex-shrink-0 ${active ? "text-[#C41E3A]" : ""}`} />
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
         {/* Collapse button */}
@@ -252,7 +313,7 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
               value={searchVal}
               onChange={e => setSearchVal(e.target.value)}
               placeholder="Search applicants…"
-              className="h-8 w-full pl-8 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-[#F7FAFC] text-xs focus:outline-none focus:border-[#0E7C7B] focus:bg-white transition"
+              className="h-8 w-full pl-8 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-[#F7FAFC] text-xs focus:outline-none focus:border-[#C41E3A] focus:bg-white transition"
             />
           </div>
 

@@ -312,7 +312,7 @@ export function GenerateAIQuestionScreen({ onBack }) {
                   onClick={() => setUseDatabase(true)}
                   className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border-2 transition-all duration-150 ${
                     useDatabase
-                      ? "bg-[#0E7C7B] text-white border-transparent shadow-md"
+                      ? "bg-[#C41E3A] text-white border-transparent shadow-md"
                       : "bg-white text-[#718096] border-[rgba(0,0,0,0.12)] hover:bg-gray-50"
                   }`}
                 >
@@ -481,7 +481,7 @@ export function GenerateAIQuestionScreen({ onBack }) {
                               name={`correct-edit-${idx}`}
                               checked={editData.correctIndex === oi}
                               onChange={() => setEditData({ ...editData, correctIndex: oi })}
-                              className="accent-[#0E7C7B]"
+                              className="accent-[#C41E3A]"
                             />
                             <span className="text-[10px] font-bold text-[#718096] w-3">{String.fromCharCode(65 + oi)}</span>
                             <input
@@ -556,7 +556,7 @@ export function GenerateAIQuestionScreen({ onBack }) {
       {toast && (
         <div
           className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-medium text-white ${
-            toast.type === "success" ? "bg-[#0E7C7B]" : "bg-red-500"
+            toast.type === "success" ? "bg-[#C41E3A]" : "bg-red-500"
           }`}
         >
           {toast.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}

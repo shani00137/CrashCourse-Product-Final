@@ -26,30 +26,66 @@ namespace MdLabScience.Controllers
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
                 var query = from c in db.AppUserTbs
-                             join d in db.ApplicantsTbs on c.ApplicantId equals d.ApplicantId
-                             where (string.IsNullOrEmpty(filter.SearchTerm) || c.UserName.Contains(filter.SearchTerm)
-                                    || d.FirstName.Contains(filter.SearchTerm) || d.LastName.Contains(filter.SearchTerm))
-                             orderby c.Status descending, c.AppUserRecordId descending
-                             select new AppUserModel
-                             {
-                                 ApplicantId = c.ApplicantId,
-                                 AppUserId = c.AppUserId,
-                                 UserName = c.UserName,
-                                 CreateOn = c.CreateOn,
-                                 LoginOn = c.LoginOn,
-                                 DeviceId = c.DeviceId,
-                                 Status = c.Status,
-                                 FirstName = d.FirstName,
-                                 LastName = d.LastName,
-                                 PhotoUrl = d.PhotoUrl,
-                                 Mobile = d.Mobile,
-                                 Address = d.Address
-                             };
+                            join d in db.ApplicantsTbs on c.ApplicantId equals d.ApplicantId
+                            orderby c.Status descending, c.AppUserRecordId descending
+                            select new AppUserModel
+                            {
+                                ApplicantId = c.ApplicantId,
+                                AppUserId = c.AppUserId,
+                                UserName = c.UserName,
+                                CreateOn = c.CreateOn,
+                                LoginOn = c.LoginOn,
+                                DeviceId = c.DeviceId,
+                                Status = c.Status,
+                                FirstName = d.FirstName,
+                                LastName = d.LastName,
+                                PhotoUrl = d.PhotoUrl,
+                                Mobile = d.Mobile,
+                                Email = d.Email,
+                                Address = d.Address,
+                                RegistrationNo = d.RegistrationNo
+                            };
+
+                string searchTerm = filter.SearchTerm ?? "";
+                string[] tokens = searchTerm.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string token in tokens)
+                {
+                    string t = token;
+                    query = query.Where(x =>
+                        x.UserName.Contains(t)
+                        || (x.FirstName ?? "").Contains(t)
+                        || (x.LastName ?? "").Contains(t)
+                        || ((x.FirstName ?? "") + " " + (x.LastName ?? "")).Contains(t)
+                        || ((x.LastName ?? "") + " " + (x.FirstName ?? "")).Contains(t)
+                        || ((x.FirstName ?? "") + (x.LastName ?? "")).Contains(t)
+                        || ((x.LastName ?? "") + (x.FirstName ?? "")).Contains(t)
+                        || (x.RegistrationNo ?? "").Contains(t));
+                }
 
                 var totalRecords = await query.CountAsync();
                 var pagedData = await query.Skip((filter.PageNumber - 1) * filter.PageSize)
                                            .Take(filter.PageSize)
                                            .ToListAsync();
+
+                List<int> pagedApplicantIds = pagedData.Select(x => x.ApplicantId).Distinct().ToList();
+                var courseRows = (from ac in db.ApplicantCourseSelectionTbs
+                                  join c in db.CourseTbs on ac.CourseId equals c.CourseId
+                                  where pagedApplicantIds.Contains(ac.ApplicantId)
+                                  select new { ac.ApplicantId, c.CourseName }).ToList();
+                var courseMap = courseRows
+                    .GroupBy(x => x.ApplicantId)
+                    .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(x => x.CourseName)));
+
+                foreach (var row in pagedData)
+                {
+                    if (courseMap.TryGetValue(row.ApplicantId, out string courses))
+                    {
+                        row.Course = courses;
+                    }
+                    row.RegistrationNo = row.RegistrationNo ?? "";
+                    row.Mobile = row.Mobile ?? "";
+                    row.Email = row.Email ?? "";
+                }
 
                 return Ok(new PagedResponse<List<AppUserModel>>(pagedData, filter.PageNumber, filter.PageSize, totalRecords));
             }
@@ -179,6 +215,55 @@ namespace MdLabScience.Controllers
                     expiryDate = applicant != null ? applicant.ExpiryDate : (DateTime?)null,
                     isActive = applicant != null ? applicant.IsActive : (bool?)null
                 });
+            }
+        }
+
+        [HttpPost]
+        [Route("api/AppUser/ChangePlan")]
+        public IActionResult ChangePlan([FromBody] ChangePlanModel value)
+        {
+            try
+            {
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var appUser = db.AppUserTbs.Where(x => x.AppUserId == value.AppUserId).FirstOrDefault();
+                    if (appUser == null || appUser.ApplicantId <= 0)
+                    {
+                        return Ok(new { succeeded = false, message = "User not found", expiryDate = (DateTime?)null });
+                    }
+
+                    var applicant = db.ApplicantsTbs.Where(x => x.ApplicantId == appUser.ApplicantId).FirstOrDefault();
+                    if (applicant == null)
+                    {
+                        return Ok(new { succeeded = false, message = "Applicant not found", expiryDate = (DateTime?)null });
+                    }
+
+                    DateTime toDate = value.ToDate == default
+                        ? (applicant.ExpiryDate ?? DateTime.Now.AddMonths(12))
+                        : value.ToDate;
+
+                    if (value.FromDate.HasValue && value.FromDate.Value != default)
+                    {
+                        applicant.RegistrationDate = value.FromDate.Value;
+                    }
+
+                    applicant.ExpiryDate = toDate;
+                    applicant.IsActive = toDate > DateTime.Now;
+                    db.SaveChanges();
+
+                    return Ok(new
+                    {
+                        succeeded = true,
+                        message = "Plan updated",
+                        registrationDate = applicant.RegistrationDate,
+                        expiryDate = applicant.ExpiryDate,
+                        isActive = applicant.IsActive
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { succeeded = false, message = ex.ToString(), expiryDate = (DateTime?)null });
             }
         }
 

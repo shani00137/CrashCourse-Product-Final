@@ -19,6 +19,7 @@ export interface User {
   courseId?: number;
   courseName?: string;
   isTrial?: boolean;
+  planExpiry?: string;
   username?: string;
   email?: string;
   phone?: string;
@@ -44,6 +45,7 @@ interface AppContextValue {
   userLoaded: boolean;
   login: (user: User, token?: string) => void;
   logout: () => void;
+  updateUser: (partial: Partial<User>) => void;
   testResults: TestResult[];
   addTestResult: (result: TestResult) => void;
 }
@@ -54,6 +56,7 @@ const AppContext = createContext<AppContextValue>({
   userLoaded: false,
   login: () => {},
   logout: () => {},
+  updateUser: () => {},
   testResults: [],
   addTestResult: () => {},
 });
@@ -145,6 +148,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const updateUser = useCallback(
+    (partial: Partial<User>) => {
+      setUser((prev) => {
+        if (!prev) return prev;
+        const next = { ...prev, ...partial };
+        persistSession(next, sessionToken);
+        return next;
+      });
+    },
+    [persistSession, sessionToken]
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -153,6 +168,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         userLoaded,
         login,
         logout,
+        updateUser,
         testResults,
         addTestResult,
       }}

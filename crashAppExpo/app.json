@@ -30,7 +30,7 @@
       "expo-font",
       "expo-status-bar",
       ["expo-splash-screen", {
-        "backgroundColor": "#C41E3A",
+        "backgroundColor": "#FFFFFF",
         "image": "./assets/splash-icon.png",
         "imageWidth": 200
       }]

@@ -126,7 +126,7 @@ function RegistrationScreen({ applicant, onDone }) {
       setSaving(false);
     }
   };
-  const fieldCls = "h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition";
+  const fieldCls = "h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition";
   const labelCls = "text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide";
   return <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
@@ -184,7 +184,7 @@ function RegistrationScreen({ applicant, onDone }) {
             </div>
             <div className="flex flex-col gap-1">
               <label className={labelCls}>Applicant Photo</label>
-              <label className="h-10 border-2 border-dashed border-[rgba(0,0,0,0.15)] rounded-lg flex items-center gap-2 px-3 text-[#718096] text-sm cursor-pointer hover:border-[#0E7C7B] hover:text-[#0E7C7B] transition">
+              <label className="h-10 border-2 border-dashed border-[rgba(0,0,0,0.15)] rounded-lg flex items-center gap-2 px-3 text-[#718096] text-sm cursor-pointer hover:border-[#C41E3A] hover:text-[#C41E3A] transition">
                 <Upload size={14} /><span>{photo ? "Photo selected" : "Click to upload photo"}</span>
                 <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
               </label>

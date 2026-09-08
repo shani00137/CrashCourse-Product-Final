@@ -33,7 +33,7 @@ export function SettingsScreen() {
         ].map(s => (
           <div key={s.label} className="flex items-center justify-between py-3 border-b border-[rgba(0,0,0,0.05)]">
             <span className="text-sm text-[#1A202C]">{s.label}</span>
-            <div className={`w-9 h-5 rounded-full relative cursor-pointer transition-all ${s.enabled ? "bg-[#0E7C7B]" : "bg-gray-200"}`}>
+            <div className={`w-9 h-5 rounded-full relative cursor-pointer transition-all ${s.enabled ? "bg-[#C41E3A]" : "bg-gray-200"}`}>
               <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${s.enabled ? "left-4" : "left-0.5"}`} />
             </div>
           </div>

@@ -323,6 +323,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [Route("api/Course/GetCountryName")]
         public IActionResult GetCountryName()
         {

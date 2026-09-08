@@ -10,7 +10,7 @@ import { applicants, monthlyData } from "../../../data/mockData";
 
 export function DashboardScreen({ setScreen }) {
   const stats = [
-    { label: "Total Students", value: "4,820", trend: "+12.4%", up: true, icon: Users, color: "text-teal-600", bg: "bg-teal-50" },
+    { label: "Total Students", value: "4,820", trend: "+12.4%", up: true, icon: Users, color: "text-red-600", bg: "bg-red-50" },
     { label: "Active Courses", value: "38", trend: "+3 this month", up: true, icon: BookOpen, color: "text-blue-600", bg: "bg-blue-50" },
     { label: "Total Paid", value: "AED 1.24M", trend: "+8.7%", up: true, icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-50" },
     { label: "Pending Review", value: "142", trend: "−18 this week", up: false, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
@@ -66,7 +66,7 @@ export function DashboardScreen({ setScreen }) {
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#718096" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "#718096" }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #EDF2F7" }} />
-              <Bar dataKey="registrations" fill="#0E7C7B" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="registrations" fill="#C41E3A" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -95,7 +95,7 @@ export function DashboardScreen({ setScreen }) {
       <Card>
         <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(0,0,0,0.06)]">
           <h3 className="text-sm font-semibold text-[#1A202C]">Recent Applicants</h3>
-          <button onClick={() => setScreen("applicants")} className="text-xs text-[#0E7C7B] font-medium hover:underline flex items-center gap-1">
+          <button onClick={() => setScreen("applicants")} className="text-xs text-[#C41E3A] font-medium hover:underline flex items-center gap-1">
             View all <ArrowRight size={12} />
           </button>
         </div>
@@ -122,7 +122,7 @@ export function DashboardScreen({ setScreen }) {
                   <td className="px-5 py-3 text-[#718096]">{a.country}</td>
                   <td className="px-5 py-3"><StatusBadge status={a.status} /></td>
                   <td className="px-5 py-3">
-                    <button onClick={() => setScreen("applicant-detail")} className="text-[#0E7C7B] hover:text-[#0a6665] transition">
+                    <button onClick={() => setScreen("applicant-detail")} className="text-[#C41E3A] hover:text-[#A0192F] transition">
                       <Eye size={15} />
                     </button>
                   </td>
@@ -136,17 +136,17 @@ export function DashboardScreen({ setScreen }) {
       {/* Quick actions */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Add Applicant", desc: "Register a new applicant", icon: Plus, screen: "registration", color: "bg-teal-500" },
+          { label: "Add Applicant", desc: "Register a new applicant", icon: Plus, screen: "registration", color: "bg-red-500" },
           { label: "Create Exam", desc: "Generate new MCQ test", icon: ClipboardList, screen: "create-test", color: "bg-blue-500" },
           { label: "Upload Docs", desc: "Verify applicant documents", icon: Upload, screen: "applicant-detail", color: "bg-amber-500" },
         ].map(q => (
           <button key={q.label} onClick={() => setScreen(q.screen)}
-            className="bg-white border border-[rgba(0,0,0,0.06)] rounded-xl p-4 flex items-center gap-3 text-left hover:border-[#0E7C7B] hover:shadow-md transition-all group">
+            className="bg-white border border-[rgba(0,0,0,0.06)] rounded-xl p-4 flex items-center gap-3 text-left hover:border-[#C41E3A] hover:shadow-md transition-all group">
             <div className={`w-9 h-9 rounded-xl ${q.color} flex items-center justify-center flex-shrink-0`}>
               <q.icon size={16} className="text-white" />
             </div>
             <div>
-              <p className="text-sm font-medium text-[#1A202C] group-hover:text-[#0E7C7B] transition">{q.label}</p>
+              <p className="text-sm font-medium text-[#1A202C] group-hover:text-[#C41E3A] transition">{q.label}</p>
               <p className="text-xs text-[#718096]">{q.desc}</p>
             </div>
           </button>

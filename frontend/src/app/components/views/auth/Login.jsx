@@ -30,7 +30,7 @@ export function LoginScreen({ onLogin }) {
   return (
     <div className="min-h-screen flex font-['Inter',sans-serif]">
       {/* Left brand panel */}
-      <div className="hidden lg:flex w-[45%] bg-gradient-to-br from-[#0E7C7B] via-[#0a6665] to-[#065655] flex-col justify-between p-12 relative overflow-hidden">
+      <div className="hidden lg:flex w-[45%] bg-gradient-to-br from-[#C41E3A] via-[#A0192F] to-[#8B0000] flex-col justify-between p-12 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 right-10 w-64 h-64 rounded-full border border-white/30" />
           <div className="absolute top-40 right-20 w-48 h-48 rounded-full border border-white/20" />
@@ -46,7 +46,7 @@ export function LoginScreen({ onLogin }) {
           <h1 className="text-white text-4xl font-bold leading-tight mb-4">
             DHA & DHCC<br />License Management
           </h1>
-          <p className="text-teal-100 text-base leading-relaxed max-w-sm">
+          <p className="text-red-100 text-base leading-relaxed max-w-sm">
             Streamlining healthcare education licensing, MCQ examinations, and professional credential verification across the UAE.
           </p>
         </div>
@@ -58,7 +58,7 @@ export function LoginScreen({ onLogin }) {
           ].map(s => (
             <div key={s.label} className="bg-white/10 rounded-xl p-4">
               <div className="text-white text-2xl font-bold">{s.value}</div>
-              <div className="text-teal-200 text-xs mt-1">{s.label}</div>
+              <div className="text-red-200 text-xs mt-1">{s.label}</div>
             </div>
           ))}
         </div>
@@ -68,7 +68,7 @@ export function LoginScreen({ onLogin }) {
       <div className="flex-1 bg-[#F7FAFC] flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2 mb-8">
-            <Activity size={24} className="text-[#0E7C7B]" />
+            <Activity size={24} className="text-[#C41E3A]" />
             <span className="font-bold text-lg text-[#1A202C]">HealthEdu Pro</span>
           </div>
           <h2 className="text-2xl font-semibold text-[#1A202C] mb-1">Welcome back</h2>
@@ -85,7 +85,7 @@ export function LoginScreen({ onLogin }) {
                     placeholder="admin@dhcc.ae"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
-                    className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                    className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                   />
                 </div>
               </div>
@@ -98,7 +98,7 @@ export function LoginScreen({ onLogin }) {
                     placeholder="••••••••"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+                    className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
                   />
                 </div>
               </div>
@@ -112,12 +112,12 @@ export function LoginScreen({ onLogin }) {
                 <label className="flex items-center gap-2 text-[#718096] cursor-pointer">
                   <input type="checkbox" className="rounded" />Remember me
                 </label>
-                <a href="#" className="text-[#0E7C7B] hover:underline">Forgot password?</a>
+                <a href="#" className="text-[#C41E3A] hover:underline">Forgot password?</a>
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="h-11 w-full rounded-lg bg-[#0E7C7B] text-white font-semibold text-sm hover:bg-[#0a6665] transition-all shadow-sm mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="h-11 w-full rounded-lg bg-[#C41E3A] text-white font-semibold text-sm hover:bg-[#A0192F] transition-all shadow-sm mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? "Signing in…" : "Sign In"}
               </button>

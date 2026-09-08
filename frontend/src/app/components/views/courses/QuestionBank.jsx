@@ -170,7 +170,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search question content…"
-              className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+              className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
             />
             {searching && <span className="absolute right-8 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">Searching…</span>}
             {search && !searching && (
@@ -221,7 +221,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-[#718096] bg-[#EDF2F7] px-2 py-0.5 rounded-md">Q{start + qi + 1}</span>
-                  <span className="text-xs text-[#0E7C7B] font-medium">{q.courseName}</span>
+                  <span className="text-xs text-[#C41E3A] font-medium">{q.courseName}</span>
                   {q.dateTime && <span className="text-xs text-[#718096]">· {new Date(q.dateTime).toLocaleDateString()}</span>}
                 </div>
                 <div className="flex gap-1">
@@ -272,7 +272,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
       )}
 
       {toast && (
-        <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-[#0E7C7B]" : "bg-red-500"}`}>
+        <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-[#C41E3A]" : "bg-red-500"}`}>
           {toast.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
           {toast.message}
           <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100"><X size={14} /></button>

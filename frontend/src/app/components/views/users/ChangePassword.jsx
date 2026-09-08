@@ -16,14 +16,14 @@ export function ChangePasswordScreen() {
             <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Current Password</label>
             <div className="relative">
               <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="password" className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B]" />
+              <input type="password" className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A]" />
             </div>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">New Password</label>
             <div className="relative">
               <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B]" placeholder="Min. 8 characters" />
+              <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A]" placeholder="Min. 8 characters" />
             </div>
             {pwd.length > 0 && (
               <div className="mt-1.5">
@@ -40,7 +40,7 @@ export function ChangePasswordScreen() {
             <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Confirm Password</label>
             <div className="relative">
               <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="password" className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B]" />
+              <input type="password" className="h-10 w-full pl-9 pr-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A]" />
             </div>
           </div>
           <Btn variant="primary" className="w-full justify-center mt-2">Update Password</Btn>

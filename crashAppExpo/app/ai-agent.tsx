@@ -16,6 +16,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, gradients, radii, shadows } from "@/constants/theme";
 import { RichText } from "@/components/RichText";
 import { useApp } from "@/context/AppContext";
+import { resolveDomain, isRelevant, outOfScopeMessage, inScopeDefault, type AiDomain } from "@/utils/aiTutor";
 
 interface Message {
   id: string;
@@ -23,15 +24,6 @@ interface Message {
   text: string;
   timestamp: Date;
 }
-
-const suggestedQuestions = [
-  "What is the mechanism of beta-blockers?",
-  "Explain the cardiac cycle",
-  "Symptoms of appendicitis?",
-  "How does insulin regulate glucose?",
-  "Layers of the heart wall",
-  "Type 1 vs Type 2 diabetes",
-];
 
 const responses: Record<string, string> = {
   beta: "**Beta-blockers — Mechanism of Action**\n\nCompetitively antagonise catecholamines at β-adrenergic receptors.\n\n**β1 blockade (cardiac):**\n• ↓ Heart rate (chronotropy)\n• ↓ Contractility (inotropy)\n• ↓ AV conduction\n• ↓ Renin release\n\n**β2 blockade (non-selective only):**\n• Bronchoconstriction ⚠️\n• Peripheral vasoconstriction\n\n**Examples:**\n• Selective β1: Metoprolol, Atenolol, Bisoprolol\n• Non-selective: Propranolol, Carvedilol\n\n**Uses:** HTN, angina, post-MI, heart failure, AF rate control, thyroid storm",
@@ -46,18 +38,32 @@ const responses: Record<string, string> = {
 
   diabetes: "**Type 1 vs Type 2 Diabetes Mellitus**\n\n| Feature | Type 1 | Type 2 |\n|---|---|---|\n| Pathology | Autoimmune β-cell destruction | Insulin resistance + relative deficiency |\n| Onset | Childhood / young adult | Adult (>40, ↓ age with obesity) |\n| Build | Usually lean | Usually obese |\n| Insulin | Absent | Reduced / ineffective |\n| C-peptide | Low/absent | Present |\n| Autoantibodies | Yes (GAD, ICA, IAA) | No |\n| Ketoacidosis | Common (DKA) | Rare |\n| HLA | DR3, DR4 | No HLA link |\n| Treatment | Insulin always | Lifestyle → Metformin → others → Insulin |\n\n**Diagnosis:** HbA1c ≥48 mmol/mol (6.5%) or fasting glucose ≥7.0 mmol/L",
 
-  default: "That's a great medical question! I can provide detailed, exam-ready answers on:\n\n• **Pharmacology** — drug mechanisms, side effects, interactions\n• **Anatomy** — systems, landmarks, clinical correlations\n• **Physiology** — mechanisms, homeostasis, pathophysiology\n• **Pathology** — disease mechanisms, presentations\n• **Internal Medicine** — diagnosis, management, emergencies\n• **Biochemistry** — metabolic pathways, enzymes\n\nTry asking something specific like:\n— \"What is the mechanism of warfarin?\"\n— \"Explain the renin-angiotensin-aldosterone system\"\n— \"What causes Cushing syndrome?\"\n\nI'll give you a structured, concise explanation optimised for exams! 🩺",
+  default: "That's a great question! I'll keep answers focused on your course. Ask me about a specific topic in your curriculum and I'll break it down for you. 🩺",
 };
 
-function getAIResponse(input: string): string {
+const topicMap: [string, string][] = [
+  ["cardiac cycle", "cardiac"],
+  ["heart cycle", "cardiac"],
+  ["appendicit", "appendicitis"],
+  ["appendix", "appendicitis"],
+  ["insulin", "insulin"],
+  ["glucose", "insulin"],
+  ["diabetes", "diabetes"],
+  ["type 1", "diabetes"],
+  ["type 2", "diabetes"],
+  ["beta", "beta"],
+  ["blocker", "beta"],
+  ["heart", "heart"],
+];
+
+function getAIResponse(input: string, domain: AiDomain, courseName: string, topicMap: [string, string][]): string {
+  if (!isRelevant(input, domain)) {
+    return outOfScopeMessage(courseName, domain);
+  }
   const q = input.toLowerCase();
-  if (q.includes("beta") || q.includes("blocker")) return responses.beta;
-  if (q.includes("cardiac cycle") || q.includes("heart cycle")) return responses.cardiac;
-  if (q.includes("appendicit") || q.includes("appendix")) return responses.appendicitis;
-  if (q.includes("insulin") || q.includes("glucose")) return responses.insulin;
-  if (q.includes("layer") && (q.includes("heart") || q.includes("wall"))) return responses.heart;
-  if (q.includes("diabetes") || q.includes("type 1") || q.includes("type 2")) return responses.diabetes;
-  return responses.default + `\n\nYou asked: **"${input}"**`;
+  const hit = topicMap.find(([match]) => q.includes(match.toLowerCase()));
+  if (hit && responses[hit[1]]) return responses[hit[1]];
+  return inScopeDefault(domain);
 }
 
 const TypingDots = () => {
@@ -98,16 +104,20 @@ const TypingDots = () => {
   );
 };
 
-const welcomeMessage: Message = {
-  id: "0",
-  role: "assistant",
-  text: "Hello! I'm your **AI Medical Tutor** for Crash Course. 🩺\n\nI can help you with:\n• Anatomy & Physiology\n• Pharmacology & drug mechanisms\n• Pathology & clinical presentations\n• Biochemistry & metabolism\n• Exam preparation\n\nWhat would you like to learn today?",
-  timestamp: new Date(),
-};
+function buildWelcomeMessage(domain: AiDomain, courseName: string): Message {
+  return {
+    id: "0",
+    role: "assistant",
+    text: `Hello! I'm your **course tutor** for ${courseName}. 🩺\n\nI only answer **read-only questions** about your selected course. Ask me about topics such as:\n\n• ${domain.suggestions[0] ?? ""}\n• ${domain.suggestions[1] ?? ""}\n• ${domain.suggestions[2] ?? ""}\n\nWhat would you like to learn today?`,
+    timestamp: new Date(),
+  };
+}
 
 export default function AIAgentScreen() {
   const { user } = useApp();
-  const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
+  const domain = resolveDomain(user?.courseName);
+  const courseName = user?.courseName || "your course";
+  const [messages, setMessages] = useState<Message[]>(() => [buildWelcomeMessage(domain, courseName)]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -135,7 +145,7 @@ export default function AIAgentScreen() {
     const aiMsg: Message = {
       id: (Date.now() + 1).toString(),
       role: "assistant",
-      text: getAIResponse(query),
+      text: getAIResponse(query, domain, courseName, topicMap),
       timestamp: new Date(),
     };
     setMessages((m) => [...m, aiMsg]);
@@ -225,7 +235,7 @@ export default function AIAgentScreen() {
           </View>
           <TouchableOpacity
             style={styles.resetButton}
-            onPress={() => setMessages([welcomeMessage])}
+            onPress={() => setMessages([buildWelcomeMessage(domain, courseName)])}
             activeOpacity={0.8}
           >
             <Ionicons name="refresh" size={15} color="rgba(255,255,255,0.5)" />
@@ -246,10 +256,10 @@ export default function AIAgentScreen() {
           <View style={styles.suggestedSection}>
             <View style={styles.suggestedHeader}>
               <Ionicons name="book-outline" size={12} color={colors.mutedForeground} />
-              <Text style={styles.suggestedHeaderText}>Quick questions:</Text>
+              <Text style={styles.suggestedHeaderText}>Questions for {courseName}:</Text>
             </View>
             <View style={styles.suggestedList}>
-              {suggestedQuestions.map((q) => (
+              {domain.suggestions.map((q) => (
                 <TouchableOpacity
                   key={q}
                   style={styles.suggestedChip}
@@ -328,7 +338,7 @@ export default function AIAgentScreen() {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Ask a medical question..."
+            placeholder={`Ask about ${courseName}...`}
             placeholderTextColor={colors.mutedForeground}
             value={input}
             onChangeText={setInput}

@@ -95,7 +95,7 @@ export function ApplicantDetailScreen({ applicant, onBack, onEdit, onToggleActiv
               { icon: Clock, value: `Expires: ${fmt(applicant?.expiryDate)}` },
             ].map(({ icon: Icon, value }) => (
               <div key={value} className="flex items-center gap-2.5 text-[#718096]">
-                <Icon size={13} className="text-[#0E7C7B] flex-shrink-0" />
+                <Icon size={13} className="text-[#C41E3A] flex-shrink-0" />
                 <span className="text-xs">{value}</span>
               </div>
             ))}
@@ -114,7 +114,7 @@ export function ApplicantDetailScreen({ applicant, onBack, onEdit, onToggleActiv
             <div className="flex border-b border-[rgba(0,0,0,0.06)]">
               {["documents", "courses", "ledger", "invoices"].map(tab => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
-                  className={`px-5 py-3 text-sm font-medium capitalize transition border-b-2 -mb-px ${activeTab === tab ? "border-[#0E7C7B] text-[#0E7C7B]" : "border-transparent text-[#718096] hover:text-[#1A202C]"}`}>
+                  className={`px-5 py-3 text-sm font-medium capitalize transition border-b-2 -mb-px ${activeTab === tab ? "border-[#C41E3A] text-[#C41E3A]" : "border-transparent text-[#718096] hover:text-[#1A202C]"}`}>
                   {tab === "courses" ? "Courses & Exams" : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
@@ -147,7 +147,7 @@ export function ApplicantDetailScreen({ applicant, onBack, onEdit, onToggleActiv
                     { course: "MDS-101 Medical Dental Science", enrolled: "2024-10-01", exam: "2024-10-15", score: "87.5%", status: "Passed" },
                     { course: "HCM-201 Healthcare Management", enrolled: "2024-10-01", exam: "Pending", score: "—", status: "Pending" },
                   ].map(c => (
-                    <div key={c.course} className="p-4 rounded-xl border border-[rgba(0,0,0,0.08)] hover:border-[#0E7C7B]/30 transition">
+                    <div key={c.course} className="p-4 rounded-xl border border-[rgba(0,0,0,0.08)] hover:border-[#C41E3A]/30 transition">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-[#1A202C]">{c.course}</span>
                         <StatusBadge status={c.status} />
@@ -209,7 +209,7 @@ export function ApplicantDetailScreen({ applicant, onBack, onEdit, onToggleActiv
                     </div>
                   )}
                   {!invoicesLoading && !invoicesError && invoices.map(inv => (
-                    <div key={inv.invoiceId} className="flex items-center justify-between p-3 rounded-xl border border-[rgba(0,0,0,0.07)] hover:border-[#0E7C7B]/30 transition">
+                    <div key={inv.invoiceId} className="flex items-center justify-between p-3 rounded-xl border border-[rgba(0,0,0,0.07)] hover:border-[#C41E3A]/30 transition">
                       <div>
                         <p className="text-sm font-medium text-[#1A202C] font-mono">{inv.invoiceNo}</p>
                         <p className="text-xs text-[#718096]">{inv.service || "—"} · {fmt(inv.dateTime)}</p>

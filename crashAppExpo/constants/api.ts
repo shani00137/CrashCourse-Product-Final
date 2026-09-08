@@ -5,11 +5,13 @@ export const ENDPOINTS = {
   saveAppUser: "/AppUser/api/AppUser/SaveAppUser",
   loginAppUser: "/Login/api/login/AppUserDetails",
   getActiveCourses: "/Course/api/Course/GetActiveCoursePublic",
+  getCountryName: "/Course/api/Course/GetCountryName",
   getApplicantCourses: (appUserId: number) =>
     `/Applicant/api/Applicant/GetApplicantCourses/${appUserId}`,
   getAllExercises: "/Course/api/Course/GetAllExercise",
   getUserDetailById: (appUserId: number) =>
     `/AppUser/api/AppUser/GetDetailOfUserById/${appUserId}`,
+  changePlan: "/AppUser/api/AppUser/ChangePlan",
   takeExercise: (start: number, end: number, courseId: number) =>
     `/Questions/api/Questions/TakeExercise/${start},${end},${courseId}`,
   getExerciseQuestionCount: (courseId: number) =>

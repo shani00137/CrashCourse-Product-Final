@@ -110,7 +110,7 @@ function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAdd
     value={search}
     onChange={(e) => setSearch(e.target.value)}
     placeholder="Search name, reg. no, mobile, email…"
-    className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#0E7C7B] focus:ring-1 focus:ring-[#0E7C7B] transition"
+    className="h-9 w-full pl-9 pr-8 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
   />
             {searching && <span className="absolute right-8 top-1/2 -translate-y-1/2 text-[10px] font-medium text-[#718096] pointer-events-none">Searching…</span>}
             {search && !searching && <button
@@ -128,7 +128,7 @@ function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAdd
       setStatusFilter(s);
       setPage(1);
     }}
-    className={`px-3.5 h-9 text-sm font-medium transition ${statusFilter === s ? "bg-[#0E7C7B] text-white" : "bg-white text-[#718096] hover:bg-[#EDF2F7]"}`}
+    className={`px-3.5 h-9 text-sm font-medium transition ${statusFilter === s ? "bg-[#C41E3A] text-white" : "bg-white text-[#718096] hover:bg-[#EDF2F7]"}`}
   >
                 {s}
               </button>)}
@@ -153,7 +153,7 @@ function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAdd
     allLabel="All Courses"
     placeholder="Search course…"
   />
-          {hasActiveFilters && <button onClick={clearFilters} className="h-9 px-3 rounded-lg text-sm font-medium text-[#0E7C7B] hover:bg-teal-50 transition flex items-center gap-1.5">
+          {hasActiveFilters && <button onClick={clearFilters} className="h-9 px-3 rounded-lg text-sm font-medium text-[#C41E3A] hover:bg-red-50 transition flex items-center gap-1.5">
               <X size={13} /> Clear
             </button>}
         </div>
@@ -183,7 +183,7 @@ function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAdd
                   <td className="px-4 py-3 text-[#718096] whitespace-nowrap">{a.address ?? "\u2014"}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button title="View details" onClick={() => onSelectApplicant(a)} className="p-1.5 rounded-lg text-[#718096] hover:text-[#0E7C7B] hover:bg-teal-50 transition"><Eye size={14} /></button>
+                      <button title="View details" onClick={() => onSelectApplicant(a)} className="p-1.5 rounded-lg text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 transition"><Eye size={14} /></button>
                       <button title="Edit applicant" onClick={() => onEditApplicant(a)} className="p-1.5 rounded-lg text-[#718096] hover:text-blue-600 hover:bg-blue-50 transition"><Edit2 size={14} /></button>
                       <button title="Delete is not available" disabled className="p-1.5 rounded-lg text-[#718096] opacity-40 cursor-not-allowed"><Trash2 size={14} /></button>
                     </div>
