@@ -201,6 +201,29 @@ namespace MdLabScience.Controllers
         }
 
         [HttpGet]
+        [Route("api/Course/GetCourseMaterialPdf/{CourseMaterialId}")]
+        public IActionResult GetCourseMaterialPdf(int CourseMaterialId)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var material = db.CourseMaterialTbs
+                    .Where(x => x.CourseMaterialId == CourseMaterialId)
+                    .FirstOrDefault();
+                if (material == null || string.IsNullOrWhiteSpace(material.CourseUrl))
+                {
+                    return NotFound(new { succeeded = false, message = "Course material not found." });
+                }
+                var path = Path.Combine(_env.ContentRootPath, material.CourseUrl);
+                if (!System.IO.File.Exists(path))
+                {
+                    return NotFound(new { succeeded = false, message = "The PDF file is missing on the server." });
+                }
+                var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+                return File(stream, "application/pdf", Path.GetFileName(path));
+            }
+        }
+
+        [HttpGet]
         [Route("api/Course/DeleteCourseMaterial/{CourseMaterialId}")]
         public IActionResult DeleteCourseMaterial(int CourseMaterialId)
         {

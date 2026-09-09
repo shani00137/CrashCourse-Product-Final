@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setSessionToken as setApiToken } from "@/services/api";
+import { registerDeviceNotifications } from "@/services/notifications";
 
 const SESSION_KEY = "crash_app_session_v1";
 export const SESSION_TTL_DAYS = 7;
@@ -104,6 +105,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setUser(session.user);
           setApiToken(session.token || "");
         }
+        // Register the device for push notifications as soon as the session is
+        // restored; best-effort and guarded inside the helper.
+        void registerDeviceNotifications(session.user.appUserId);
         // Ignore corrupt storage; fall through to unauthenticated state.
       } catch {
         // Ignore corrupt storage; fall through to unauthenticated state.
@@ -133,6 +137,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSessionToken(token);
       setApiToken(token);
       persistSession(nextUser, token);
+      void registerDeviceNotifications(nextUser.appUserId);
     },
     [persistSession]
   );

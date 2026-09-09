@@ -282,7 +282,7 @@ function ProfitLossScreen() {
                     <td className="py-3 px-3 text-right text-[#718096]">{row.count}</td>
                     <td className="py-3 px-3 text-right font-mono text-xs text-[#1A202C]">{fmtMoney(row.revenue)}</td>
                     <td className="py-3 px-3 text-right font-mono text-xs text-orange-600">{fmtMoney(row.purchase)}</td>
-                    <td className={`py-3 px-3 text-right font-mono text-xs font-medium ${row.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmtMoney(row.profit)}</td>
+                    <td className={`py-3 px-3 text-right font-mono text-sm font-semibold ${row.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmtMoney(row.profit)}</td>
                     <td className="py-3 px-3 text-right font-mono text-xs text-blue-600">{fmtMoney(row.paid)}</td>
                     <td className="py-3 px-3 text-right font-mono text-xs text-red-600">{fmtMoney(row.outstanding)}</td>
                   </tr>
@@ -403,7 +403,7 @@ function ProfitLossScreen() {
                   <td className="px-4 py-3 text-[#718096] whitespace-nowrap">{inv.dateTime ? new Date(inv.dateTime).toLocaleDateString() : "—"}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-[#1A202C]">{fmtMoney(inv.totalSale)}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-orange-600">{fmtMoney(inv.totalPurchase)}</td>
-                  <td className={`px-4 py-3 text-right font-mono text-xs font-medium ${inv.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmtMoney(inv.profit)}</td>
+                  <td className={`px-4 py-3 text-right font-mono text-sm font-semibold ${inv.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmtMoney(inv.profit)}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-blue-600">{fmtMoney(inv.paidAmount)}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-red-600">{fmtMoney(inv.balance)}</td>
                   <td className="px-4 py-3">

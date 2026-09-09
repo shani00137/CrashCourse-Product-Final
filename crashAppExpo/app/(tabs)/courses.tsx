@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
+  Pressable,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -19,10 +21,13 @@ import {
   getAllExercises,
   getAllReadingTime,
   getUserDetailById,
+  getCourseMaterials,
+  coursePdfUrl,
   ApplicantCourse,
   ExerciseInfo,
   ReadingTimeRow,
   UserDetailInfo,
+  CourseMaterialInfo,
 } from "@/services/api";
 import {
   readingPct,
@@ -40,6 +45,10 @@ export default function CoursesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [pdfSheet, setPdfSheet] = useState(false);
+  const [pdfBooks, setPdfBooks] = useState<CourseMaterialInfo[]>([]);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState("");
 
   const loadCourses = useCallback(async () => {
     try {
@@ -108,6 +117,43 @@ export default function CoursesScreen() {
         courseName: userDetail?.courseName || course?.courseName || "Medical Exercise",
         start: String(exercise.startFrom ?? 0),
         end: String(exercise.endFrom ?? 0),
+      },
+    });
+  };
+
+  const openPdfPicker = async () => {
+    const cid = courseId ?? 0;
+    if (!cid) {
+      Alert.alert("No course", "Register a course first to see its PDF books.");
+      return;
+    }
+    setPdfSheet(true);
+    setPdfLoading(true);
+    setPdfError("");
+    try {
+      const items = await getCourseMaterials(cid);
+      const files = items.filter(
+        (m) => !!coursePdfUrl(m.courseUrl) && /\.pdf$/i.test(m.courseUrl ?? "")
+      );
+      setPdfBooks(files);
+      if (files.length === 0) setPdfError("No PDF books found for this course.");
+    } catch (e) {
+      setPdfError(e instanceof Error ? e.message : "Couldn't load the PDF list.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const openPdf = (item: CourseMaterialInfo) => {
+    const url = coursePdfUrl(item.courseUrl);
+    if (!url) return;
+    setPdfSheet(false);
+    router.push({
+      pathname: "/pdf-preview",
+      params: {
+        url,
+        fileName: item.fileName || item.courseUrl || "Course PDF",
+        courseName: userDetail?.courseName || course?.courseName || "",
       },
     });
   };
@@ -185,6 +231,14 @@ export default function CoursesScreen() {
                         : "No course registered"}
                   </Text>
                 </View>
+                <TouchableOpacity
+                  style={styles.pdfButton}
+                  onPress={openPdfPicker}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+                  <Text style={styles.pdfButtonText}>PDF</Text>
+                </TouchableOpacity>
               </View>
 
               {/* Exercises heading */}
@@ -300,6 +354,66 @@ export default function CoursesScreen() {
           <View style={styles.bottomSpacer} />
         </ScrollView>
       )}
+
+      {/* PDF books sheet */}
+      <Modal
+        visible={pdfSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPdfSheet(false)}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={() => setPdfSheet(false)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <View>
+                <Text style={styles.sheetTitle}>PDF Books</Text>
+                <Text style={styles.sheetSubtitle}>
+                  {userDetail?.courseName || course?.courseName || "Medical course"}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.sheetClose}
+                onPress={() => setPdfSheet(false)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="close" size={18} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+
+            {pdfLoading ? (
+              <View style={styles.sheetCenter}>
+                <ActivityIndicator color={colors.primary} />
+                <Text style={styles.sheetCenterText}>Loading PDFs…</Text>
+              </View>
+            ) : pdfError ? (
+              <View style={styles.sheetCenter}>
+                <Ionicons name="cloud-offline-outline" size={32} color={colors.mutedForeground} />
+                <Text style={styles.sheetCenterText}>{pdfError}</Text>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+                {pdfBooks.map((item) => (
+                  <TouchableOpacity
+                    key={item.courseMaterialId}
+                    style={styles.pdfRow}
+                    onPress={() => openPdf(item)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.pdfRowIcon}>
+                      <Ionicons name="document-text" size={18} color={colors.primary} />
+                    </View>
+                    <Text style={styles.pdfRowName} numberOfLines={2}>
+                      {item.fileName || "PDF file"}
+                    </Text>
+                    <Ionicons name="open-outline" size={16} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -400,6 +514,105 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginTop: 4,
     fontWeight: "600",
+  },
+  pdfButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: "#FFF0F2",
+    borderWidth: 1,
+    borderColor: "rgba(196,30,58,0.18)",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  pdfButtonText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: colors.primary,
+    letterSpacing: 0.4,
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 28,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E2E8F0",
+    marginBottom: 12,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: colors.foreground,
+  },
+  sheetSubtitle: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    marginTop: 2,
+  },
+  sheetClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: "#F7FAFC",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetCenter: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 32,
+    gap: 10,
+  },
+  sheetCenterText: {
+    fontSize: 13,
+    color: colors.mutedForeground,
+    textAlign: "center",
+    paddingHorizontal: 16,
+  },
+  pdfRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#F7FAFC",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  pdfRowIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#FFF0F2",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pdfRowName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.foreground,
   },
   sectionRow: {
     flexDirection: "row",

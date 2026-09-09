@@ -273,7 +273,14 @@ export function InvoiceScreen({ applicant }) {
     setRegForm({ fullName: "", mobile: "", email: "", countryId: 0, courseId: 0 });
     setRegError(null);
     setShowRegModal(true);
-    getCountries().then((res) => setRegCountries(Array.isArray(res) ? res : [])).catch(() => setRegCountries([]));
+    getCountries().then((res) => {
+      const list = Array.isArray(res) ? res : [];
+      setRegCountries(list);
+      const uae = list.find((c) => /uae|dubai|united arab/i.test((c.coutryName ?? "").trim()));
+      if (uae) {
+        setRegForm((f) => ({ ...f, countryId: uae.countryId }));
+      }
+    }).catch(() => setRegCountries([]));
     getActiveCourses().then((res) => setRegCourses(Array.isArray(res) ? res : [])).catch(() => setRegCourses([]));
   };
 
@@ -330,7 +337,6 @@ export function InvoiceScreen({ applicant }) {
     if (!regForm.mobile.trim()) { setRegError("Please enter a mobile number."); return; }
     if (!regForm.email.trim()) { setRegError("Please enter an email address."); return; }
     if (!regForm.countryId) { setRegError("Please select a country."); return; }
-    if (!regForm.courseId) { setRegError("Please select a course."); return; }
     const regDate = new Date();
     const expiry = new Date(regDate);
     expiry.setFullYear(expiry.getFullYear() + 1);
@@ -359,12 +365,15 @@ export function InvoiceScreen({ applicant }) {
       const data = await getApplicants({ pageNumber: 1, pageSize: 500, status: "All" });
       const list = data?.data ?? (Array.isArray(data) ? data : []);
       setApplicants(list);
-      const created = list.find((a) =>
-        `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim().toLowerCase() === regForm.fullName.trim().toLowerCase() &&
-        (a.mobile ?? "") === regForm.mobile.trim()
-      ) || list[list.length - 1];
-      if (created) {
-        setModalApplicant({ applicantId: created.applicantId, label: `${created.firstName ?? ""} ${created.lastName ?? ""}`.trim() });
+      const createdId = Number(res?.applicantId);
+      if (createdId > 0) {
+        const inList = list.find((a) => a.applicantId === createdId);
+        setModalApplicant({
+          applicantId: createdId,
+          label: inList
+            ? `${inList.firstName ?? ""} ${inList.lastName ?? ""}`.trim()
+            : regForm.fullName.trim()
+        });
         setFormErrors((errs) => { const n = { ...errs }; delete n.applicant; return n; });
       }
       setShowRegModal(false);
@@ -1180,7 +1189,7 @@ export function InvoiceScreen({ applicant }) {
                       <span className="ml-2 text-[10px] text-gray-400 font-medium">+{(inv.serviceList?.length ?? 0)} items</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-xs font-medium text-[#1A202C]">{fmtMoney(inv.amount)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-[#1A202C]">{fmtMoney(inv.amount)}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-emerald-600">{fmtMoney(inv.paidAmount)}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-red-600">{fmtMoney(inv.balance)}</td>
                   <td className="px-4 py-3 text-[#718096]">{inv.currency}</td>
@@ -1505,15 +1514,14 @@ export function InvoiceScreen({ applicant }) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Country</label>
-                <select
+                <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Country <span className="text-red-500">*</span></label>
+                <SearchableSelect
+                  options={regCountries.map((c) => ({ id: c.countryId, label: c.coutryName }))}
                   value={regForm.countryId}
-                  onChange={(e) => setRegForm((f) => ({ ...f, countryId: Number(e.target.value) }))}
-                  className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
-                >
-                  <option value={0}>Select Country</option>
-                  {regCountries.map((c) => <option key={c.countryId} value={c.countryId}>{c.coutryName}</option>)}
-                </select>
+                  onSelect={(id) => setRegForm((f) => ({ ...f, countryId: id ?? 0 }))}
+                  allLabel="Select Country"
+                  placeholder="Search country…"
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Course</label>

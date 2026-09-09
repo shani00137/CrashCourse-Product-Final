@@ -8,6 +8,16 @@ export interface CourseInfo {
   courseUrl?: string;
 }
 
+export interface CourseMaterialInfo {
+  courseId?: number;
+  courseMaterialId?: number;
+  materialType?: string;
+  courseUrl?: string;
+  fileName?: string;
+  courseName?: string;
+  questions?: number;
+}
+
 export interface ApplicantRequest {
   recordId: number;
   applicantId: number;
@@ -82,6 +92,20 @@ export function setSessionToken(token: string) {
   authToken = token || "";
 }
 
+/**
+ * Saves the device push (FCM) token for an AppUser so the backend can send
+ * notifications (exam ready, account blocked, chat messages).
+ */
+export async function updateAppUserToken(appUserId: number, token: string): Promise<boolean> {
+  if (!appUserId || !token) return false;
+  try {
+    await request<unknown>(ENDPOINTS.updateToken, { Token: token, appUserId });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function request<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
@@ -153,6 +177,42 @@ export async function getActiveCourses(): Promise<CourseInfo[]> {
       };
     })
     .filter((c) => c.courseId > 0);
+}
+
+/**
+ * Builds an absolute URL for a course material file. The backend stores
+ * relative paths like "Uploads/guid-file.pdf" and serves them statically at
+ * the site root (outside /api).
+ */
+export function coursePdfUrl(courseUrl?: string): string | null {
+  if (!courseUrl) return null;
+  if (/^https?:\/\//i.test(courseUrl)) return courseUrl;
+  const base = API_BASE_URL.replace(/\/api\/?$/, "");
+  return `${base}/${courseUrl.replace(/^\/+/, "")}`;
+}
+
+/**
+ * Fetches the list of course materials (PDFs, MCQs, etc.) for a course using
+ * the Course API's GetCourseMaterial endpoint.
+ */
+export async function getCourseMaterials(courseId: number): Promise<CourseMaterialInfo[]> {
+  const data = await get<unknown>(ENDPOINTS.getCourseMaterials(courseId));
+  if (!Array.isArray(data)) return [];
+  return data
+    .filter((it) => it && typeof it === "object")
+    .map((it) => {
+      const m = it as Record<string, unknown>;
+      return {
+        courseId: Number(m.courseId) || 0,
+        courseMaterialId: Number(m.courseMaterialId) || 0,
+        materialType: typeof m.materialType === "string" ? m.materialType : "",
+        courseUrl: typeof m.courseUrl === "string" ? m.courseUrl : "",
+        fileName: typeof m.fileName === "string" ? m.fileName : "",
+        courseName: typeof m.courseName === "string" ? m.courseName : "",
+        questions: typeof m.questions === "number" ? m.questions : undefined,
+      };
+    })
+    .filter((m) => m.courseMaterialId > 0);
 }
 
 export interface CountryInfo {

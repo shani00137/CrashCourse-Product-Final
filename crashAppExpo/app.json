@@ -19,7 +19,8 @@
         // "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.crashcourse.app"
+      "package": "com.crashcourse.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -33,6 +34,10 @@
         "backgroundColor": "#FFFFFF",
         "image": "./assets/splash-icon.png",
         "imageWidth": 200
+      }],
+      ["expo-notifications", {
+        "color": "#C41E3A",
+        "defaultChannel": "high_importance_channel"
       }]
     ]
   }

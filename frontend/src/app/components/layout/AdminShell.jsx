@@ -243,7 +243,7 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
               <div key={group.label} className="mb-1">
                 <button
                   onClick={() => toggleGroup(group.label)}
-                  className={`w-full flex items-center justify-between px-2 py-2 mt-2 rounded-md text-[10px] font-bold text-[#718096] uppercase tracking-widest transition
+                  className={`w-full flex items-center justify-between px-2 py-2 mt-2 rounded-md text-xs font-bold text-[#718096] uppercase tracking-widest transition
                     ${open ? "text-[#4A5568]" : ""} hover:text-[#4A5568] hover:bg-[#F7FAFC]`}
                   title={open ? `Collapse ${group.label}` : `Expand ${group.label}`}
                 >

@@ -129,7 +129,12 @@ foreach (var dir in staticDirs)
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new PhysicalFileProvider(dirPath),
-            RequestPath = "/" + dir
+            RequestPath = "/" + dir,
+            OnPrepareResponse = ctx =>
+            {
+                // Allow the in-app PDF viewer (WebView, null origin) to read files directly.
+                ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+            }
         });
     }
 }
