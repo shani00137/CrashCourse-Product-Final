@@ -3,6 +3,10 @@
  * PDF.js is loaded from a pinned CDN and renders one page at a time (fit-to-width,
  * pinch/button zoom) so each rendered page number is reported back to React Native
  * and can be persisted and restored on next open.
+ *
+ * The PDF bytes are not embedded in this document (that broke large books).
+ * Instead React Native streams base64 chunks in with `window.__ccFeed(...)` and
+ * finishes with `window.__ccEnd()`, so a readable copy only ever lives in memory.
  */
 export function buildPdfViewerHtml(url: string, initialPage: number): string {
   const safeUrl = JSON.stringify(url);
@@ -41,6 +45,11 @@ export function buildPdfViewerHtml(url: string, initialPage: number): string {
   var maxPages = 0;
   var pageNum = startPage;
   var scale = 1;
+  var feedOffset = 0;
+  var pendingData = null;
+  var feedComplete = false;
+  var started = false;
+  var engineFailed = false;
 
   function send(obj) {
     try { window.ReactNativeWebView.postMessage(JSON.stringify(obj)); } catch (e) {}
@@ -70,7 +79,7 @@ export function buildPdfViewerHtml(url: string, initialPage: number): string {
       canvas.height = Math.floor(vp.height);
       canvas.style.width = canvas.width + 'px';
       canvas.style.height = canvas.height + 'px';
-      page.render({ canvasContext: ctx, viewport: vp }).then(function () {
+      page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
         spinner.style.display = 'none';
         send({ type: 'page', page: pageNum, pages: maxPages });
       }).catch(function (e) {
@@ -93,27 +102,62 @@ export function buildPdfViewerHtml(url: string, initialPage: number): string {
     else if (cmd === 'out') zoomOut();
   };
 
-  function load() {
+  function tryLoad() {
+    if (started || !pendingData || !feedComplete) return;
     var lib = window.pdfjsLib;
-    if (!lib) { showErr('Could not load the PDF engine. Check your connection and try again.'); return; }
+    if (!lib) return;
+    started = true;
     try { lib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; } catch (e) {}
-    lib.getDocument({ url: url, disableWorker: true, isEvalSupported: false }).promise.then(function (doc) {
+    lib.getDocument({ data: pendingData, disableWorker: true, isEvalSupported: false }).promise.then(function (doc) {
       pdfDoc = doc;
       maxPages = doc.numPages;
       errEl.style.display = 'none';
       draw();
     }).catch(function (e) {
-      showErr('Could not download the PDF. ' + (e ? e.message : ''));
+      started = false;
+      showErr('Could not open the PDF. ' + (e ? e.message : ''));
     });
   }
 
+  window.__ccBegin = function (total) {
+    pendingData = new Uint8Array(total >>> 0);
+    feedOffset = 0;
+  };
+
+  window.__ccFeed = function (chunk) {
+    if (!pendingData || typeof chunk !== 'string' || !chunk) return;
+    var bin = atob(chunk);
+    for (var i = 0; i < bin.length && feedOffset < pendingData.length; i++) {
+      pendingData[feedOffset++] = bin.charCodeAt(i);
+    }
+  };
+
+  window.__ccEnd = function () {
+    feedComplete = true;
+    spinner.style.display = 'block';
+    spinner.textContent = 'Opening PDF…';
+    tryLoad();
+  };
+
+  window.__ccFail = function (m) {
+    showErr(m || 'Could not open the PDF.');
+  };
+
   var attempts = 0;
-  (function poll() {
+  var poll = setInterval(function () {
+    if (window.pdfjsLib) {
+      if (feedComplete && !started) { clearInterval(poll); tryLoad(); }
+      return;
+    }
     attempts++;
-    if (window.pdfjsLib) { load(); return; }
-    if (attempts > 100) { showErr('Could not load the PDF engine. Check your connection and try again.'); return; }
-    setTimeout(poll, 200);
-  })();
+    if (attempts > 150 && !engineFailed) {
+      engineFailed = true;
+      clearInterval(poll);
+      showErr('Could not load the PDF engine. Check your connection and try again.');
+    }
+  }, 200);
+
+  send({ type: 'ready' });
 })();
 </script>
 </body>

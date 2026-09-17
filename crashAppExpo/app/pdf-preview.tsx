@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { WebView } from "react-native-webview";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors, gradients } from "@/constants/theme";
 import { buildPdfViewerHtml, pdfPageKey } from "@/constants/pdfViewerHtml";
+import { bytesToBase64, loadSecurePdfBytes } from "@/services/securePdf";
 
 export default function PdfPreviewScreen() {
   const params = useLocalSearchParams<{
@@ -31,40 +32,122 @@ export default function PdfPreviewScreen() {
   const [zoom, setZoom] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [useNative, setUseNative] = useState(false);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [busyLabel, setBusyLabel] = useState("Opening PDF…");
+  const [attempt, setAttempt] = useState(0);
+  const initialPageRef = useRef(1);
   const webRef = useRef<WebView>(null);
+  const bytesRef = useRef<Uint8Array | null>(null);
+  const feedingRef = useRef(false);
+  const feedAbortRef = useRef(false);
 
   useEffect(() => {
     if (!uri) {
       setReady(true);
       return;
     }
+    let cancelled = false;
+    feedAbortRef.current = false;
+    feedingRef.current = false;
+    bytesRef.current = null;
+    setError("");
+    setPdfLoaded(false);
+    setReady(false);
     setLoading(true);
+    setBusyLabel("Preparing PDF…");
     (async () => {
+      let startPage = 1;
       try {
         const saved = await AsyncStorage.getItem(pdfPageKey(uri));
-        const page = saved ? parseInt(saved, 10) : 1;
-        if (!Number.isNaN(page) && page > 0) setCurrentPage(page);
+        const parsed = saved ? parseInt(saved, 10) : 1;
+        if (!Number.isNaN(parsed) && parsed > 0) startPage = parsed;
       } catch {
         // fall through and start at page 1
+      }
+      initialPageRef.current = startPage;
+      if (!cancelled) setCurrentPage(startPage);
+
+      try {
+        // Download once to the hidden app-private cache and decrypt in memory.
+        // No plaintext PDF is ever written to a user-visible location.
+        setBusyLabel("Decrypting…");
+        const bytes = await loadSecurePdfBytes(uri);
+        if (cancelled) return;
+        bytesRef.current = bytes;
+        setPdfLoaded(true);
+      } catch (e) {
+        if (!cancelled) {
+          setError(
+            e instanceof Error && e.message
+              ? e.message
+              : "Couldn't open the PDF. Check your connection and try again."
+          );
+          setLoading(false);
+        }
       } finally {
-        setReady(true);
+        if (!cancelled) setReady(true);
       }
     })();
-  }, [uri]);
+    return () => {
+      cancelled = true;
+      feedAbortRef.current = true;
+    };
+  }, [uri, attempt]);
 
   useEffect(() => {
     if (!loading) return;
-    const t = setTimeout(() => setLoading(false), 8000);
+    const t = setTimeout(() => setLoading(false), 60000);
     return () => clearTimeout(t);
   }, [loading]);
 
-  const html = ready && uri ? buildPdfViewerHtml(uri, currentPage) : "";
+  // Built once per PDF (not on every page turn). The decrypted bytes are
+  // streamed in separately so large books never go through one giant HTML string.
+  const html = useMemo(() => {
+    if (!ready || !uri || !pdfLoaded) return "";
+    return buildPdfViewerHtml(uri, initialPageRef.current);
+  }, [ready, uri, pdfLoaded]);
+
+  // Streams the decrypted bytes into the WebView in base64 chunks. Chunks are
+  // multiples of 3 bytes so none ends with base64 padding until the last one.
+  const feedPdf = useCallback(async () => {
+    const web = webRef.current;
+    const bytes = bytesRef.current;
+    if (!web || !bytes || feedingRef.current) return;
+    feedingRef.current = true;
+    setBusyLabel("Opening PDF…");
+    const CHUNK = 3 * 128 * 1024;
+    try {
+      web.injectJavaScript(`window.__ccBegin(${bytes.length});true`);
+      for (let offset = 0; offset < bytes.length; offset += CHUNK) {
+        if (feedAbortRef.current) return;
+        const chunk = bytesToBase64(bytes.subarray(offset, offset + CHUNK));
+        web.injectJavaScript(`window.__ccFeed(${JSON.stringify(chunk)});true`);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      if (feedAbortRef.current) return;
+      web.injectJavaScript("window.__ccEnd();true");
+    } catch {
+      if (!feedAbortRef.current) {
+        setLoading(false);
+        setError("Couldn't open the PDF. Check your connection and try again.");
+      }
+    } finally {
+      feedingRef.current = false;
+    }
+  }, []);
+
+  const retry = () => {
+    setError("");
+    setAttempt((a) => a + 1);
+  };
 
   const handleMessage = (e: { nativeEvent: { data: string } }) => {
     try {
       const d = JSON.parse(e.nativeEvent.data);
-      if (d.type === "page") {
+      if (d.type === "ready") {
+        feedPdf();
+      } else if (d.type === "page") {
+        setLoading(false);
         const page = Number(d.page) || 1;
         setCurrentPage(page);
         if (d.pages) setTotalPages(Number(d.pages) || 0);
@@ -72,14 +155,6 @@ export default function PdfPreviewScreen() {
           AsyncStorage.setItem(pdfPageKey(uri), String(page)).catch(() => {});
         }
       } else if (d.type === "error") {
-        if (!useNative) {
-          // page-tracking viewer couldn't fetch the PDF (server may not send
-          // CORS headers yet) -> fall back to the OS native PDF renderer.
-          setUseNative(true);
-          setError("");
-          setLoading(true);
-          return;
-        }
         setLoading(false);
         setError(
           `${typeof d.message === "string" && d.message ? d.message : "Couldn't load the PDF."}`
@@ -123,11 +198,7 @@ export default function PdfPreviewScreen() {
         </View>
         <TouchableOpacity
           style={styles.refreshButton}
-          onPress={() => {
-            setError("");
-            setLoading(true);
-            webRef.current?.reload();
-          }}
+          onPress={retry}
           activeOpacity={0.8}
         >
           <Ionicons name="refresh" size={18} color={colors.white} />
@@ -141,50 +212,14 @@ export default function PdfPreviewScreen() {
             <Ionicons name="cloud-offline-outline" size={40} color={colors.mutedForeground} />
             <Text style={styles.errorTitle}>Couldn't load the PDF</Text>
             <Text style={styles.errorText}>{error}</Text>
-            <Text style={styles.errorUrl} selectable>
-              {uri}
-            </Text>
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={() => {
-                setError("");
-                setLoading(true);
-                webRef.current?.reload();
-              }}
+              onPress={retry}
               activeOpacity={0.85}
             >
               <Text style={styles.retryText}>Try again</Text>
             </TouchableOpacity>
-            {useNative && (
-              <TouchableOpacity
-                style={styles.switchButton}
-                onPress={() => {
-                  setUseNative(false);
-                  setError("");
-                  setLoading(true);
-                  webRef.current?.reload();
-                }}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.switchText}>Back to page-tracking view</Text>
-              </TouchableOpacity>
-            )}
           </View>
-        ) : useNative ? (
-          <WebView
-            ref={webRef}
-            source={{ uri }}
-            style={styles.web}
-            javaScriptEnabled
-            setBuiltInZoomControls
-            setDisplayZoomControls={false}
-            allowsInlineMediaPlayback
-            onLoadEnd={() => setLoading(false)}
-            onError={(e) => {
-              setLoading(false);
-              setError(e.nativeEvent.description || "Couldn't load the PDF.");
-            }}
-          />
         ) : ready && uri && html ? (
           <WebView
             ref={webRef}
@@ -195,7 +230,6 @@ export default function PdfPreviewScreen() {
             mixedContentMode="never"
             originWhitelist={["*"]}
             onMessage={handleMessage}
-            onLoadEnd={() => setLoading(false)}
             onError={(e) => {
               setLoading(false);
               setError(e.nativeEvent.description || "Couldn't load the PDF.");
@@ -209,14 +243,13 @@ export default function PdfPreviewScreen() {
         {loading && !error && (
           <View style={styles.loadingOverlay} pointerEvents="none">
             <ActivityIndicator color={colors.primary} size="large" />
-            <Text style={styles.loadingText}>Opening PDF…</Text>
+            <Text style={styles.loadingText}>{busyLabel}</Text>
           </View>
         )}
       </View>
 
       {/* Toolbar */}
-      {!useNative && (
-        <View style={styles.toolbar}>
+      <View style={styles.toolbar}>
         <TouchableOpacity style={styles.toolButton} onPress={() => cmd("out")} activeOpacity={0.8}>
           <Ionicons name="remove" size={20} color={colors.foreground} />
         </TouchableOpacity>
@@ -253,8 +286,7 @@ export default function PdfPreviewScreen() {
             color={canNext ? colors.foreground : "#CBD5E0"}
           />
         </TouchableOpacity>
-        </View>
-      )}
+      </View>
     </View>
   );
 }
@@ -334,12 +366,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 19,
   },
-  errorUrl: {
-    color: colors.primary,
-    fontSize: 11,
-    textAlign: "center",
-    lineHeight: 16,
-  },
   retryButton: {
     backgroundColor: colors.primary,
     paddingHorizontal: 18,
@@ -349,15 +375,6 @@ const styles = StyleSheet.create({
   retryText: {
     color: colors.white,
     fontSize: 14,
-    fontWeight: "700",
-  },
-  switchButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  switchText: {
-    color: colors.primary,
-    fontSize: 12,
     fontWeight: "700",
   },
   loadingOverlay: {

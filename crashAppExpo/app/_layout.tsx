@@ -1,6 +1,7 @@
 import { Stack, useRouter } from "expo-router";
 import { useEffect } from "react";
 import * as Notifications from "expo-notifications";
+import { usePreventScreenCapture } from "expo-screen-capture";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AppProvider } from "@/context/AppContext";
@@ -8,6 +9,11 @@ import AccountBlockWatchdog from "@/components/AccountBlockWatchdog";
 
 export default function RootLayout() {
   const router = useRouter();
+
+  // Block screenshots and screen recording for the whole app. On Android this
+  // sets FLAG_SECURE, which blocks the three-finger swipe screenshot gesture,
+  // hardware-key combos, and screen recorders, and blanks the recents preview.
+  usePreventScreenCapture();
 
   // Route taps on "Exam Test." notifications to the test screen, mirroring the
   // old Flutter app's behavior of opening the pending test.
