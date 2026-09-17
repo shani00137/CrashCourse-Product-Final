@@ -43,3 +43,7 @@ yarn-error.*
 # Signing credentials (DO NOT COMMIT)
 .keystore-credentials.env
 keystore.properties
+*.keystore
+
+# Release build artifacts
+/release/
