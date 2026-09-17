@@ -1,5 +1,5 @@
-// export const API_BASE_URL = "http://localhost:5005/api";
-export const API_BASE_URL = "https://development.crashcourseonlin.net/api";
+export const API_BASE_URL = "http://192.168.26.6:5005/api";
+// export const API_BASE_URL = "https://crashcourseonlin.net/api";
 export const ENDPOINTS = {
   saveApplicants: "/Applicant/api/Applicant/SaveApplicants",
   saveAppUser: "/AppUser/api/AppUser/SaveAppUser",
@@ -33,4 +33,9 @@ export const ENDPOINTS = {
   userTestUpdate: "/TakeTest/api/TakeTest/UserTestUpdate",
   saveTest: (testId: number) => `/TakeTest/api/TakeTest/SaveTest/${testId}`,
   updateToken: "/AppUser/api/AppUser/UpdateToken",
+  analyzeProctorFrame: "/Proctor/api/Proctor/AnalyzeFrame",
+  blockAppUser: (appUserId: number) =>
+    `/AppUser/api/AppUser/BlockUser/${appUserId}`,
+  checkAppUserStatus: (appUserId: number) =>
+    `/AppUser/api/AppUser/CheckAppUserStatus/${appUserId}`,
 };

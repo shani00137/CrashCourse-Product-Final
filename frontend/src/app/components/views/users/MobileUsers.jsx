@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Lock, Trash2, Search, X, ChevronLeft, ChevronRight, AlertCircle, Users, RefreshCw, Eye, EyeOff, Check, Wand2, Zap } from "lucide-react";
+import { Plus, Lock, Trash2, Search, X, ChevronLeft, ChevronRight, AlertCircle, Users, RefreshCw, Eye, EyeOff, Check, Wand2, Zap, Ban } from "lucide-react";
 import { Avatar, Btn, BouncingDots, Card, Input, Modal, SearchableSelect, StatusBadge } from "../../shared/ui";
-import { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan } from "../../../../services/appUserService";
+import { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan, blockAppUser } from "../../../../services/appUserService";
 import { getActiveApplicants } from "../../../../services/applicantService";
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -36,6 +36,8 @@ export function MobileUsersScreen() {
   const [formError, setFormError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [blockTarget, setBlockTarget] = useState(null);
+  const [blocking, setBlocking] = useState(false);
   const [deviceResetTarget, setDeviceResetTarget] = useState(null);
   const [deviceResetting, setDeviceResetting] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
@@ -153,6 +155,27 @@ export function MobileUsersScreen() {
       setDeleteTarget(null);
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function handleBlock() {
+    if (!blockTarget) return;
+    setBlocking(true);
+    try {
+      const res = await blockAppUser(blockTarget.appUserId);
+      const msg = res && typeof res === "object" && typeof res.message === "string"
+        ? res.message
+        : typeof res === "string"
+          ? res
+          : "User blocked successfully.";
+      setMessage(msg);
+      setBlockTarget(null);
+      load();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to block the user.");
+      setBlockTarget(null);
+    } finally {
+      setBlocking(false);
     }
   }
 
@@ -407,6 +430,12 @@ export function MobileUsersScreen() {
                         className="p-1.5 text-[#718096] hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                         title="Change Plan (Trial/Pro)"
                       ><Zap size={14} /></button>
+                      <button
+                        onClick={() => { setMessage(""); setBlockTarget(u); }}
+                        disabled={!u.status}
+                        className="p-1.5 text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={u.status ? "Block User" : "Already blocked"}
+                      ><Ban size={14} /></button>
                       <button onClick={() => { setMessage(""); setDeleteTarget(u); }} className="p-1.5 text-[#718096] hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete User"><Trash2 size={14} /></button>
                     </div>
                   </td>
@@ -482,6 +511,20 @@ export function MobileUsersScreen() {
             <div className="flex gap-2 justify-end mt-2">
               <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Btn>
               <Btn variant="danger" onClick={handleDelete} disabled={deleting}>{deleting ? "Deleting…" : "Delete"}</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {blockTarget && (
+        <Modal title="Block Mobile User" onClose={() => setBlockTarget(null)}>
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-[#1A202C]">
+              Blocking <span className="font-semibold">{displayName(blockTarget)}</span> ({blockTarget.userName}) suspends their
+              account immediately — they will be logged out of the app and unable to log in again until unblocked. Continue?
+            </p>
+            <div className="flex gap-2 justify-end mt-2">
+              <Btn variant="ghost" onClick={() => setBlockTarget(null)}>Cancel</Btn>
+              <Btn variant="danger" onClick={handleBlock} disabled={blocking}>{blocking ? "Blocking…" : "Block User"}</Btn>
             </div>
           </div>
         </Modal>

@@ -366,6 +366,32 @@ namespace MdLabScience.Controllers
         }
 
         [HttpGet]
+        [Route("api/AppUser/BlockUser/{id}")]
+        public IActionResult BlockUser(int id)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var appUser = db.AppUserTbs.Where(x => x.AppUserId == id).FirstOrDefault();
+                if (appUser == null)
+                {
+                    return Ok(new { succeeded = false, message = "User not found." });
+                }
+                if (appUser.Status == false)
+                {
+                    return Ok(new { succeeded = true, message = "User is already blocked." });
+                }
+                appUser.Status = false;
+                db.SaveChanges();
+                if (!string.IsNullOrEmpty(appUser.Token))
+                {
+                    String _message = "Dear Mr/Mrs " + appUser.UserName + ", your account has been suspended. Please contact the administrator.";
+                    PushNotification.PushNotificationTOuser(appUser.Token, _message, "Account Block");
+                }
+                return Ok(new { succeeded = true, message = "User blocked successfully." });
+            }
+        }
+
+        [HttpGet]
         [Route("api/AppUser/CheckAppUserStatus/{id}")]
         public bool CheckAppUserStatus(int id)
         {

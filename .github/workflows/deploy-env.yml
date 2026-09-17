@@ -1,0 +1,100 @@
+name: Deploy single SmarterASP environment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+        description: Name of the environment (development / production)
+      api_url:
+        type: string
+        required: true
+        description: Base API URL baked into the frontend build
+    secrets:
+      ftp_server:
+        required: true
+      ftp_username:
+        required: true
+      ftp_password:
+        required: true
+      ftp_server_dir:
+        required: true
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '20'
+
+jobs:
+  build-and-deploy:
+    name: Build + deploy (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+
+      - name: Build frontend for ${{ inputs.environment }}
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ inputs.api_url }}
+        run: npm run build
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Copy frontend into API wwwroot
+        run: |
+          mkdir -p MdLabScience.WebAPI/wwwroot
+          cp -R frontend/dist/. MdLabScience.WebAPI/wwwroot/
+
+      - name: Restore dependencies
+        run: dotnet restore MdLabScience.WebAPI/MdLabScience.WebAPI.csproj
+
+      - name: Publish API
+        run: dotnet publish MdLabScience.WebAPI/MdLabScience.WebAPI.csproj -c Release -o published --no-restore
+
+      - name: Take API offline (upload app_offline.htm)
+        run: |
+          SERVER="${{ secrets.ftp_server }}"
+          DIR="${{ secrets.ftp_server_dir }}"
+          [[ "$DIR" != */ ]] && DIR="$DIR/"
+          printf '<html><body><h1>Deployment in progress...</h1><p>Please wait.</p></body></html>' > app_offline.htm
+          curl -sS --ftp-create-dirs -T app_offline.htm "ftp://$SERVER$DIR"app_offline.htm --user "${{ secrets.ftp_username }}:${{ secrets.ftp_password }}"
+          sleep 10
+
+      - name: FTP Deploy to SmarterASP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.ftp_server }}
+          username: ${{ secrets.ftp_username }}
+          password: ${{ secrets.ftp_password }}
+          server-dir: ${{ secrets.ftp_server_dir }}
+          local-dir: ./published/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            app_offline.htm
+            **/Images/**
+            **/Uploads/**
+          dangerous-clean-slate: false
+
+      - name: Bring API back online (remove app_offline.htm)
+        run: |
+          SERVER="${{ secrets.ftp_server }}"
+          DIR="${{ secrets.ftp_server_dir }}"
+          [[ "$DIR" != */ ]] && DIR="$DIR/"
+          curl -sS --user "${{ secrets.ftp_username }}:${{ secrets.ftp_password }}" -Q "DELE app_offline.htm" "ftp://$SERVER$DIR" || true

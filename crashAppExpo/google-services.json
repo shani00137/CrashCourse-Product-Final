@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:545087695165:android:53e39192b4d2c8c2707d54",
         "android_client_info": {
-          "package_name": "com.crashcourse.app"
+          "package_name": "com.onlinecrashcourse.app"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "545087695165-18bl1hfh0jd13mv4m9al7qehl859h29h.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.crashcourse.app",
+            "package_name": "com.onlinecrashcourse.app",
             "certificate_hash": "cfcd39b14da7456bd26dfd46c0f8a83960d5053d"
           }
         },
@@ -25,7 +25,7 @@
           "client_id": "545087695165-hcdb9dg1guivjhs39oi677a4h12009ld.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.crashcourse.app",
+            "package_name": "com.onlinecrashcourse.app",
             "certificate_hash": "d5c566843f95eafb14a9467e328a284d179e86a0"
           }
         },

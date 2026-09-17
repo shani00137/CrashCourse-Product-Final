@@ -1,3 +1,4 @@
+import { File } from "expo-file-system";
 import { API_BASE_URL, ENDPOINTS } from "@/constants/api";
 
 export interface CourseInfo {
@@ -92,6 +93,45 @@ export function setSessionToken(token: string) {
   authToken = token || "";
 }
 
+export interface ProctorFrameResult {
+  phoneDetected: boolean;
+  imageUrl?: string;
+  message?: string;
+}
+
+/**
+ * Uploads a proctor frame captured from the user's camera to the backend,
+ * which saves the image into the site web root (wwwroot) and runs the
+ * server-side YOLO phone detector. Returns whether a mobile phone was found.
+ */
+export async function analyzeProctorFrame(photoUri: string): Promise<ProctorFrameResult> {
+  const form = new FormData();
+  form.append("file", new File(photoUri));
+
+  const res = await fetch(`${API_BASE_URL}${ENDPOINTS.analyzeProctorFrame}`, {
+    method: "POST",
+    headers: {
+      accept: "*/*",
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    },
+    body: form,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Proctor analysis failed (${res.status}): ${text}`);
+  }
+  const data = await parseBody<unknown>(res);
+  if (data && typeof data === "object") {
+    const r = data as Record<string, unknown>;
+    return {
+      phoneDetected: r.phoneDetected === true,
+      imageUrl: typeof r.imageUrl === "string" ? r.imageUrl : undefined,
+      message: typeof r.message === "string" ? r.message : undefined,
+    };
+  }
+  return { phoneDetected: false };
+}
+
 /**
  * Saves the device push (FCM) token for an AppUser so the backend can send
  * notifications (exam ready, account blocked, chat messages).
@@ -103,6 +143,48 @@ export async function updateAppUserToken(appUserId: number, token: string): Prom
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Blocks an AppUser (sets Status = false). The backend also sends a push
+ * notification so the app can force-logout immediately.
+ */
+export async function blockAppUser(appUserId: number): Promise<{ succeeded: boolean; message: string }> {
+  if (!appUserId) return { succeeded: false, message: "No user id." };
+  try {
+    const data = await get<unknown>(ENDPOINTS.blockAppUser(appUserId));
+    const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+    return {
+      succeeded: r.succeeded !== false,
+      message: typeof r.message === "string" ? r.message : "",
+    };
+  } catch {
+    return { succeeded: false, message: "Failed to block user." };
+  }
+}
+
+/**
+ * Polls the backend to check if the current user's account is still active.
+ * Returns `false` when the user is blocked or their subscription expired,
+ * meaning the app should immediately log them out.
+ */
+export async function checkAppUserStatus(appUserId: number): Promise<boolean> {
+  if (!appUserId) return true;
+  try {
+    const res = await fetch(`${API_BASE_URL}${ENDPOINTS.checkAppUserStatus(appUserId)}`, {
+      method: "GET",
+      headers: {
+        accept: "*/*",
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+    });
+    if (!res.ok) return true; // network error → don't force logout
+    const text = (await res.text()).trim();
+    // Endpoint returns "true" / "false" as plain text
+    return text !== "false";
+  } catch {
+    return true; // network error → don't force logout
   }
 }
 

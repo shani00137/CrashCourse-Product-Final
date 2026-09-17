@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   RefreshControl,
   Modal,
   TextInput,
@@ -27,6 +26,10 @@ import {
 } from "@/services/api";
 import { ScoreRing } from "@/components/ScoreRing";
 import { ProgressBar } from "@/components/ProgressBar";
+import StylishDialog, {
+  type StylishDialogAction,
+  type StylishDialogProps,
+} from "@/components/StylishDialog";
 
 const optionLabels = ["A", "B", "C", "D"];
 const TEST_QUESTION_COUNT = 10;
@@ -60,6 +63,44 @@ export default function TestScreen() {
   const [answers, setAnswers] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState(0);
   const [score, setScore] = useState(0);
+  const [dialog, setDialog] = useState<{
+    title: string;
+    message: string;
+    icon?: StylishDialogProps["icon"];
+    tone?: StylishDialogProps["tone"];
+    actions: StylishDialogAction[];
+  } | null>(null);
+
+  const closeDialog = useCallback(() => setDialog(null), []);
+
+  const notify = useCallback(
+    (
+      title: string,
+      message: string,
+      opts?: {
+        icon?: StylishDialogProps["icon"];
+        tone?: StylishDialogProps["tone"];
+        onOk?: () => void;
+      }
+    ) => {
+      setDialog({
+        title,
+        message,
+        icon: opts?.icon,
+        tone: opts?.tone,
+        actions: [
+          {
+            label: "OK",
+            onPress: () => {
+              closeDialog();
+              opts?.onOk?.();
+            },
+          },
+        ],
+      });
+    },
+    [closeDialog]
+  );
 
   const appUserId = user?.appUserId ?? 0;
   const applicantId = user?.applicantId ?? 0;
@@ -146,7 +187,7 @@ export default function TestScreen() {
         const res = await conductTestByUser(test.testId);
         const qs = res.questions;
         if (!qs.length) {
-          Alert.alert("No questions", "This test has no questions yet.");
+          notify("No questions", "This test has no questions yet.");
           setOpening(false);
           return;
         }
@@ -170,7 +211,7 @@ export default function TestScreen() {
         setOpening(false);
       } catch (e) {
         setOpening(false);
-        Alert.alert("Error", e instanceof Error ? e.message : String(e));
+        notify("Error", e instanceof Error ? e.message : String(e), { icon: "alert-circle-outline", tone: "danger" });
       }
     },
     []
@@ -178,13 +219,14 @@ export default function TestScreen() {
 
   const handleCreate = useCallback(async () => {
     if (!courseId) {
-      Alert.alert("Missing details", "Log in with a registered course to create a test.");
+      notify("Missing details", "Log in with a registered course to create a test.", { icon: "person-circle-outline" });
       return;
     }
     if (isTrial && tests.length >= TRIAL_TEST_LIMIT) {
-      Alert.alert(
+      notify(
         "Trial limit reached",
-        "Your 5-day trial includes 2 tests. Upgrade to create unlimited tests."
+        "Your 5-day trial includes 2 tests. Upgrade to create unlimited tests.",
+        { icon: "diamond-outline" }
       );
       return;
     }
@@ -198,18 +240,19 @@ export default function TestScreen() {
     const parsed = parseInt(questionCount, 10);
     const count = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), MAX_TEST_QUESTIONS) : 20;
     if (!courseId) {
-      Alert.alert("Missing details", "Log in with a registered course to create a test.");
+      notify("Missing details", "Log in with a registered course to create a test.", { icon: "person-circle-outline" });
       return;
     }
     if (isTrial && tests.length >= TRIAL_TEST_LIMIT) {
-      Alert.alert(
+      notify(
         "Trial limit reached",
-        "Your 5-day trial includes 2 tests. Upgrade to create unlimited tests."
+        "Your 5-day trial includes 2 tests. Upgrade to create unlimited tests.",
+        { icon: "diamond-outline" }
       );
       return;
     }
     if (!createMode) {
-      Alert.alert("Choose a mode", "Pick Question Bank or AI Generated below.");
+      notify("Choose a mode", "Pick Question Bank or AI Generated below.", { icon: "albums-outline" });
       return;
     }
     setCreating(true);
@@ -223,7 +266,7 @@ export default function TestScreen() {
         difficulty: createMode === "ai" ? difficulty : "",
       });
       if (!res.succeeded || !res.testId) {
-        Alert.alert("Could not create test", res.message || "Unexpected response from server.");
+        notify("Could not create test", res.message || "Unexpected response from server.", { icon: "alert-circle-outline", tone: "danger" });
         return;
       }
       setCreateDialog(false);
@@ -244,7 +287,7 @@ export default function TestScreen() {
       await loadTests();
       await openTest(created, false);
     } catch (e) {
-      Alert.alert("Error", e instanceof Error ? e.message : String(e));
+      notify("Error", e instanceof Error ? e.message : String(e), { icon: "alert-circle-outline", tone: "danger" });
     } finally {
       setCreating(false);
     }
@@ -636,6 +679,15 @@ export default function TestScreen() {
             </View>
           </View>
         </Modal>
+        <StylishDialog
+          visible={!!dialog}
+          title={dialog?.title ?? ""}
+          message={dialog?.message ?? ""}
+          icon={dialog?.icon}
+          tone={dialog?.tone}
+          actions={dialog?.actions ?? []}
+          onRequestClose={closeDialog}
+        />
       </View>
     );
   }
@@ -842,14 +894,24 @@ export default function TestScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => {
-              Alert.alert(
-                "Leave test?",
-                "Your answered questions are saved. You can resume anytime.",
-                [
-                  { text: "Keep Testing", style: "cancel" },
-                  { text: "Leave", onPress: () => setPhase("select") },
-                ]
-              );
+              setDialog({
+                title: "Leave test?",
+                message:
+                  "Your answered questions are saved. You can resume anytime.",
+                icon: "exit-outline",
+                tone: "danger",
+                actions: [
+                  { label: "Keep Testing", variant: "ghost", onPress: closeDialog },
+                  {
+                    label: "Leave",
+                    variant: "danger",
+                    onPress: () => {
+                      closeDialog();
+                      setPhase("select");
+                    },
+                  },
+                ],
+              });
             }}
             activeOpacity={0.8}
           >
@@ -951,6 +1013,15 @@ export default function TestScreen() {
           <Ionicons name="chevron-forward" size={20} color={colors.white} />
         </TouchableOpacity>
       </View>
+      <StylishDialog
+        visible={!!dialog}
+        title={dialog?.title ?? ""}
+        message={dialog?.message ?? ""}
+        icon={dialog?.icon}
+        tone={dialog?.tone}
+        actions={dialog?.actions ?? []}
+        onRequestClose={closeDialog}
+      />
     </View>
   );
 }
@@ -1559,6 +1630,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 25,
     color: colors.foreground,
+    textAlign: "left",
   },
   optionsContainer: {
     gap: 12,
@@ -1587,6 +1659,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     lineHeight: 20,
+    textAlign: "left",
   },
   bottomBar: {
     position: "absolute",

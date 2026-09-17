@@ -34,7 +34,6 @@ export async function ensureNotificationsChannel(): Promise<void> {
     await Notifications.setNotificationChannelAsync("high_importance_channel", {
       name: "High Importance Notifications",
       importance: Notifications.AndroidImportance.HIGH,
-      sound: "default",
     });
   } catch {
     // Best-effort: delivery falls back to the default channel.

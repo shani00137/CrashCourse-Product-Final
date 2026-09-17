@@ -160,7 +160,7 @@ export default function AIAgentScreen() {
     return (
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
       >
         <LinearGradient
           colors={gradients.darkRedGrad}
@@ -205,7 +205,7 @@ export default function AIAgentScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior="padding"
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
       {/* Header */}

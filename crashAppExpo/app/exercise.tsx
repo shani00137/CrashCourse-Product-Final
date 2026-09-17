@@ -18,13 +18,17 @@ import { useApp } from "@/context/AppContext";
 import { ProgressBar } from "@/components/ProgressBar";
 import { ScoreRing } from "@/components/ScoreRing";
 import { QuestionAiModal } from "@/components/QuestionAiModal";
+import SwipeSheet from "@/components/SwipeSheet";
+import ProctorViolationDialog from "@/components/ProctorViolationDialog";
 import {
   takeExercise,
   getExerciseQuestionCount,
   getReadingTime,
+  blockAppUser,
   TakeQuestion,
 } from "@/services/api";
 import { useReadingTime } from "@/hooks/useReadingTime";
+import ProctorMonitor from "@/components/ProctorMonitor";
 import {
   readingPct,
   formatReadingTime,
@@ -70,7 +74,7 @@ export default function ExerciseScreen() {
     end?: string;
   }>();
   const course = allCourses.find((c) => c.id === Number(courseId)) || null;
-  const { user, addTestResult } = useApp();
+  const { user, addTestResult, logout } = useApp();
   const isTrial = !!user?.isTrial;
 
   const cId = Number(courseId);
@@ -78,6 +82,22 @@ export default function ExerciseScreen() {
   const endN = Number(end || 0);
   const headerColor = course?.color || colors.primary;
   const headerCourseName = courseName || course?.title || "Medical Exercise";
+
+  // ── Anti-cheating watchdog ───────────────────────────────────────────────
+  const [violation, setViolation] = useState(false);
+  const handleViolation = useCallback(() => {
+    setViolation(true);
+    // Best-effort: immediately block the account server-side so the user
+    // cannot log in again even if they force-quit the app.
+    if (user?.appUserId) {
+      void blockAppUser(user.appUserId);
+    }
+  }, [user?.appUserId]);
+
+  const handleViolationAck = useCallback(() => {
+    logout();
+    router.replace("/login");
+  }, [logout]);
 
   // ── Phase state ──────────────────────────────────────────────────────────
   const [phase, setPhase] = useState<"count" | "exercise" | "loading-questions">("count");
@@ -334,27 +354,33 @@ export default function ExerciseScreen() {
   if (phase === "count" || phase === "loading-questions") {
     const isLoadingQs = phase === "loading-questions";
     return (
-      <View style={styles.flex}>
-        <LinearGradient
-          colors={[headerColor, headerColor + "CC"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
-        >
-          <View style={styles.headerTopRow}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="arrow-back" size={18} color={colors.white} />
-            </TouchableOpacity>
-            <View style={styles.headerTitleBlock}>
-              <Text style={styles.headerCourseTitle}>{headerCourseName}</Text>
-              <Text style={styles.headerQuestionCount}>Exercise</Text>
+      <SwipeSheet
+        onClose={() => router.back()}
+        style={styles.modalScreen}
+        handle={
+          <LinearGradient
+            colors={[headerColor, headerColor + "CC"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.header}
+          >
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="arrow-back" size={18} color={colors.white} />
+              </TouchableOpacity>
+              <View style={styles.headerTitleBlock}>
+                <Text style={styles.headerCourseTitle}>{headerCourseName}</Text>
+                <Text style={styles.headerQuestionCount}>Exercise</Text>
+              </View>
             </View>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
+        }
+      >
+        <View style={styles.flex}>
 
         <ScrollView
           style={styles.flex}
@@ -459,20 +485,22 @@ export default function ExerciseScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+        </View>
+      </SwipeSheet>
     );
   }
 
   // ── Results ──────────────────────────────────────────────────────────────
   if (finished) {
-    const pct = Math.round((score / totalQ) * 100);
-    const passed = pct >= 70;
-    return (
-      <ScrollView
-        style={styles.flex}
-        contentContainerStyle={styles.resultsContent}
-        showsVerticalScrollIndicator={false}
-      >
+const pct = Math.round((score / totalQ) * 100);
+      const passed = pct >= 70;
+      return (
+        <SwipeSheet onClose={() => router.back()} style={styles.modalScreen}>
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={styles.resultsContent}
+            showsVerticalScrollIndicator={false}
+          >
         <View
           style={[
             styles.resultIconCircle,
@@ -516,8 +544,9 @@ export default function ExerciseScreen() {
           activeOpacity={0.9}
         >
           <Text style={styles.primaryButtonText}>Back to Dashboard</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          </TouchableOpacity>
+        </ScrollView>
+      </SwipeSheet>
     );
   }
 
@@ -527,44 +556,53 @@ export default function ExerciseScreen() {
     totalQ > 0 ? ((current + (checked ? 1 : 0)) / totalQ) * 100 : 0;
 
   return (
-    <View style={styles.flex}>
-      {/* Header */}
-      <LinearGradient
-        colors={[headerColor, headerColor + "CC"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="arrow-back" size={18} color={colors.white} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleBlock}>
-            <Text style={styles.headerCourseTitle}>{headerCourseName}</Text>
-            <Text style={styles.headerQuestionCount}>
-              Question {current + 1} of {totalQ}
-            </Text>
+    <SwipeSheet
+      onClose={() => router.back()}
+      style={styles.modalScreen}
+      handle={
+        <LinearGradient
+          colors={[headerColor, headerColor + "CC"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="arrow-back" size={18} color={colors.white} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleBlock}>
+              <Text style={styles.headerCourseTitle}>{headerCourseName}</Text>
+              <Text style={styles.headerQuestionCount}>
+                Question {current + 1} of {totalQ}
+              </Text>
+            </View>
+            <View style={styles.practiceBadge}>
+              <Ionicons
+                name="time-outline"
+                size={13}
+                color="rgba(255,255,255,0.8)"
+              />
+              <Text style={styles.practiceText}>Practice</Text>
+            </View>
           </View>
-          <View style={styles.practiceBadge}>
-            <Ionicons
-              name="time-outline"
-              size={13}
-              color="rgba(255,255,255,0.8)"
-            />
-            <Text style={styles.practiceText}>Practice</Text>
-          </View>
-        </View>
-        <ProgressBar
-          progress={progress}
-          color={colors.white}
-          bgColor="rgba(255,255,255,0.2)"
-          height={8}
+          <ProgressBar
+            progress={progress}
+            color={colors.white}
+            bgColor="rgba(255,255,255,0.2)"
+            height={8}
+          />
+        </LinearGradient>
+      }
+    >
+      <View style={styles.flex}>
+        <ProctorMonitor
+          active={phase === "exercise" && !finished}
+          onViolation={handleViolation}
         />
-      </LinearGradient>
 
       {/* Question sweep */}
       <View style={styles.sweepWrap}>
@@ -620,6 +658,12 @@ export default function ExerciseScreen() {
         correct={q.correct}
         questionNumber={current + 1}
         onClose={() => setAiOpen(false)}
+      />
+
+      {/* Phone-detected violation dialog */}
+      <ProctorViolationDialog
+        visible={violation}
+        onAcknowledge={handleViolationAck}
       />
 
       {/* Question body */}
@@ -819,7 +863,8 @@ export default function ExerciseScreen() {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+      </View>
+    </SwipeSheet>
   );
 }
 
@@ -827,6 +872,14 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+modalScreen: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    overflow: "hidden",
+    ...shadows.lg,
   },
   flexCenter: {
     flex: 1,
@@ -911,7 +964,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   header: {
-    paddingTop: 72,
+    paddingTop: 64,
     paddingBottom: 16,
     paddingHorizontal: 20,
   },
@@ -1142,6 +1195,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 25,
     color: colors.foreground,
+    textAlign: "left",
   },
   optionsContainer: {
     gap: 12,
@@ -1170,6 +1224,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     lineHeight: 20,
+    textAlign: "left",
   },
   explanationBox: {
     marginTop: 16,

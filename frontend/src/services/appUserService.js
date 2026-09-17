@@ -32,4 +32,7 @@ async function changeAppUserPlan(payload) {
     body: JSON.stringify(payload)
   });
 }
-export { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan };
+async function blockAppUser(appUserId) {
+  return apiFetch(`/api/AppUser/api/AppUser/BlockUser/${appUserId}`);
+}
+export { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan, blockAppUser };

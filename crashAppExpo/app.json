@@ -13,13 +13,15 @@
     },
     "android": {
       "adaptiveIcon": {
-        // "backgroundColor": "#C41E3A",
-        // "foregroundImage": "./assets/android-icon-foreground.png",
-        // "backgroundImage": "./assets/android-icon-background.png",
-        // "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFFFFF"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.crashcourse.app",
+      "package": "com.onlinecrashcourse.app",
+      "versionCode": 1,
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "googleServicesFile": "./google-services.json"
     },
     "web": {
@@ -30,15 +32,29 @@
       "expo-image",
       "expo-font",
       "expo-status-bar",
-      ["expo-splash-screen", {
-        "backgroundColor": "#FFFFFF",
-        "image": "./assets/splash-icon.png",
-        "imageWidth": 200
-      }],
-      ["expo-notifications", {
-        "color": "#C41E3A",
-        "defaultChannel": "high_importance_channel"
-      }]
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to use your camera to verify exam integrity and detect mobile phone usage during exercises. Images are analyzed on-device only."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#C41E3A",
+          "defaultChannel": "high_importance_channel"
+        }
+      ],
+      "./plugins/with-onnxruntime",
+      "expo-asset"
     ]
   }
 }

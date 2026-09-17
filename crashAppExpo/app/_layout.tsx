@@ -2,7 +2,9 @@ import { Stack, useRouter } from "expo-router";
 import { useEffect } from "react";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AppProvider } from "@/context/AppContext";
+import AccountBlockWatchdog from "@/components/AccountBlockWatchdog";
 
 export default function RootLayout() {
   const router = useRouter();
@@ -22,22 +24,25 @@ export default function RootLayout() {
   }, [router]);
 
   return (
-    <AppProvider>
-      <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: "fade",
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="register" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="exercise" options={{ presentation: "modal", animation: "slide_from_right" }} />
-        <Stack.Screen name="test" options={{ presentation: "modal", animation: "slide_from_right" }} />
-        <Stack.Screen name="ai-agent" options={{ presentation: "modal", animation: "slide_from_right" }} />
-      </Stack>
-    </AppProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AppProvider>
+        <AccountBlockWatchdog />
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: "fade",
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="login" />
+          <Stack.Screen name="register" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="exercise" options={{ presentation: "modal", animation: "slide_from_bottom", gestureEnabled: true }} />
+          <Stack.Screen name="test" options={{ presentation: "modal", animation: "slide_from_right" }} />
+          <Stack.Screen name="ai-agent" options={{ presentation: "modal", animation: "slide_from_right" }} />
+        </Stack>
+      </AppProvider>
+    </GestureHandlerRootView>
   );
 }
