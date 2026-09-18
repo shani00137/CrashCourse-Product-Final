@@ -43,3 +43,6 @@ yarn-error.*
 # Signing credentials (DO NOT COMMIT)
 .keystore-credentials.env
 keystore.properties
+
+# Release build artifacts (DO NOT COMMIT - exceed GitHub's 100MB limit)
+release/
