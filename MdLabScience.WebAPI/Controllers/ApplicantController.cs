@@ -1,6 +1,7 @@
 using MdLabScience.DbContext;
 using MdLabScience.Models;
 using MdLabScience.Utility;
+using MdLabScience.Utility.Yolo;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,11 +23,13 @@ namespace MdLabScience.Controllers
     public class ApplicantController : ControllerBase
     {
         private readonly IWebHostEnvironment _env;
+        private readonly IConfiguration _configuration;
         private static TimeZoneInfo Pakistan_Standard_Time = TimeZoneInfo.FindSystemTimeZoneById("Arabian Standard Time");
 
-        public ApplicantController(IWebHostEnvironment env)
+        public ApplicantController(IWebHostEnvironment env, IConfiguration configuration)
         {
             _env = env;
+            _configuration = configuration;
         }
 
         [HttpPost]
@@ -817,12 +820,53 @@ IF NOT EXISTS (
                     if (Request.Form.Files.Count > 0)
                     {
                         var postedFile = uploadFiles[0];
-                        var fileName = Path.GetFileName(postedFile.FileName);
-                        var path = Path.Combine(_env.ContentRootPath, "Screenshots", fileName);
-                        using (var stream = new FileStream(path, FileMode.Create))
+                        string screenshotsDir = Path.Combine(_env.ContentRootPath, "Screenshots");
+                        Directory.CreateDirectory(screenshotsDir);
+                        string fileName = $"screenshot_{DateTime.Now:yyyyMMdd_HHmmssfff}_{Guid.NewGuid():N}.jpg";
+                        string annotatedPath = Path.Combine(screenshotsDir, fileName);
+
+                        bool detected;
+                        using (var memoryStream = new MemoryStream())
                         {
-                            postedFile.CopyTo(stream);
+                            postedFile.CopyTo(memoryStream);
+                            memoryStream.Position = 0;
+
+                            try
+                            {
+                                string modelPath = _configuration["Proctor:ModelPath"] ?? "Utility/yolo/yolov8n.onnx";
+                                string modelFullPath = Path.IsPathRooted(modelPath)
+                                    ? modelPath
+                                    : Path.Combine(_env.ContentRootPath, modelPath);
+                                byte[] model = System.IO.File.ReadAllBytes(modelFullPath);
+                                float confidence = float.TryParse(_configuration["Proctor:Confidence"], out var c)
+                                    ? c
+                                    : 0.35f;
+
+                                detected = Yolov8PhoneDetector.Annotate(memoryStream, model, confidence, annotatedPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"[ScreenShot] Detection failed: {ex.Message}");
+                                // Detector unavailable - keep old behaviour and save the original image.
+                                memoryStream.Position = 0;
+                                using (var stream = new FileStream(annotatedPath, FileMode.Create))
+                                {
+                                    memoryStream.CopyTo(stream);
+                                }
+                                detected = true;
+                            }
                         }
+
+                        if (!detected)
+                        {
+                            if (System.IO.File.Exists(annotatedPath))
+                            {
+                                System.IO.File.Delete(annotatedPath);
+                            }
+                            _response = "No phone detected. Screenshot discarded.";
+                            return Ok(_response);
+                        }
+
                         String ImageUrl = "Screenshots/" + fileName.ToString();
                         AppUserScreenshotTB appUserScreenshotTB = new AppUserScreenshotTB();
                         appUserScreenshotTB.ImageUrl = "Screenshots/" + fileName.ToString();

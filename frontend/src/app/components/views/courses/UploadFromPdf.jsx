@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import PdfJsWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
 import {
@@ -36,6 +36,55 @@ const ZOOM_MAX = 300;
 const OCR_SCALE = 2;
 const OCR_SERVICE_URL = (import.meta.env.VITE_OCR_URL || "http://localhost:5100/ocr");
 
+function ProcessingSteps({ stage }) {
+  const steps = [
+    { key: "ocr", num: 1, label: "Local OCR", desc: "Reading text from the page" },
+    { key: "gpt", num: 2, label: "GPT AI Parsing", desc: "Building MCQ questions" }
+  ];
+  const stateOf = (key) => {
+    if (stage === key) return "active";
+    if (stage === "gpt" && key === "ocr") return "done";
+    return "waiting";
+  };
+  return (
+    <div className="flex items-center gap-2 w-full max-w-md mx-auto">
+      {steps.map((s, i) => {
+        const state = stateOf(s.key);
+        return (
+          <Fragment key={s.key}>
+            <div className="flex flex-col items-center flex-1">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
+                state === "active"
+                  ? "border-[#C41E3A] bg-[#FFF0F2] text-[#C41E3A] shadow-md shadow-red-100"
+                  : state === "done"
+                    ? "border-emerald-500 bg-emerald-500 text-white"
+                    : "border-[rgba(0,0,0,0.12)] bg-[#F7FAFC] text-[#A0AEC0]"
+              }`}>
+                {state === "active"
+                  ? <Loader2 size={16} className="animate-spin" />
+                  : state === "done"
+                    ? <Check size={16} />
+                    : <span className="text-[12px] font-bold">{s.num}</span>}
+              </div>
+              <span className={`text-[11px] font-semibold mt-1.5 ${
+                state === "active" ? "text-[#C41E3A]" : state === "done" ? "text-emerald-700" : "text-[#A0AEC0]"
+              }`}>
+                {s.label}
+              </span>
+              <span className="text-[10px] text-[#A0AEC0] text-center leading-tight">
+                {state === "active" ? s.desc : state === "done" ? "Complete" : "Waiting"}
+              </span>
+            </div>
+            {i < steps.length - 1 && (
+              <div className={`h-0.5 flex-1 mb-7 rounded-full transition-colors ${stage === "gpt" ? "bg-emerald-400" : "bg-[rgba(0,0,0,0.1)]"}`} />
+            )}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
 export function UploadFromPdfScreen({ onBack }) {
   const [fileName, setFileName] = useState("");
   const [pdfBytes, setPdfBytes] = useState(null);
@@ -65,6 +114,7 @@ export function UploadFromPdfScreen({ onBack }) {
 
   const [saving, setSaving] = useState(false);
   const [ocrText, setOcrText] = useState("");
+  const [stage, setStage] = useState(null);
   const autoModeRef = useRef(false);
 
   useEffect(() => {
@@ -147,6 +197,7 @@ export function UploadFromPdfScreen({ onBack }) {
       setParsedQuestions([]);
       setProcessedPages(new Set());
       setOcrText("");
+      setStage(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not read this PDF.");
     } finally {
@@ -187,6 +238,7 @@ export function UploadFromPdfScreen({ onBack }) {
       const formData = new FormData();
       formData.append("file", pageBlob, `page_${pageNum}.png`);
 
+      setStage("ocr");
       let ocrRes;
       try {
         const ocrResponse = await fetch(OCR_SERVICE_URL, {
@@ -212,18 +264,21 @@ export function UploadFromPdfScreen({ onBack }) {
       setOcrText(prev => prev ? prev + "\n\n--- Page " + pageNum + " ---\n\n" + pageText : pageText);
 
       if (pageText.trim()) {
+        setStage("gpt");
         const parseRes = await parseOcrToQuestions({ ocrText: pageText, courseId: courseId || 0 });
         if (parseRes?.succeeded && parseRes.questions?.length > 0) {
           setParsedQuestions(prev => [...prev, ...parseRes.questions]);
         }
       }
 
+      setStage(null);
       setProcessedPages(prev => new Set([...prev, pageNum]));
       return pageText;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process page " + pageNum);
       return null;
     } finally {
+      setStage(null);
       setSubmitting(false);
     }
   }, [pdfDoc, fileName, courseId]);
@@ -507,10 +562,17 @@ export function UploadFromPdfScreen({ onBack }) {
                     ? `Processing page ${currentPage}...`
                     : "Submit this page"}
               </Btn>
+              {submitting && <ProcessingSteps stage={stage} />}
               <p className="text-[11px] text-[#718096] text-center">
-                {autoMode
-                  ? "Auto mode: processing all pages sequentially"
-                  : `Only page ${currentPage} is sent to the OCR engine`}
+                {submitting
+                  ? stage === "ocr"
+                    ? "Step 1/2 — OCR is reading the page locally, then the text goes to GPT AI"
+                    : stage === "gpt"
+                      ? "Step 2/2 — GPT AI is parsing the OCR text into MCQ questions"
+                      : "Processing page..."
+                  : autoMode
+                    ? "Auto mode: processing all pages sequentially (OCR → GPT AI)"
+                    : `Only page ${currentPage} is sent to the OCR engine, then to GPT AI`}
               </p>
             </>
           )}
@@ -550,9 +612,23 @@ export function UploadFromPdfScreen({ onBack }) {
           )}
 
           {submitting && (
-            <div className="flex flex-col items-center justify-center gap-3 py-8">
-              <Loader2 size={22} className="animate-spin text-[#C41E3A]" />
-              <p className="text-xs text-[#718096]">Running OCR and parsing questions...</p>
+            <div className="flex flex-col items-center gap-4 py-8">
+              <div className="flex items-center justify-between w-full">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-[#C41E3A] flex items-center gap-1.5">
+                  <Loader2 size={12} className="animate-spin" /> Processing page {currentPage}
+                </span>
+                <span className="text-[11px] text-[#718096]">
+                  {stage === "ocr" ? "Step 1 of 2 — Local OCR" : stage === "gpt" ? "Step 2 of 2 — AI Parsing" : "Processing..."}
+                </span>
+              </div>
+              <ProcessingSteps stage={stage} />
+              <p className="text-[11px] text-[#718096]">
+                {stage === "ocr"
+                  ? `Sending page ${currentPage} to the local OCR engine...`
+                  : stage === "gpt"
+                    ? "OCR complete — sending text to GPT AI to build questions..."
+                    : "Reading page and preparing..."}
+              </p>
             </div>
           )}
 

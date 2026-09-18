@@ -29,6 +29,7 @@ import {
   ListChecks,
   BarChart3,
   TrendingUp,
+  ShieldCheck,
 } from "lucide-react";
 import { Avatar } from "../shared/ui";
 import { DashboardScreen } from "../views/dashboard/Dashboard";
@@ -43,6 +44,7 @@ import { QuestionBankScreen } from "../views/courses/QuestionBank";
 import { QuestionFormScreen } from "../views/courses/QuestionForm";
 import { GenerateAIQuestionScreen } from "../views/courses/GenerateAIQuestion";
 import { UploadFromPdfScreen } from "../views/courses/UploadFromPdf";
+import { QuestionCorrectionScreen } from "../views/courses/QuestionCorrection";
 import { CreateTestScreen } from "../views/courses/CreateTest";
 import { MobileUsersScreen } from "../views/users/MobileUsers";
 import { RolesScreen } from "../views/users/Roles";
@@ -85,6 +87,7 @@ const navGroups = [
       { icon: PlusCircle, label: "Add Question", screen: "question-form" },
       { icon: FileUp, label: "Upload from PDF", screen: "upload-from-pdf" },
       { icon: Sparkles, label: "Generate with AI", screen: "generate-ai-question" },
+      { icon: ShieldCheck, label: "Question Correction", screen: "question-correction" },
       { icon: BookMarked, label: "Create Test", screen: "create-test" },
     ],
   },
@@ -151,6 +154,7 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     "question-form": ["Questions", questionForm?.question?.questionId ? "Edit Question" : "Add Question"],
     "generate-ai-question": ["Questions", "Generate with AI"],
     "upload-from-pdf": ["Questions", "Upload from PDF"],
+    "question-correction": ["Questions", "Question Correction"],
     "create-test": ["Questions", "Create Test"],
     "mobile-users": ["Users & Access", "Mobile Users"],
     roles: ["Users & Access", "Roles & Permissions"],
@@ -193,6 +197,7 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     "question-form": <QuestionFormScreen question={questionForm?.question ?? null} onBack={() => setScreen("question-bank")} />,
     "generate-ai-question": <GenerateAIQuestionScreen onBack={() => setScreen("question-bank")} />,
     "upload-from-pdf": <UploadFromPdfScreen onBack={() => setScreen("question-bank")} />,
+    "question-correction": <QuestionCorrectionScreen onBack={() => setScreen("question-bank")} />,
     "create-test": <CreateTestScreen user={user} />,
     "mobile-users": <MobileUsersScreen />,
     roles: <RolesScreen />,

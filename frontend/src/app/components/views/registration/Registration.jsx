@@ -25,6 +25,7 @@ function RegistrationScreen({ applicant, onDone }) {
   const [courseId, setCourseId] = useState(applicant?.courseMD?.courseId ?? 0);
   const [serviceIds, setServiceIds] = useState([]);
   const [registrationDate, setRegistrationDate] = useState(applicant?.registrationDate?.slice(0, 10) ?? "");
+  const [expiryDate, setExpiryDate] = useState(applicant?.expiryDate?.slice(0, 10) ?? "");
   const [photo, setPhoto] = useState(null);
   const [countries, setCountries] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -62,10 +63,6 @@ function RegistrationScreen({ applicant, onDone }) {
       setError("Please enter a mobile number.");
       return;
     }
-    if (!email.trim()) {
-      setError("Please enter an email address.");
-      return;
-    }
     if (!countryId) {
       setError("Please select a country.");
       return;
@@ -74,9 +71,12 @@ function RegistrationScreen({ applicant, onDone }) {
       setError("Please select a course.");
       return;
     }
+    if (!expiryDate) {
+      setError("Please select an expiry date.");
+      return;
+    }
     const regDate = registrationDate ? new Date(registrationDate) : /* @__PURE__ */ new Date();
-    const expiry = new Date(regDate);
-    expiry.setFullYear(expiry.getFullYear() + 1);
+    const expiry = new Date(expiryDate);
     const serviceNames = serviceIds
       .map((id) => services.find((s) => s.serviceId === id)?.serviceName)
       .filter(Boolean)
@@ -115,6 +115,7 @@ function RegistrationScreen({ applicant, onDone }) {
           setCourseId(0);
           setServiceIds([]);
           setRegistrationDate("");
+          setExpiryDate("");
           setPhoto(null);
         } else {
           onDone();
@@ -181,6 +182,10 @@ function RegistrationScreen({ applicant, onDone }) {
             <div className="flex flex-col gap-1">
               <label className={labelCls}>Registration Date</label>
               <input type="date" value={registrationDate} onChange={(e) => setRegistrationDate(e.target.value)} className={fieldCls} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className={labelCls}>Expiry Date <span className="text-[#C41E3A]">*</span></label>
+              <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className={fieldCls} />
             </div>
             <div className="flex flex-col gap-1">
               <label className={labelCls}>Applicant Photo</label>

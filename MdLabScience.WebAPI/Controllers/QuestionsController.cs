@@ -1013,6 +1013,100 @@ Return a JSON array with this exact structure:
             }
         }
 
+        [HttpPost]
+        [Route("api/Questions/ReviewQuestion")]
+        public async Task<IActionResult> ReviewQuestion([FromBody] ReviewQuestionRequest request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.QuestionContent))
+                {
+                    return BadRequest("Question content is required.");
+                }
+
+                string apiKey = _configuration["OpenAI:ApiKey1"];
+                string model = _configuration["OpenAI:Model"] ?? "gpt-4o";
+                if (string.IsNullOrEmpty(apiKey))
+                {
+                    return Ok(new ReviewQuestionResponse()
+                    {
+                        Succeeded = false,
+                        Message = "OpenAI ApiKey is not configured."
+                    });
+                }
+
+                string originalJson = System.Text.Json.JsonSerializer.Serialize(request);
+
+                string prompt = @"You are an expert MCQ exam reviewer. You review an existing multiple-choice question and its marked correct answer. Check whether the question is correct and whether the marked answer is the right option.
+
+You will receive a JSON object:
+{
+  ""questionContent"": ""question text"",
+  ""options"": [ ""option A"", ""option B"", ""option C"", ""option D"" ],
+  ""correctIndex"": 0
+}
+
+Rules:
+1. Check whether the question text is grammatically correct, clear, and unambiguous. Fix typos or messy OCR text, but preserve the original meaning.
+2. Check whether exactly one option is objectively the correct answer. If the marked correctIndex is wrong, correct it.
+3. If the question and the marked answer are already correct, set ""isCorrect"": true and return the original content unchanged.
+4. If anything is wrong, set ""isCorrect"": false and return the fully corrected question text, the corrected options (exactly 4 options A-D), the corrected correctIndex (0=A, 1=B, 2=C, 3=D), and a brief explanation (max 150 words) of what was fixed.
+5. If there are fewer than 4 options, pad with plausible options and mark exactly one as correct. If there are duplicate or nonsensical options, replace them.
+6. Return ONLY valid JSON, no commentary.
+
+Return JSON with this exact structure:
+{
+  ""isCorrect"": true,
+  ""questionContent"": ""..."",
+  ""options"": [""..."", ""..."", ""..."", ""...""],
+  ""correctIndex"": 0,
+  ""explanation"": ""...""
+}
+
+Question to review (JSON):
+" + originalJson;
+
+                ChatClient client = new ChatClient(model, apiKey);
+
+                ChatCompletion completion = await client.CompleteChatAsync(new UserChatMessage(prompt));
+                string responseText = string.Join("", completion.Content.Select(c => c.Text));
+
+                responseText = responseText.Trim();
+                if (responseText.StartsWith("```"))
+                {
+                    responseText = responseText.Substring(responseText.IndexOf('\n') + 1);
+                    if (responseText.EndsWith("```"))
+                    {
+                        responseText = responseText.Substring(0, responseText.LastIndexOf("```"));
+                    }
+                    responseText = responseText.Trim();
+                }
+
+                var review = System.Text.Json.JsonSerializer.Deserialize<ReviewQuestionResponse>(responseText,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                return Ok(new ReviewQuestionResponse()
+                {
+                    Succeeded = true,
+                    IsCorrect = review?.IsCorrect == true,
+                    QuestionContent = string.IsNullOrWhiteSpace(review?.QuestionContent) ? request.QuestionContent : review.QuestionContent,
+                    Options = review?.Options ?? request.Options,
+                    CorrectIndex = review?.CorrectIndex ?? request.CorrectIndex,
+                    Explanation = review?.Explanation ?? "",
+                    Message = review?.IsCorrect == true ? "The question and the marked answer are correct." : "The question was incorrect and has been corrected."
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ReviewQuestion] {ex}");
+                return Ok(new ReviewQuestionResponse()
+                {
+                    Succeeded = false,
+                    Message = "AI review failed: " + ex.Message
+                });
+            }
+        }
+
         [HttpGet]
         [Route("api/Questions/DownloadQuestionModel/{filename}")]
         public IActionResult DownloadQuestionModel(string filename)

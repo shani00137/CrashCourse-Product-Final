@@ -106,4 +106,22 @@ namespace MdLabScience.Models
         public string Message { get; set; }
         public string Answer { get; set; }
     }
+
+    public class ReviewQuestionRequest
+    {
+        public string QuestionContent { get; set; }
+        public List<string> Options { get; set; }
+        public int CorrectIndex { get; set; }
+    }
+
+    public class ReviewQuestionResponse
+    {
+        public bool Succeeded { get; set; }
+        public string Message { get; set; }
+        public bool IsCorrect { get; set; }
+        public string QuestionContent { get; set; }
+        public List<string> Options { get; set; }
+        public int CorrectIndex { get; set; }
+        public string Explanation { get; set; }
+    }
 }

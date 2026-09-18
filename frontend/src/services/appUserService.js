@@ -35,4 +35,25 @@ async function changeAppUserPlan(payload) {
 async function blockAppUser(appUserId) {
   return apiFetch(`/api/AppUser/api/AppUser/BlockUser/${appUserId}`);
 }
-export { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan, blockAppUser };
+async function unblockAppUser(appUserId) {
+  return apiFetch(`/api/AppUser/api/AppUser/UnblockUser/${appUserId}`);
+}
+async function getAllUserScreenShots(filter) {
+  return apiFetch("/api/AppUser/api/AppUser/GetAllUserScreenShots", {
+    method: "POST",
+    body: JSON.stringify(filter)
+  });
+}
+
+export {
+  getAppUsers,
+  saveAppUser,
+  deleteAppUser,
+  resetAppUserPassword,
+  resetAppUserDeviceId,
+  getAppUserDetail,
+  changeAppUserPlan,
+  blockAppUser,
+  unblockAppUser,
+  getAllUserScreenShots
+};

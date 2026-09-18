@@ -392,6 +392,27 @@ namespace MdLabScience.Controllers
         }
 
         [HttpGet]
+        [Route("api/AppUser/UnblockUser/{id}")]
+        public IActionResult UnblockUser(int id)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var appUser = db.AppUserTbs.Where(x => x.AppUserId == id).FirstOrDefault();
+                if (appUser == null)
+                {
+                    return Ok(new { succeeded = false, message = "User not found." });
+                }
+                if (appUser.Status == true)
+                {
+                    return Ok(new { succeeded = true, message = "User is already active." });
+                }
+                appUser.Status = true;
+                db.SaveChanges();
+                return Ok(new { succeeded = true, message = "User unlocked successfully." });
+            }
+        }
+
+        [HttpGet]
         [Route("api/AppUser/CheckAppUserStatus/{id}")]
         public bool CheckAppUserStatus(int id)
         {
@@ -545,6 +566,33 @@ namespace MdLabScience.Controllers
                     .Take(filter.PageSize).ToList();
                 var totalRecords = Query.Count();
                 return Ok(new PagedResponse<List<AppUserModel>>(pagedData, filter.PageNumber, filter.PageSize, totalRecords));
+            }
+        }
+
+        [HttpPost]
+        [Route("api/AppUser/GetAllUserScreenShots")]
+        public IActionResult GetAllUserScreenShots([FromBody] PaginationFilter filter)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var Query = (from s in db.AppUserScreenshotTBs
+                             join a in db.ApplicantsTbs on s.ApplicantId equals a.ApplicantId
+                             select new
+                             {
+                                 ScreenShotId = s.ScreenShotId,
+                                 ImageUrl = s.ImageUrl,
+                                 DateTime = s.DateTime,
+                                 ApplicantId = s.ApplicantId,
+                                 ApplicantName = a.FirstName + " " + a.LastName
+                             })
+                             .OrderByDescending(x => x.DateTime)
+                             .ToList();
+
+                var pagedData = Query
+                    .Skip((filter.PageNumber - 1) * filter.PageSize)
+                    .Take(filter.PageSize).ToList();
+                var totalRecords = Query.Count();
+                return Ok(new PagedResponse<object>(pagedData, filter.PageNumber, filter.PageSize, totalRecords));
             }
         }
     }

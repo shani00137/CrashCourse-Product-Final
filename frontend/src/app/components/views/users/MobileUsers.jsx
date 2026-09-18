@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Lock, Trash2, Search, X, ChevronLeft, ChevronRight, AlertCircle, Users, RefreshCw, Eye, EyeOff, Check, Wand2, Zap, Ban } from "lucide-react";
+import { Plus, Lock, LockOpen, Trash2, Search, X, ChevronLeft, ChevronRight, AlertCircle, Users, RefreshCw, Eye, EyeOff, Check, Wand2, Zap, Ban } from "lucide-react";
 import { Avatar, Btn, BouncingDots, Card, Input, Modal, SearchableSelect, StatusBadge } from "../../shared/ui";
-import { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan, blockAppUser } from "../../../../services/appUserService";
+import { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan, blockAppUser, unblockAppUser } from "../../../../services/appUserService";
 import { getActiveApplicants } from "../../../../services/applicantService";
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -173,6 +173,27 @@ export function MobileUsersScreen() {
       load();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to block the user.");
+      setBlockTarget(null);
+    } finally {
+      setBlocking(false);
+    }
+  }
+
+  async function handleUnblock() {
+    if (!blockTarget) return;
+    setBlocking(true);
+    try {
+      const res = await unblockAppUser(blockTarget.appUserId);
+      const msg = res && typeof res === "object" && typeof res.message === "string"
+        ? res.message
+        : typeof res === "string"
+          ? res
+          : "User unlocked successfully.";
+      setMessage(msg);
+      setBlockTarget(null);
+      load();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to unlock the user.");
       setBlockTarget(null);
     } finally {
       setBlocking(false);
@@ -430,12 +451,19 @@ export function MobileUsersScreen() {
                         className="p-1.5 text-[#718096] hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                         title="Change Plan (Trial/Pro)"
                       ><Zap size={14} /></button>
-                      <button
-                        onClick={() => { setMessage(""); setBlockTarget(u); }}
-                        disabled={!u.status}
-                        className="p-1.5 text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        title={u.status ? "Block User" : "Already blocked"}
-                      ><Ban size={14} /></button>
+                      {u.status ? (
+                        <button
+                          onClick={() => { setMessage(""); setBlockTarget(u); }}
+                          className="p-1.5 text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 rounded-lg transition"
+                          title="Block User"
+                        ><Ban size={14} /></button>
+                      ) : (
+                        <button
+                          onClick={() => { setMessage(""); setBlockTarget(u); }}
+                          className="p-1.5 text-[#718096] hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                          title="Unlock User"
+                        ><LockOpen size={14} /></button>
+                      )}
                       <button onClick={() => { setMessage(""); setDeleteTarget(u); }} className="p-1.5 text-[#718096] hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Delete User"><Trash2 size={14} /></button>
                     </div>
                   </td>
@@ -516,15 +544,24 @@ export function MobileUsersScreen() {
         </Modal>
       )}
       {blockTarget && (
-        <Modal title="Block Mobile User" onClose={() => setBlockTarget(null)}>
+        <Modal title={blockTarget.status ? "Block Mobile User" : "Unlock Mobile User"} onClose={() => setBlockTarget(null)}>
           <div className="flex flex-col gap-4">
             <p className="text-sm text-[#1A202C]">
-              Blocking <span className="font-semibold">{displayName(blockTarget)}</span> ({blockTarget.userName}) suspends their
-              account immediately — they will be logged out of the app and unable to log in again until unblocked. Continue?
+              {blockTarget.status ? (
+                <>Blocking <span className="font-semibold">{displayName(blockTarget)}</span> ({blockTarget.userName}) suspends their
+                account immediately — they will be logged out of the app and unable to log in again until unblocked. Continue?</>
+              ) : (
+                <>This will <span className="font-semibold">unlock {displayName(blockTarget)}</span> ({blockTarget.userName}) so they can
+                log in and use the app again. Continue?</>
+              )}
             </p>
             <div className="flex gap-2 justify-end mt-2">
               <Btn variant="ghost" onClick={() => setBlockTarget(null)}>Cancel</Btn>
-              <Btn variant="danger" onClick={handleBlock} disabled={blocking}>{blocking ? "Blocking…" : "Block User"}</Btn>
+              {blockTarget.status ? (
+                <Btn variant="danger" onClick={handleBlock} disabled={blocking}>{blocking ? "Blocking…" : "Block User"}</Btn>
+              ) : (
+                <Btn variant="primary" onClick={handleUnblock} disabled={blocking}>{blocking ? "Unlocking…" : "Unlock User"}</Btn>
+              )}
             </div>
           </div>
         </Modal>

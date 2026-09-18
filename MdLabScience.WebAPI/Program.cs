@@ -120,7 +120,7 @@ app.UseCors("Frontend");
 //swagger UI finalzed
 app.UseDefaultFiles();
 app.UseStaticFiles();
-var staticDirs = new[] { "Uploads", "Images" };
+var staticDirs = new[] { "Uploads", "Images", "Screenshots" };
 foreach (var dir in staticDirs)
 {
     var dirPath = Path.Combine(app.Environment.ContentRootPath, dir);

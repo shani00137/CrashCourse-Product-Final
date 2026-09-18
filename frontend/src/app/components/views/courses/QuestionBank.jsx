@@ -13,6 +13,7 @@ import {
   Loader2,
   CheckCircle,
   Sparkles,
+  ShieldCheck,
   FileUp,
   Download
 } from "lucide-react";
@@ -153,6 +154,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
           <Btn variant="outline" icon={<Download size={14} />} onClick={handleDownloadTemplate}>Template</Btn>
           <Btn variant="outline" icon={<FileUp size={14} />} onClick={() => setScreen("upload-from-pdf")}>Upload from PDF</Btn>
           <Btn variant="outline" icon={<Sparkles size={14} />} onClick={() => setScreen("generate-ai-question")}>Generate with AI</Btn>
+          <Btn variant="outline" icon={<ShieldCheck size={14} />} onClick={() => setScreen("question-correction")}>Question Correction</Btn>
           <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setScreen("question-form")}>Add Question</Btn>
         </div>
       </div>

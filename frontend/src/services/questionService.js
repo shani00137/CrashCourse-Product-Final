@@ -45,6 +45,12 @@ async function generateAiQuestions(payload) {
     body: JSON.stringify(payload)
   });
 }
+async function reviewQuestion(payload) {
+  return apiFetch("/api/Questions/api/Questions/ReviewQuestion", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
 async function importQuestions(file) {
   const formData = new FormData();
   formData.append("file", file);
@@ -79,5 +85,6 @@ export {
   importQuestions,
   ocrPdf,
   parseOcrToQuestions,
+  reviewQuestion,
   saveQuestion
 };
