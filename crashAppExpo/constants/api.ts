@@ -1,4 +1,4 @@
-// export const API_BASE_URL = "http://192.168.26.6:5005/api";
+//export const API_BASE_URL = "http://localhost:5005/api";
 export const API_BASE_URL = "https://crashcourseonlin.net/api";
 export const ENDPOINTS = {
   saveApplicants: "/Applicant/api/Applicant/SaveApplicants",
@@ -9,8 +9,11 @@ export const ENDPOINTS = {
   getApplicantCourses: (appUserId: number) =>
     `/Applicant/api/Applicant/GetApplicantCourses/${appUserId}`,
   getAllExercises: "/Course/api/Course/GetAllExercise",
+  getAllExercisesForCourse: (courseId: number) =>
+    `/Course/api/Course/GetAllExercise/${courseId}`,
   getCourseMaterials: (courseId: number) =>
     `/Course/api/Course/GetCourseMaterial/${courseId}`,
+  getLatestAppVersion: "/Course/api/Course/GetLatestAppVersion",
   getUserDetailById: (appUserId: number) =>
     `/AppUser/api/AppUser/GetDetailOfUserById/${appUserId}`,
   changePlan: "/AppUser/api/AppUser/ChangePlan",

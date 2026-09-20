@@ -52,19 +52,19 @@ export default function CoursesScreen() {
 
   const loadCourses = useCallback(async () => {
     try {
-      const [courseResult, exerciseResult, detail, readingResult] =
-        await Promise.all([
-          user?.appUserId
-            ? getApplicantCourses(user.appUserId)
-            : Promise.resolve([]),
-          getAllExercises(),
-          user?.appUserId
-            ? getUserDetailById(user.appUserId)
-            : Promise.resolve(null),
-          user?.appUserId
-            ? getAllReadingTime(user.appUserId)
-            : Promise.resolve([]),
-        ]);
+      const [courseResult, detail, readingResult] = await Promise.all([
+        user?.appUserId
+          ? getApplicantCourses(user.appUserId)
+          : Promise.resolve([]),
+        user?.appUserId
+          ? getUserDetailById(user.appUserId)
+          : Promise.resolve(null),
+        user?.appUserId
+          ? getAllReadingTime(user.appUserId)
+          : Promise.resolve([]),
+      ]);
+      const cid = detail?.courseId || courseResult[0]?.courseId || 0;
+      const exerciseResult = await getAllExercises(cid || undefined);
       setCourse(courseResult[0] ?? null);
       setUserDetail(detail);
       setExercises(exerciseResult);

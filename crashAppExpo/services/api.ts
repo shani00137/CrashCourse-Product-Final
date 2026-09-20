@@ -637,12 +637,7 @@ export interface ExerciseInfo {
   endFrom: number;
 }
 
-/**
- * Fetches the full list of exercises. Each exercise is a range of question
- * ids (startFrom..endFrom) belonging to a course.
- */
-export async function getAllExercises(): Promise<ExerciseInfo[]> {
-  const data = await get<unknown>(ENDPOINTS.getAllExercises);
+function mapExercises(data: unknown): ExerciseInfo[] {
   if (!Array.isArray(data)) return [];
   return data
     .filter((it) => it && typeof it === "object")
@@ -656,6 +651,57 @@ export async function getAllExercises(): Promise<ExerciseInfo[]> {
       };
     })
     .filter((c) => c.exerciseRecordId > 0);
+}
+
+/**
+ * Fetches the exercises for a course. Exercises are ranges of question ids
+ * (startFrom..endFrom) that must line up with the course's actual question
+ * count: the course-aware endpoint computes ranges from the questions that
+ * exist (50-question blocks, last block clamped to the total), and as a
+ * safety net we also clamp to the real count here, so no exercise ever
+ * points past the pool and every question stays reachable.
+ */
+export async function getAllExercises(courseId?: number): Promise<ExerciseInfo[]> {
+  if (courseId && courseId > 0) {
+    try {
+      return await getExercisesForCourse(courseId);
+    } catch {
+      // Backend may not have the course-aware endpoint deployed yet; fall back
+      // to the global list (filtered/clamped to this course's question count).
+    }
+  }
+  const data = await get<unknown>(ENDPOINTS.getAllExercises);
+  let list = mapExercises(data);
+  if (courseId && courseId > 0) {
+    list = await clampToCourse(list, courseId);
+  }
+  return list;
+}
+
+async function getExercisesForCourse(courseId: number): Promise<ExerciseInfo[]> {
+  const data = await get<unknown>(ENDPOINTS.getAllExercisesForCourse(courseId));
+  const list = mapExercises(data);
+  return clampToCourse(list, courseId);
+}
+
+async function clampToCourse(
+  list: ExerciseInfo[],
+  courseId: number
+): Promise<ExerciseInfo[]> {
+  try {
+    const { questionCount } = await getExerciseQuestionCount(courseId);
+    if (questionCount > 0) {
+      return list
+        .filter((e) => e.startFrom > 0 && e.startFrom <= questionCount)
+        .map((e) => ({
+          ...e,
+          endFrom: Math.min(e.endFrom, questionCount),
+        }));
+    }
+  } catch {
+    // Count lookup is best-effort; keep the raw list when it fails.
+  }
+  return list;
 }
 
 export interface QuestionCountResult {

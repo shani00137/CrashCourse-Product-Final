@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AppProvider } from "@/context/AppContext";
 import AccountBlockWatchdog from "@/components/AccountBlockWatchdog";
+import UpdatePrompt from "@/components/UpdatePrompt";
 
 export default function RootLayout() {
   const router = useRouter();
@@ -33,6 +34,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppProvider>
         <AccountBlockWatchdog />
+        <UpdatePrompt />
         <StatusBar style="light" />
         <Stack
           screenOptions={{

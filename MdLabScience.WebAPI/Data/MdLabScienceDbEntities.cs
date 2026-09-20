@@ -50,6 +50,7 @@ namespace MdLabScience.DbContext
         public virtual DbSet<ApplicantStatusTransactionsTb> ApplicantStatusTransactionsTbs { get; set; }
         public virtual DbSet<ServiceTb> ServiceTbs { get; set; }
         public virtual DbSet<UserReadingTimeTb> UserReadingTimeTbs { get; set; }
+        public virtual DbSet<AppVersionTb> AppVersionTbs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -217,6 +218,11 @@ namespace MdLabScience.DbContext
             {
                 entity.HasKey(e => e.Id);
                 entity.ToTable("UserReadingTimeTb");
+            });
+            modelBuilder.Entity<AppVersionTb>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.ToTable("AppVersionTb");
             });
         }
     }

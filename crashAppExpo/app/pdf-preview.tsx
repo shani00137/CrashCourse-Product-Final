@@ -168,7 +168,15 @@ export default function PdfPreviewScreen() {
   const cmd = (c: "next" | "prev" | "in" | "out") => {
     if (c === "in") setZoom((z) => Math.min(4, Math.round(z * 1.25 * 100) / 100));
     if (c === "out") setZoom((z) => Math.max(0.4, Math.round(z / 1.25 * 100) / 100));
-    webRef.current?.injectJavaScript(`window.__nav&&window.__nav("${c}");true`);
+    // Don't silently swallow taps while the WebView hasn't mounted yet; report
+    // back to the toolbar instead of pretending navigation succeeded.
+    const web = webRef.current;
+    if (!web) return;
+    web.injectJavaScript(
+      `if (window.__nav) { window.__nav("${c}"); } else { ` +
+        `try { window.ReactNativeWebView.postMessage(JSON.stringify({type:"error", message:"Viewer not ready"})); } catch (e) {} ` +
+        `} true`
+    );
   };
 
   const canPrev = currentPage > 1;
@@ -258,7 +266,7 @@ export default function PdfPreviewScreen() {
           <Ionicons name="add" size={20} color={colors.foreground} />
         </TouchableOpacity>
         <View style={styles.toolDivider} />
-        <Text style={styles.pageLabel}>
+        <Text style={styles.pageLabel} numberOfLines={1}>
           {totalPages > 0 ? `Page ${currentPage} of ${totalPages}` : "Loading pages…"}
         </Text>
         <View style={styles.toolFiller} />
@@ -392,17 +400,21 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    paddingBottom: 14,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingBottom: 12,
     backgroundColor: colors.card,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    // Keep the toolbar tappable even when the native WebView layer sits above
+    // sibling views (a known WKWebView behaviour).
+    zIndex: 10,
+    elevation: 10,
   },
   toolButton: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     backgroundColor: "#F7FAFC",
     borderWidth: 1,
@@ -414,7 +426,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   zoomLabel: {
-    minWidth: 44,
+    minWidth: 40,
     textAlign: "center",
     fontSize: 12,
     fontWeight: "700",

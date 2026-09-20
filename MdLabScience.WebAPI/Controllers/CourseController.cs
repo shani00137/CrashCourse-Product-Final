@@ -345,6 +345,42 @@ namespace MdLabScience.Controllers
             }
         }
 
+        // Exercises are question ranges, but the fixed rows in ExerciseTb are
+        // global index ranges (1-50, 51-100, ...) that never match a single
+        // course's real question count. For a given course we instead compute
+        // the ranges from the questions that actually exist: 50-question
+        // blocks, with the last block clamped to the course's total so every
+        // question is reachable and no exercise points past the pool.
+        [HttpGet]
+        [AllowAnonymous]
+        [Route("api/Course/GetAllExercise/{courseId}")]
+        public IActionResult GetAllExerciseForCourse(int courseId)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                int total = db.QuestionsTBs.Where(x => x.CourseId == courseId).Count();
+                var list = new List<object>();
+                if (total > 0)
+                {
+                    const int chunk = 50;
+                    int index = 0;
+                    for (int start = 1; start <= total; start += chunk)
+                    {
+                        index++;
+                        int end = Math.Min(start + chunk - 1, total);
+                        list.Add(new
+                        {
+                            ExerciseRecordId = index,
+                            Exercise = "Exercise-" + index,
+                            StartFrom = start,
+                            EndFrom = end
+                        });
+                    }
+                }
+                return Ok(list);
+            }
+        }
+
         [HttpGet]
         [AllowAnonymous]
         [Route("api/Course/GetCountryName")]
@@ -354,6 +390,41 @@ namespace MdLabScience.Controllers
             {
                 var Query = db.CountryTbs.ToList();
                 return Ok(Query);
+            }
+        }
+
+        // The latest released app version, used by the in-app "update
+        // available" prompt. The version is not derivable from the public
+        // Google Play page anymore, so it is maintained in AppVersionTb by the
+        // developer when a new build is uploaded to the store. StoreUrl lets
+        // the store link be overridden (defaults to market://details?id=...).
+        [HttpGet]
+        [AllowAnonymous]
+        [Route("api/Course/GetLatestAppVersion")]
+        public IActionResult GetLatestAppVersion()
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var row = db.AppVersionTbs.FirstOrDefault();
+                if (row == null)
+                {
+                    return Ok(new
+                    {
+                        latestVersion = "1.0.0",
+                        forceUpdate = false,
+                        storeUrl = "market://details?id=com.onlinecrashcourse.app",
+                        storeWebUrl = "https://play.google.com/store/apps/details?id=com.onlinecrashcourse.app",
+                        message = "An updated version of Crash Course is available."
+                    });
+                }
+                return Ok(new
+                {
+                    latestVersion = row.LatestVersion,
+                    forceUpdate = row.ForceUpdate,
+                    storeUrl = row.StoreUrl,
+                    storeWebUrl = "https://play.google.com/store/apps/details?id=com.onlinecrashcourse.app",
+                    message = row.Message
+                });
             }
         }
     }
