@@ -10,6 +10,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors, gradients } from "@/constants/theme";
 import { buildPdfViewerHtml, pdfPageKey } from "@/constants/pdfViewerHtml";
@@ -40,6 +41,14 @@ export default function PdfPreviewScreen() {
   const bytesRef = useRef<Uint8Array | null>(null);
   const feedingRef = useRef(false);
   const feedAbortRef = useRef(false);
+
+  // The app runs edge-to-edge, so the bottom of the screen sits under the
+  // Android navigation keys. Lift the content above the system inset, pull the
+  // bottom region (viewer + toolbar) in from the left/right edges as well, and
+  // keep a small grey margin below the PDF so it never overlays the nav keys.
+  const insets = useSafeAreaInsets();
+  const sidePad = Math.max(insets.left, 8);
+  const sidePadRight = Math.max(insets.right, 8);
 
   useEffect(() => {
     if (!uri) {
@@ -183,7 +192,7 @@ export default function PdfPreviewScreen() {
   const canNext = totalPages === 0 || currentPage < totalPages;
 
   return (
-    <View style={styles.flex}>
+    <View style={[styles.flex, { paddingBottom: insets.bottom }]}>
       {/* Header */}
       <LinearGradient
         colors={gradients.darkRedGrad}
@@ -214,7 +223,7 @@ export default function PdfPreviewScreen() {
       </LinearGradient>
 
       {/* Viewer */}
-      <View style={styles.viewer}>
+      <View style={[styles.viewer, { marginLeft: sidePad, marginRight: sidePadRight }]}>
         {error ? (
           <View style={styles.center}>
             <Ionicons name="cloud-offline-outline" size={40} color={colors.mutedForeground} />
@@ -257,7 +266,7 @@ export default function PdfPreviewScreen() {
       </View>
 
       {/* Toolbar */}
-      <View style={styles.toolbar}>
+      <View style={[styles.toolbar, { marginLeft: sidePad, marginRight: sidePadRight }]}>
         <TouchableOpacity style={styles.toolButton} onPress={() => cmd("out")} activeOpacity={0.8}>
           <Ionicons name="remove" size={20} color={colors.foreground} />
         </TouchableOpacity>
@@ -349,6 +358,9 @@ const styles = StyleSheet.create({
   viewer: {
     flex: 1,
     backgroundColor: "#525252",
+    // Keep the PDF page off the bottom edge: a small grey breathing space
+    // between the page canvas and the toolbar below.
+    paddingBottom: 12,
   },
   web: {
     flex: 1,
