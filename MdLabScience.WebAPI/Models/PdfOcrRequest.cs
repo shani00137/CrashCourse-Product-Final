@@ -124,4 +124,10 @@ namespace MdLabScience.Models
         public int CorrectIndex { get; set; }
         public string Explanation { get; set; }
     }
+
+    public class UpdateQuestionVerifiedByRequest
+    {
+        public int QuestionId { get; set; }
+        public string VerifiedBy { get; set; }
+    }
 }

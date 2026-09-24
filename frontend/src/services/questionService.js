@@ -51,6 +51,12 @@ async function reviewQuestion(payload) {
     body: JSON.stringify(payload)
   });
 }
+async function updateQuestionVerifiedBy(payload) {
+  return apiFetch("/api/Questions/api/Questions/UpdateQuestionVerifiedBy", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
 async function importQuestions(file) {
   const formData = new FormData();
   formData.append("file", file);
@@ -86,5 +92,6 @@ export {
   ocrPdf,
   parseOcrToQuestions,
   reviewQuestion,
-  saveQuestion
+  saveQuestion,
+  updateQuestionVerifiedBy
 };

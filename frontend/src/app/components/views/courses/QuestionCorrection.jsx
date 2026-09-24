@@ -18,7 +18,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { Btn, Card, SearchableSelect } from "../../shared/ui";
-import { getAllQuestions, reviewQuestion, editQuestion } from "../../../../services/questionService";
+import { getAllQuestions, reviewQuestion, editQuestion, updateQuestionVerifiedBy } from "../../../../services/questionService";
 import { getActiveCourses } from "../../../../services/applicantService";
 import { htmlToText } from "../../../../utils/html";
 
@@ -61,6 +61,24 @@ function OptionRow({ letter, text, correct }) {
   );
 }
 
+function VerifiedBadge({ verifiedBy }) {
+  if (verifiedBy === "Human") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <BadgeCheck size={11} /> Verified by Human
+      </span>
+    );
+  }
+  if (verifiedBy === "AI") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-50 text-violet-700 border border-violet-200">
+        <Sparkles size={11} /> Verified by AI
+      </span>
+    );
+  }
+  return null;
+}
+
 export function QuestionCorrectionScreen({ onBack }) {
   const [courses, setCourses] = useState([]);
   const [courseId, setCourseId] = useState(null);
@@ -74,6 +92,7 @@ export function QuestionCorrectionScreen({ onBack }) {
   const [reviews, setReviews] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [savingId, setSavingId] = useState(null);
+  const [verifyingId, setVerifyingId] = useState(null);
   const [toast, setToast] = useState(null);
 
   const questionsRef = useRef([]);
@@ -152,6 +171,10 @@ export function QuestionCorrectionScreen({ onBack }) {
         ...prev,
         [q.questionId]: { status: STATUS_DONE, isCorrect: !!res.isCorrect, review: res }
       }));
+      if (res.isCorrect) {
+        setQuestions(prev => prev.map(qq => qq.questionId === q.questionId ? { ...qq, verifiedBy: "AI" } : qq));
+        updateQuestionVerifiedBy({ questionId: q.questionId, verifiedBy: "AI" }).catch(() => {});
+      }
     } catch (err) {
       setReviews(prev => ({
         ...prev,
@@ -175,12 +198,14 @@ export function QuestionCorrectionScreen({ onBack }) {
         questionId: q.questionId,
         courseId: q.courseId,
         questionContent: review.questionContent,
-        questionOptionsList: correctedOptions
+        questionOptionsList: correctedOptions,
+        verifiedBy: "AI"
       });
       setQuestions(prev => prev.map((qq, ii) => ii === selectedIdx ? {
         ...qq,
         questionContent: review.questionContent,
-        questionOptions: correctedOptions
+        questionOptions: correctedOptions,
+        verifiedBy: "AI"
       } : qq));
       setReviews(prev => ({
         ...prev,
@@ -191,6 +216,23 @@ export function QuestionCorrectionScreen({ onBack }) {
       setToast({ type: "error", message: err instanceof Error ? err.message : "Failed to update the question." });
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const handleManualVerify = async () => {
+    if (selectedIdx === null) return;
+    const q = questionsRef.current[selectedIdx];
+    if (!q) return;
+    const next = q.verifiedBy === "Human" ? "" : "Human";
+    setVerifyingId(q.questionId);
+    try {
+      const msg = await updateQuestionVerifiedBy({ questionId: q.questionId, verifiedBy: next });
+      setQuestions(prev => prev.map(qq => qq.questionId === q.questionId ? { ...qq, verifiedBy: next || null } : qq));
+      setToast({ type: "success", message: next === "Human" ? (msg || "Question marked as verified by Human.") : "Manual verification removed." });
+    } catch (err) {
+      setToast({ type: "error", message: err instanceof Error ? err.message : "Failed to update verification." });
+    } finally {
+      setVerifyingId(null);
     }
   };
 
@@ -320,11 +362,12 @@ export function QuestionCorrectionScreen({ onBack }) {
                   >
                     <div className="p-3">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
                           <span className={`inline-flex items-center justify-center w-5 h-5 rounded-md text-[10px] font-extrabold flex-shrink-0 ${isSelected ? "bg-[#C41E3A] text-white" : "bg-[#EDF2F7] text-[#718096]"}`}>
                             {idx + 1}
                           </span>
                           <StatusBadge status={rStatus} isCorrect={!!rev?.isCorrect} />
+                          <VerifiedBadge verifiedBy={q.verifiedBy} />
                         </div>
                         <span className={`inline-flex items-center gap-1 text-[10px] font-semibold flex-shrink-0 ${isSelected ? "text-[#C41E3A]" : "text-[#A0AEC0]"}`}>
                           <ChevronDown size={12} className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
@@ -455,6 +498,26 @@ export function QuestionCorrectionScreen({ onBack }) {
                 </div>
                 <p className="text-sm font-semibold text-blue-700">Accepted &amp; Replaced</p>
                 <p className="text-xs text-blue-600 text-center max-w-xs">The corrected version is now saved in the question bank.</p>
+              </div>
+            )}
+
+            {selected && !selectedReview?.error && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#F7FAFC] px-3.5 py-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <input
+                    type="checkbox"
+                    id="manual-verify-tick"
+                    className="w-4 h-4 accent-emerald-600 cursor-pointer flex-shrink-0"
+                    checked={selected.verifiedBy === "Human"}
+                    onChange={handleManualVerify}
+                    disabled={!!verifyingId}
+                  />
+                  <label htmlFor="manual-verify-tick" className="text-xs font-medium text-[#1A202C] cursor-pointer select-none">
+                    Manually verified by Human
+                  </label>
+                  <span className="text-[10px] text-[#718096] hidden sm:inline">Tick to mark, untick to clear</span>
+                </div>
+                {selected.verifiedBy ? <VerifiedBadge verifiedBy={selected.verifiedBy} /> : null}
               </div>
             )}
           </Card>

@@ -106,6 +106,13 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
         Console.WriteLine("[Migration] CertificateInvoiceTb columns verified.");
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('QuestionsTB') AND name = 'VerifiedBy')
+            BEGIN
+                ALTER TABLE QuestionsTB ADD VerifiedBy NVARCHAR(50) NULL;
+            END
+        ");
+        Console.WriteLine("[Migration] QuestionsTB VerifiedBy column verified.");
     }
     catch (Exception ex)
     {

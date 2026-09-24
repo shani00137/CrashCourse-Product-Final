@@ -10,6 +10,7 @@ namespace EMCQWebApi.Models
         public int CourseId { get; set; }
         public Nullable<System.DateTime> DateTime { get; set; }
         public string QuestionContent { get; set; }
+        public string VerifiedBy { get; set; }
         public int[] CourseIdList { get; set; }
         public IEnumerable<QuestionOptions> QuestionOptionsList { get; set; }
     }

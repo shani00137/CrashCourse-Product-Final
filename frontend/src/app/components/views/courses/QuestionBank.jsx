@@ -12,13 +12,14 @@ import {
   BookOpen,
   Loader2,
   CheckCircle,
+  BadgeCheck,
   Sparkles,
   ShieldCheck,
   FileUp,
   Download
 } from "lucide-react";
 import { Btn, BouncingDots, Card, SearchableSelect } from "../../shared/ui";
-import { getAllQuestions, deleteQuestion, importQuestions, downloadQuestionModel } from "../../../../services/questionService";
+import { getAllQuestions, deleteQuestion, importQuestions, downloadQuestionModel, updateQuestionVerifiedBy } from "../../../../services/questionService";
 import { getActiveCourses } from "../../../../services/applicantService";
 import { htmlToText } from "../../../../utils/html";
 
@@ -35,6 +36,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [verifyingId, setVerifyingId] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState(null);
   const fileInputRef = useRef(null);
@@ -102,6 +104,20 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
       showToast("error", err instanceof Error ? err.message : "Failed to delete question.");
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleToggleVerified = async (q) => {
+    const next = q.verifiedBy === "Human" ? "" : "Human";
+    setVerifyingId(q.questionId);
+    try {
+      const msg = await updateQuestionVerifiedBy({ questionId: q.questionId, verifiedBy: next });
+      setRows(prev => prev.map(r => r.questionId === q.questionId ? { ...r, verifiedBy: next || null } : r));
+      showToast("success", next === "Human" ? (msg || "Question marked as verified by Human.") : "Manual verification removed.");
+    } catch (err) {
+      showToast("error", err instanceof Error ? err.message : "Failed to update verification.");
+    } finally {
+      setVerifyingId(null);
     }
   };
 
@@ -225,8 +241,26 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
                   <span className="text-xs font-semibold text-[#718096] bg-[#EDF2F7] px-2 py-0.5 rounded-md">Q{start + qi + 1}</span>
                   <span className="text-xs text-[#C41E3A] font-medium">{q.courseName}</span>
                   {q.dateTime && <span className="text-xs text-[#718096]">· {new Date(q.dateTime).toLocaleDateString()}</span>}
+                  {q.verifiedBy === "Human" && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">
+                      <BadgeCheck size={11} /> Verified by Human
+                    </span>
+                  )}
+                  {q.verifiedBy === "AI" && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-violet-50 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5">
+                      <Sparkles size={11} /> Verified by AI
+                    </span>
+                  )}
                 </div>
                 <div className="flex gap-1">
+                  <button
+                    onClick={() => handleToggleVerified(q)}
+                    disabled={verifyingId === q.questionId}
+                    className={`p-1.5 rounded-lg transition disabled:opacity-50 ${q.verifiedBy === "Human" ? "text-emerald-600 hover:bg-emerald-50" : "text-[#718096] hover:text-emerald-600 hover:bg-emerald-50"}`}
+                    title={q.verifiedBy === "Human" ? "Remove manual verification" : "Mark as verified by Human"}
+                  >
+                    {verifyingId === q.questionId ? <Loader2 size={13} className="animate-spin" /> : <BadgeCheck size={13} />}
+                  </button>
                   <button onClick={() => onEdit(q)} className="p-1.5 text-[#718096] hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"><Edit2 size={13} /></button>
                   <button
                     onClick={() => handleDelete(q)}

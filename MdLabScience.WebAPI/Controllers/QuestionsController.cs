@@ -71,6 +71,7 @@ namespace MdLabScience.Controllers
                                     c.QuestionId,
                                     c.DateTime,
                                     c.CourseId,
+                                    c.VerifiedBy,
                                     q.CourseName
                                 }).OrderBy(x => x.QuestionId).ToList();
 
@@ -84,6 +85,7 @@ namespace MdLabScience.Controllers
                         r.QuestionId,
                         r.DateTime,
                         r.CourseId,
+                        r.VerifiedBy,
                         r.CourseName,
                         IsSelected = false,
                         QuestionOptions = options.Where(o => o.QuestionId == r.QuestionId).ToList()
@@ -125,6 +127,7 @@ namespace MdLabScience.Controllers
                                  c.QuestionId,
                                  c.DateTime,
                                  c.CourseId,
+                                 c.VerifiedBy,
                                  q.CourseName,
                                  IsSelected = false,
                                  QuestionOptions = db.QuestionOptionsTbs.Where(x => x.QuestionId == c.QuestionId).ToList(),
@@ -162,6 +165,7 @@ namespace MdLabScience.Controllers
                                  c.QuestionId,
                                  c.DateTime,
                                  c.CourseId,
+                                 c.VerifiedBy,
                                  q.CourseName,
                                  IsSelected = false,
                                  QuestionOptions = db.QuestionOptionsTbs.Where(x => x.QuestionId == c.QuestionId).ToList(),
@@ -194,6 +198,7 @@ namespace MdLabScience.Controllers
                                  c.QuestionId,
                                  c.DateTime,
                                  c.CourseId,
+                                 c.VerifiedBy,
                                  q.CourseName,
                                  IsSelected = false,
                                  QuestionOptions = db.QuestionOptionsTbs.Where(x => x.QuestionId == c.QuestionId).ToList(),
@@ -226,6 +231,7 @@ namespace MdLabScience.Controllers
                                  c.QuestionId,
                                  c.DateTime,
                                  c.CourseId,
+                                 c.VerifiedBy,
                                  q.CourseName,
                                  IsSelected = false,
                                  QuestionOptions = db.QuestionOptionsTbs.Where(x => x.QuestionId == c.QuestionId).ToList(),
@@ -295,6 +301,10 @@ namespace MdLabScience.Controllers
                 {
                     UpdateQuery[0].QuestionContent = value.QuestionContent;
                     UpdateQuery[0].CourseId = value.CourseId;
+                    if (!string.IsNullOrEmpty(value.VerifiedBy))
+                    {
+                        UpdateQuery[0].VerifiedBy = value.VerifiedBy;
+                    }
                     db.SaveChanges();
                     ResponseMessage = "Question Updated Sucessfuly..!";
                     var OptionsQuery = db.QuestionOptionsTbs.Where(x => x.QuestionId == value.QuestionId).ToList();
@@ -317,6 +327,28 @@ namespace MdLabScience.Controllers
                         db.QuestionOptionsTbs.Add(Qto);
                         db.SaveChanges();
                     }
+                }
+            }
+            return ResponseMessage;
+        }
+
+        [HttpPost]
+        [Route("api/Questions/UpdateQuestionVerifiedBy")]
+        public String UpdateQuestionVerifiedBy([FromBody] UpdateQuestionVerifiedByRequest value)
+        {
+            String ResponseMessage = "";
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var Query = db.QuestionsTBs.Where(x => x.QuestionId == value.QuestionId).ToList();
+                if (Query.Count > 0)
+                {
+                    Query[0].VerifiedBy = string.IsNullOrEmpty(value.VerifiedBy) ? null : value.VerifiedBy;
+                    db.SaveChanges();
+                    ResponseMessage = "Question verification updated successfully..!";
+                }
+                else
+                {
+                    ResponseMessage = "Question not found..!";
                 }
             }
             return ResponseMessage;
