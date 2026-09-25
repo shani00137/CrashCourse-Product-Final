@@ -15,14 +15,16 @@ import {
   ShieldAlert,
   Clock,
   MousePointerClick,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { Btn, Card, SearchableSelect } from "../../shared/ui";
 import { getAllQuestions, reviewQuestion, editQuestion, updateQuestionVerifiedBy } from "../../../../services/questionService";
 import { getActiveCourses } from "../../../../services/applicantService";
 import { htmlToText } from "../../../../utils/html";
 
-const MAX_FETCH = 200;
+const PAGE_SIZE = 20;
 
 const STATUS_PENDING = "pending";
 const STATUS_CHECKING = "checking";
@@ -89,6 +91,7 @@ export function QuestionCorrectionScreen({ onBack }) {
   const [totalInCourse, setTotalInCourse] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState(null);
   const [expandedIdx, setExpandedIdx] = useState(null);
+  const [page, setPage] = useState(1);
   const [reviews, setReviews] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [savingId, setSavingId] = useState(null);
@@ -124,6 +127,17 @@ export function QuestionCorrectionScreen({ onBack }) {
   const selected = selectedIdx !== null ? questions[selectedIdx] : null;
   const selectedReview = selected ? reviews[selected.questionId] : null;
 
+  const fetchQuestions = async (pageNumber) => {
+    const res = await getAllQuestions({ pageNumber, pageSize: PAGE_SIZE, courseId, searchTerm: "" });
+    const data = res?.data ?? [];
+    setQuestions(data);
+    setTotalInCourse(res?.totalRecords ?? data.length);
+    return data;
+  };
+
+  const totalPages = Math.max(1, Math.ceil(totalInCourse / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+
   const handleSearch = async () => {
     if (!courseId) {
       setToast({ type: "error", message: "Please select a course first." });
@@ -137,15 +151,30 @@ export function QuestionCorrectionScreen({ onBack }) {
     setSelectedIdx(null);
     setExpandedIdx(null);
     setReviews({});
+    setPage(1);
     try {
-      const res = await getAllQuestions({ pageNumber: 1, pageSize: MAX_FETCH, courseId, searchTerm: "" });
-      const data = res?.data ?? [];
-      setQuestions(data);
-      setTotalInCourse(res?.totalRecords ?? data.length);
+      await fetchQuestions(1);
       setSearched(true);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Failed to load questions.");
       setSearched(true);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const goToPage = async (p) => {
+    const target = Math.max(1, Math.min(p, totalPages));
+    if (target === page || searching) return;
+    setSearching(true);
+    setLoadError(null);
+    setSelectedIdx(null);
+    setExpandedIdx(null);
+    try {
+      await fetchQuestions(target);
+      setPage(target);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load questions.");
     } finally {
       setSearching(false);
     }
@@ -293,8 +322,8 @@ export function QuestionCorrectionScreen({ onBack }) {
             ) : (
               <>
                 <span className="text-sm font-semibold text-[#1A202C]">
-                  {questions.length} question{questions.length === 1 ? "" : "s"}
-                  {totalInCourse > questions.length ? ` of ${totalInCourse} shown` : ""}
+                  {questions.length} question{questions.length === 1 ? "" : "s"}{totalInCourse > questions.length ? ` of ${totalInCourse}` : ""}
+                  {totalPages > 1 && <span className="text-[#718096] font-normal"> · Page {safePage} of {totalPages}</span>}
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
                   <CheckCircle size={12} /> {rightCount} correct
@@ -306,6 +335,27 @@ export function QuestionCorrectionScreen({ onBack }) {
               </>
             )}
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-[rgba(0,0,0,0.06)]">
+              <button
+                onClick={() => goToPage(safePage - 1)}
+                disabled={safePage <= 1 || searching}
+                className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Previous page"
+              >
+                <ChevronLeft size={14} className="mx-auto" />
+              </button>
+              <span className="px-2 text-xs font-medium text-[#718096]">Page {safePage} of {totalPages}</span>
+              <button
+                onClick={() => goToPage(safePage + 1)}
+                disabled={safePage >= totalPages || searching}
+                className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Next page"
+              >
+                <ChevronRight size={14} className="mx-auto" />
+              </button>
+            </div>
+          )}
         </Card>
       )}
 
@@ -563,7 +613,7 @@ export function QuestionCorrectionScreen({ onBack }) {
       )}
 
       {toast && (
-        <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-medium text-white ${toast.type === "success" ? "bg-[#C41E3A]" : "bg-red-500"}`}>
+        <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-medium text-white ${toast.type === "success" ? "bg-emerald-500" : "bg-red-500"}`}>
           {toast.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
           {toast.message}
           <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100"><XCircle size={14} /></button>

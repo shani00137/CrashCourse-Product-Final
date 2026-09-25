@@ -36,17 +36,20 @@ function PrintInvoice({ invoice, onClose }) {
   <title>Invoice ${invoice.invoiceNo}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; padding: 40px; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; padding: 40px; font-weight: 700; }
     .invoice-container { max-width: 750px; margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 3px solid #C41E3A; padding-bottom: 20px; }
     .company-name { font-size: 24px; font-weight: 700; color: #C41E3A; letter-spacing: -0.5px; }
-    .company-sub { font-size: 11px; color: #718096; margin-top: 4px; }
+    .company-sub { font-size: 11px; color: #334155; margin-top: 4px; }
+    .company-meta { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(0,0,0,0.12); font-size: 11px; color: #4a5568; line-height: 1.7; }
+    .company-meta .meta-row { display: flex; gap: 6px; }
+    .company-meta .meta-label { font-weight: 700; color: #334155; white-space: nowrap; }
     .invoice-title { font-size: 28px; font-weight: 700; color: #1a1a1a; text-align: right; }
-    .invoice-no { font-size: 13px; color: #718096; margin-top: 4px; text-align: right; }
+    .invoice-no { font-size: 13px; color: #334155; margin-top: 4px; text-align: right; }
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
     .info-box { background: #f7fafc; border-radius: 8px; padding: 16px; border: 1px solid rgba(0,0,0,0.06); }
-    .info-label { font-size: 10px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .info-value { font-size: 13px; color: #1a1a1a; font-weight: 500; }
+    .info-label { font-size: 10px; font-weight: 600; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .info-value { font-size: 13px; color: #1a1a1a; font-weight: 700; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
     th { background: #C41E3A; color: white; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 14px; text-align: left; }
     th:last-child, th:nth-child(3) { text-align: right; }
@@ -58,13 +61,13 @@ function PrintInvoice({ invoice, onClose }) {
     .totals-box { width: 280px; }
     .totals-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; }
     .totals-row.total { border-top: 2px solid #C41E3A; font-weight: 700; font-size: 15px; padding-top: 12px; margin-top: 4px; }
-    .totals-row .label { color: #718096; }
+    .totals-row .label { color: #334155; }
     .totals-row .value { font-family: 'Courier New', monospace; color: #1a1a1a; }
     .footer { margin-top: 40px; border-top: 1px solid rgba(0,0,0,0.06); padding-top: 20px; }
     .signature-section { display: flex; justify-content: space-between; margin-top: 30px; }
     .signature-box { width: 200px; }
-    .signature-line { border-top: 1px solid #1a1a1a; margin-top: 60px; padding-top: 8px; font-size: 11px; color: #718096; }
-    .notes { font-size: 11px; color: #718096; margin-top: 20px; line-height: 1.6; }
+    .signature-line { border-top: 1px solid #1a1a1a; margin-top: 60px; padding-top: 8px; font-size: 11px; color: #334155; }
+    .notes { font-size: 11px; color: #334155; margin-top: 20px; line-height: 1.6; }
     @media print {
       body { padding: 20px; }
       .no-print { display: none !important; }
@@ -75,8 +78,18 @@ function PrintInvoice({ invoice, onClose }) {
   <div class="invoice-container">
     <div class="header">
       <div>
-        <div class="company-name">HealthEdu Pro</div>
-        <div class="company-sub">Medical Education & Certification Services</div>
+        <div class="company-name">Health Planning Consultancies</div>
+        <div class="company-sub">Medical Education &amp; Certification Services</div>
+        <div class="company-meta">
+          <div class="meta-row">
+            <span class="meta-label">Address:</span>
+            <span>Office No. 584 How AI-Anz, Dubai</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Tax Registration No.:</span>
+            <span>104880139100003</span>
+          </div>
+        </div>
       </div>
       <div>
         <div class="invoice-title">INVOICE</div>
@@ -165,7 +178,7 @@ function PrintInvoice({ invoice, onClose }) {
         <div className="border border-[rgba(0,0,0,0.08)] rounded-xl p-5 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-xs font-semibold text-[#1A202C]">HealthEdu Pro</p>
+              <p className="text-xs font-semibold text-[#1A202C]">Health Planning Consultancies</p>
               <p className="text-[15px] text-[#718096]">Invoice {invoice.invoiceNo}</p>
             </div>
             <div className="text-right">

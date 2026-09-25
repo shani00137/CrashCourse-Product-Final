@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Loader2, CheckCircle, Plus, Trash2, CircleDot } from "lucide-react";
+import { AlertCircle, Loader2, CheckCircle, Plus, Trash2, CircleDot, ArrowLeft } from "lucide-react";
 import { Btn, Card, SearchableSelect } from "../../shared/ui";
 import { RichTextEditor } from "../../shared/RichTextEditor";
 import { saveQuestion, editQuestion } from "../../../../services/questionService";
@@ -45,6 +45,27 @@ export function QuestionFormScreen({ question, onBack }) {
   }, [toast]);
 
   const courseOptions = courses.map(c => ({ id: c.courseId, label: `${c.courseCode} — ${c.courseName}` }));
+
+  const resetForm = () => {
+    setError(null);
+    if (editing) {
+      // Reset back to the originally loaded question
+      setCourseId(String(question.courseId));
+      setContent(question.questionContent ?? "");
+      const opts = Array.isArray(question.questionOptions) ? question.questionOptions : [];
+      const mapped = opts.map(o => o.options ?? "");
+      while (mapped.length < 4) mapped.push("");
+      setOptions(mapped);
+      const idx = opts.findIndex(o => o.isRightAns);
+      setCorrect(idx >= 0 ? idx : 0);
+    } else {
+      // Blank fresh form
+      setCourseId("");
+      setContent("");
+      setOptions([...BLANK_OPTIONS]);
+      setCorrect(0);
+    }
+  };
 
   const addOptions = () => {
     const next = Math.min(options.length + 2, MAX_OPTIONS);
@@ -95,7 +116,6 @@ export function QuestionFormScreen({ question, onBack }) {
         ? await editQuestion({ questionId: question.questionId, ...payload })
         : await saveQuestion(payload);
       setToast({ type: "success", message: msg || (editing ? "Question updated" : "Question saved") });
-      setTimeout(onBack, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save.");
     } finally {
@@ -105,11 +125,14 @@ export function QuestionFormScreen({ question, onBack }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-[#1A202C]">{editing ? "Edit Question" : "Add Question"}</h1>
           <p className="text-xs text-[#718096] mt-0.5">{editing ? "Update the MCQ and save your changes" : "Create a new MCQ with rich text support"}</p>
         </div>
+        {onBack && (
+          <Btn variant="ghost" icon={<ArrowLeft size={14} />} onClick={onBack}>Back</Btn>
+        )}
       </div>
 
       <form onSubmit={handleSave} className="flex flex-col gap-5 max-w-4xl">
@@ -233,17 +256,20 @@ export function QuestionFormScreen({ question, onBack }) {
         )}
 
         {/* Actions */}
-        <div className="flex gap-2 justify-end">
-          <Btn variant="ghost" onClick={onBack}>Cancel</Btn>
-          <Btn type="submit" variant="primary" disabled={saving} className={saving ? "cursor-wait" : ""}>
-            {saving && <Loader2 size={14} className="animate-spin" />}
-            {editing ? "Save Changes" : "Save Question"}
-          </Btn>
+        <div className="flex gap-2 justify-between">
+          <Btn type="button" variant="outline" onClick={resetForm} disabled={saving}>Reset</Btn>
+          <div className="flex gap-2">
+            <Btn variant="ghost" onClick={onBack}>Cancel</Btn>
+            <Btn type="submit" variant="primary" disabled={saving} className={saving ? "cursor-wait" : ""}>
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              {editing ? "Save Changes" : "Save Question"}
+            </Btn>
+          </div>
         </div>
       </form>
 
       {toast && (
-        <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-[#C41E3A]" : "bg-red-500"}`}>
+        <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-emerald-500" : "bg-red-500"}`}>
           {toast.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
           {toast.message}
         </div>

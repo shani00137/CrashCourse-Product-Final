@@ -118,6 +118,11 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set(navGroups.map(g => g.label)));
   const firedRef = useRef(false);
 
+  // Keep the Question Bank mounted (hidden) while on question sub-screens so
+  // pressing Back returns to the last-seen state instead of reloading it fresh.
+  const questionSubScreens = ["question-form", "generate-ai-question", "upload-from-pdf", "question-correction"];
+  const bankMounted = screen === "question-bank" || questionSubScreens.includes(screen);
+
   useEffect(() => {
     if (!firedRef.current) {
       firedRef.current = true;
@@ -193,7 +198,6 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     "invoice-dashboard": <InvoiceDashboardScreen />,
     "profit-loss": <ProfitLossScreen />,
     courses: <CoursesScreen />,
-    "question-bank": <QuestionBankScreen setScreen={setScreen} onEdit={onEditQuestion} />,
     "question-form": <QuestionFormScreen question={questionForm?.question ?? null} onBack={() => setScreen("question-bank")} />,
     "generate-ai-question": <GenerateAIQuestionScreen onBack={() => setScreen("question-bank")} />,
     "upload-from-pdf": <UploadFromPdfScreen onBack={() => setScreen("question-bank")} />,
@@ -363,7 +367,12 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">
-          {content[screen]}
+          {bankMounted && (
+            <div className={screen === "question-bank" ? "" : "hidden"}>
+              <QuestionBankScreen setScreen={setScreen} onEdit={onEditQuestion} />
+            </div>
+          )}
+          {screen !== "question-bank" && content[screen]}
         </main>
       </div>
     </div>
