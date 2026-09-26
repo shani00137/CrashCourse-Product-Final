@@ -44,6 +44,11 @@ async function getAllUserScreenShots(filter) {
     body: JSON.stringify(filter)
   });
 }
+async function changeAIAllowed(payload) {
+  return apiFetch(`/api/AppUser/api/AppUser/ChangeAIAllowed?appUserId=${encodeURIComponent(payload.appUserId)}&isAIAllowed=${payload.isAIAllowed}`, {
+    method: "POST"
+  });
+}
 
 export {
   getAppUsers,
@@ -55,5 +60,6 @@ export {
   changeAppUserPlan,
   blockAppUser,
   unblockAppUser,
-  getAllUserScreenShots
+  getAllUserScreenShots,
+  changeAIAllowed
 };

@@ -74,6 +74,7 @@ login(
           email: result.email || "",
           phone: result.mobile || "",
           address: result.address || "",
+          isAIAllowed: result.isAIAllowed,
         },
         result.userToken
       );

@@ -76,6 +76,7 @@ export default function ExerciseScreen() {
   const course = allCourses.find((c) => c.id === Number(courseId)) || null;
   const { user, addTestResult, logout } = useApp();
   const isTrial = !!user?.isTrial;
+  const aiAllowed = user?.isAIAllowed !== false;
 
   const cId = Number(courseId);
   const startN = Number(start || 0);
@@ -682,26 +683,31 @@ const pct = Math.round((score / totalQ) * 100);
               </Text>
             </View>
             <TouchableOpacity
-              style={[styles.aiButton, isTrial && styles.aiButtonLocked]}
+              style={[styles.aiButton, (isTrial || !aiAllowed) && styles.aiButtonLocked]}
               onPress={() =>
                 isTrial
                   ? Alert.alert(
                       "Premium feature",
                       "AI question explanations are available after upgrading from the trial."
                     )
-                  : setAiOpen(true)
+                  : aiAllowed
+                    ? setAiOpen(true)
+                    : Alert.alert(
+                        "AI Access Restricted",
+                        "You are not allowed to use AI. Please contact the administrator."
+                      )
               }
               activeOpacity={0.85}
             >
               <Ionicons
-                name={isTrial ? "lock-closed" : "sparkles"}
+                name={isTrial || !aiAllowed ? "lock-closed" : "sparkles"}
                 size={14}
-                color={isTrial ? "#6B7280" : "#B45309"}
+                color={isTrial || !aiAllowed ? "#6B7280" : "#B45309"}
               />
               <Text
                 style={[
                   styles.aiButtonText,
-                  isTrial && styles.aiButtonTextLocked,
+                  (isTrial || !aiAllowed) && styles.aiButtonTextLocked,
                 ]}
               >
                 Ask AI

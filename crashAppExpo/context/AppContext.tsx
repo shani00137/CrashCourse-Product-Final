@@ -25,6 +25,7 @@ export interface User {
   email?: string;
   phone?: string;
   address?: string;
+  isAIAllowed?: boolean;
 }
 
 export interface TestResult {

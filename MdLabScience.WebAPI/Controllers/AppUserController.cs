@@ -43,7 +43,8 @@ namespace MdLabScience.Controllers
                                 Mobile = d.Mobile,
                                 Email = d.Email,
                                 Address = d.Address,
-                                RegistrationNo = d.RegistrationNo
+                                RegistrationNo = d.RegistrationNo,
+                                IsAIAllowed = c.IsAIAllowed
                             };
 
                 string searchTerm = filter.SearchTerm ?? "";
@@ -157,6 +158,7 @@ namespace MdLabScience.Controllers
                 appUserTb.UserName = value.UserName;
                 appUserTb.Password = Encrption.Encrypt(value.Password);
                 appUserTb.Status = true;
+                appUserTb.IsAIAllowed = value.IsAIAllowed ?? true;
                 appUserTb.CreateOn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
                 db.AppUserTbs.Add(appUserTb);
                 db.SaveChanges();
@@ -264,6 +266,37 @@ namespace MdLabScience.Controllers
             catch (Exception ex)
             {
                 return Ok(new { succeeded = false, message = ex.ToString(), expiryDate = (DateTime?)null });
+            }
+        }
+
+        [AcceptVerbs("GET", "POST")]
+        [Route("api/AppUser/ChangeAIAllowed")]
+        public IActionResult ChangeAIAllowed([FromQuery] int appUserId, [FromQuery] bool isAIAllowed)
+        {
+            try
+            {
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var appUser = db.AppUserTbs.Where(x => x.AppUserId == appUserId).FirstOrDefault();
+                    if (appUser == null)
+                    {
+                        return Ok(new { succeeded = false, message = "User not found" });
+                    }
+
+                    appUser.IsAIAllowed = isAIAllowed;
+                    db.SaveChanges();
+
+                    return Ok(new
+                    {
+                        succeeded = true,
+                        message = isAIAllowed ? "AI access enabled." : "AI access disabled.",
+                        isAIAllowed = appUser.IsAIAllowed
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { succeeded = false, message = ex.ToString() });
             }
         }
 

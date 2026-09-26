@@ -16,5 +16,6 @@ namespace MdLabScience.Models
         public string Token { get; set; }
         public DateTime DateTime { get; set; }
         public string ImageUrl { get; set; }
+        public bool? IsAIAllowed { get; set; }
     }
 }

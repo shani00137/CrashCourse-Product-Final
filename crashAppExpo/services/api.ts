@@ -333,6 +333,7 @@ export interface LoginResult {
   applicantId: number;
   userToken: string;
   courseId?: number;
+  isAIAllowed: boolean;
 }
 
 /**
@@ -380,6 +381,7 @@ export async function loginAppUser({
       typeof row.address === "string" ? row.address : "",
     applicantId: Number(row.applicantId) || 0,
     userToken: typeof row.userToken === "string" ? row.userToken : "",
+    isAIAllowed: row.isAIAllowed !== false,
   };
 }
 

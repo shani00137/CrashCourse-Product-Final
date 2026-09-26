@@ -113,6 +113,13 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
         Console.WriteLine("[Migration] QuestionsTB VerifiedBy column verified.");
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AppUserTb') AND name = 'IsAIAllowed')
+            BEGIN
+                ALTER TABLE AppUserTb ADD IsAIAllowed BIT NULL;
+            END
+        ");
+        Console.WriteLine("[Migration] AppUserTb IsAIAllowed column verified.");
     }
     catch (Exception ex)
     {

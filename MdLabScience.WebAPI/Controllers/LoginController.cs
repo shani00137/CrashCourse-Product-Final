@@ -138,7 +138,8 @@ namespace MdLabScience.Controllers
                                      DeviceId = (c.DeviceId ?? ""),
                                      a.Address,
                                      a.Email,
-                                     c.LoginOn
+                                     c.LoginOn,
+                                     c.IsAIAllowed
                                  }).FirstOrDefault();
                     if (query != null)
                     {
@@ -168,6 +169,7 @@ namespace MdLabScience.Controllers
                                 Email = query.Email,
                                 Address = query.Address,
                                 ApplicantId = applicantId,
+                                IsAIAllowed = query.IsAIAllowed,
                                 UserToken = token
                             });
                         }
@@ -187,6 +189,7 @@ namespace MdLabScience.Controllers
                                 Email = query.Email,
                                 Address = query.Address,
                                 ApplicantId = applicantId,
+                                IsAIAllowed = query.IsAIAllowed,
                                 UserToken = token
                             });
                         }

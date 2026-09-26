@@ -156,6 +156,51 @@ export default function AIAgentScreen() {
 
   const isTrial = !!user?.isTrial;
 
+  if (user && user.isAIAllowed === false) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior="padding"
+      >
+        <LinearGradient
+          colors={gradients.darkRedGrad}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="arrow-back" size={18} color={colors.white} />
+            </TouchableOpacity>
+            <View style={styles.headerAvatar}>
+              <MaterialCommunityIcons name="brain" size={22} color="#FDE047" />
+            </View>
+            <View style={styles.headerTextBlock}>
+              <Text style={styles.headerTitle}>Smart AI Assistant</Text>
+              <View style={styles.onlineRow}>
+                <Text style={styles.onlineText}>Access restricted</Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.lockedContent}>
+          <View style={styles.lockedIconBox}>
+            <Ionicons name="lock-closed" size={30} color={colors.primary} />
+          </View>
+          <Text style={styles.lockedTitle}>AI Access Restricted</Text>
+          <Text style={styles.lockedText}>
+            You are not allowed to use AI. Please contact the administrator.
+          </Text>
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
+
   if (isTrial) {
     return (
       <KeyboardAvoidingView

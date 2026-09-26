@@ -177,6 +177,7 @@ login(
           email: email.trim(),
           phone: mobile.trim(),
           address: address.trim(),
+          isAIAllowed: true,
         },
         token
       );

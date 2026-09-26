@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Lock, LockOpen, Trash2, Search, X, ChevronLeft, ChevronRight, AlertCircle, Users, RefreshCw, Eye, EyeOff, Check, Wand2, Zap, Ban } from "lucide-react";
+import { Plus, Lock, LockOpen, Trash2, Search, X, ChevronLeft, ChevronRight, AlertCircle, Users, RefreshCw, Eye, EyeOff, Check, Wand2, Zap, Ban, Sparkles } from "lucide-react";
 import { Avatar, Btn, BouncingDots, Card, Input, Modal, SearchableSelect, StatusBadge } from "../../shared/ui";
-import { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan, blockAppUser, unblockAppUser } from "../../../../services/appUserService";
+import { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan, blockAppUser, unblockAppUser, changeAIAllowed } from "../../../../services/appUserService";
 import { getActiveApplicants } from "../../../../services/applicantService";
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -197,6 +197,26 @@ export function MobileUsersScreen() {
       setBlockTarget(null);
     } finally {
       setBlocking(false);
+    }
+  }
+
+  async function handleToggleAI(u) {
+    const next = u.isAIAllowed === false;
+    setMessage("");
+    try {
+      const res = await changeAIAllowed({ appUserId: u.appUserId, isAIAllowed: next });
+      const ok = res && typeof res === "object" ? res.succeeded !== false : true;
+      const msg = res && typeof res === "object" && typeof res.message === "string" && res.message
+        ? res.message
+        : next ? "AI access enabled." : "AI access disabled.";
+      if (ok) {
+        setMessage(msg);
+        load();
+      } else {
+        setMessage(msg);
+      }
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to update AI access.");
     }
   }
 
@@ -413,7 +433,7 @@ export function MobileUsersScreen() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[rgba(0,0,0,0.06)] bg-[#F7FAFC]">
-                {["Name", "Username", "Registration No.", "Course", "App ID", "Device", "Status", "Last Login", "Actions"].map(h => (
+                {["Name", "Username", "Registration No.", "Course", "App ID", "Device", "Status", "AI Access", "Last Login", "Actions"].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -436,6 +456,11 @@ export function MobileUsersScreen() {
                   <td className="px-4 py-3 font-mono text-xs text-[#718096]">{u.appUserId}</td>
                   <td className="px-4 py-3 text-[#718096] max-w-40 truncate">{u.deviceId || "—"}</td>
                   <td className="px-4 py-3"><StatusBadge status={u.status ? "Active" : "Inactive"} /></td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${u.isAIAllowed === false ? "bg-gray-100 text-gray-500" : "bg-violet-50 text-violet-600"}`}>
+                      <Sparkles size={11} /> {u.isAIAllowed === false ? "Restricted" : "Allowed"}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-[#718096] text-xs font-mono">{u.loginOn ? new Date(u.loginOn).toLocaleString() : "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
@@ -451,6 +476,11 @@ export function MobileUsersScreen() {
                         className="p-1.5 text-[#718096] hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                         title="Change Plan (Trial/Pro)"
                       ><Zap size={14} /></button>
+                      <button
+                        onClick={() => handleToggleAI(u)}
+                        className={`p-1.5 rounded-lg transition ${u.isAIAllowed === false ? "text-[#718096] hover:text-violet-600 hover:bg-violet-50" : "text-violet-600 bg-violet-50 hover:bg-violet-100"}`}
+                        title={u.isAIAllowed === false ? "AI disabled — click to allow AI" : "AI enabled — click to restrict AI"}
+                      ><Sparkles size={14} /></button>
                       {u.status ? (
                         <button
                           onClick={() => { setMessage(""); setBlockTarget(u); }}

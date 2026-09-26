@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -185,7 +186,16 @@ export default function DashboardScreen() {
         {/* Smart AI Assistant card */}
         <TouchableOpacity
           style={styles.aiCard}
-          onPress={() => router.push("/ai-agent")}
+          onPress={() => {
+            if (user && user.isAIAllowed === false) {
+              Alert.alert(
+                "AI Access Restricted",
+                "You are not allowed to use AI. Please contact the administrator."
+              );
+              return;
+            }
+            router.push("/ai-agent");
+          }}
           activeOpacity={0.9}
         >
           <LinearGradient

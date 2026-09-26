@@ -16,5 +16,6 @@ namespace HotelManagement.Models
         public string Email { get; set; }
         public object Address { get; set; }
         public int ApplicantId { get; set; }
+        public bool? IsAIAllowed { get; set; }
     }
 }
