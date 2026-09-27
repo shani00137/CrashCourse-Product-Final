@@ -120,6 +120,21 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
         Console.WriteLine("[Migration] AppUserTb IsAIAllowed column verified.");
+        db.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ApplicantInvoiceTB') AND name = 'DiscountType')
+            BEGIN
+                ALTER TABLE ApplicantInvoiceTB ADD DiscountType NVARCHAR(20) NULL;
+            END
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ApplicantInvoiceTB') AND name = 'DiscountValue')
+            BEGIN
+                ALTER TABLE ApplicantInvoiceTB ADD DiscountValue FLOAT NULL;
+            END
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ApplicantInvoiceTB') AND name = 'DiscountAmount')
+            BEGIN
+                ALTER TABLE ApplicantInvoiceTB ADD DiscountAmount FLOAT NULL;
+            END
+        ");
+        Console.WriteLine("[Migration] ApplicantInvoiceTB discount columns verified.");
     }
     catch (Exception ex)
     {

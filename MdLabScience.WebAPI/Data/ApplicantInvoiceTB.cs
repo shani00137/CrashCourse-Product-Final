@@ -13,5 +13,8 @@ namespace MdLabScience.DbContext
         public Nullable<double> PaidAmount { get; set; }
         public Nullable<double> Balance { get; set; }
         public string Currency { get; set; }
+        public string? DiscountType { get; set; }
+        public Nullable<double> DiscountValue { get; set; }
+        public Nullable<double> DiscountAmount { get; set; }
     }
 }

@@ -33,6 +33,8 @@ const emptyForm = () => ({
   paidAmount: "",
   currency: "AED",
   remarks: "",
+  discountType: "",
+  discountValue: "",
   serviceList: []
 });
 
@@ -47,6 +49,26 @@ function subtotalOf(serviceList) {
     const n = Number(r.amount);
     return sum + (Number.isFinite(n) && n > 0 ? n : 0);
   }, 0);
+}
+
+/** Money value of the current discount (clamped to the subtotal). */
+function discountAmountOf(serviceList, discountType, discountValue) {
+  const subtotal = subtotalOf(serviceList);
+  const value = toNumber(discountValue);
+  if (discountType === "Percentage") {
+    if (!(value > 0 && value <= 100)) return 0;
+    return Math.min((subtotal * value) / 100, subtotal);
+  }
+  if (discountType === "Amount") {
+    if (!(value > 0)) return 0;
+    return Math.min(value, subtotal);
+  }
+  return 0;
+}
+
+/** Net total after applying the discount. */
+function netAmountOf(serviceList, discountType, discountValue) {
+  return Math.max(subtotalOf(serviceList) - discountAmountOf(serviceList, discountType, discountValue), 0);
 }
 
 function fmtMoney(value) {
@@ -129,6 +151,17 @@ function validateForm(form) {
     errors.paidAmount = "Paid amount cannot exceed the invoice amount.";
   }
   if (!form.currency.trim()) errors.currency = "Currency is required.";
+  const subtotal = subtotalOf(form.serviceList);
+  const discountValue = toNumber(form.discountValue);
+  if (form.discountType === "Percentage") {
+    if (form.discountValue === "" || discountValue < 0 || discountValue > 100) {
+      errors.discount = "Discount percentage must be between 0 and 100.";
+    }
+  } else if (form.discountType === "Amount") {
+    if (form.discountValue === "" || discountValue < 0 || discountValue > subtotal) {
+      errors.discount = "Discount amount cannot exceed the subtotal.";
+    }
+  }
   form.serviceList.forEach((item, i) => {
     const key = `line-${i}`;
     if (!item.service.trim() && item.amount === "") return;
@@ -452,6 +485,8 @@ export function InvoiceScreen({ applicant }) {
       paidAmount: inv.paidAmount ?? "",
       currency: inv.currency || "AED",
       remarks: inv.remarks ?? "",
+      discountType: inv.discountType === "Percentage" || inv.discountType === "Amount" ? inv.discountType : "",
+      discountValue: inv.discountValue != null && Number(inv.discountValue) > 0 ? String(inv.discountValue) : "",
       serviceList: (inv.serviceList ?? []).map((l) => ({ service: l.service ?? "", amount: l.amount ?? "" }))
     });
     setFormErrors({});
@@ -472,12 +507,21 @@ export function InvoiceScreen({ applicant }) {
     });
   };
 
+  /** Recompute the net total from line items minus any discount. */
+  const recalcForm = (f) => {
+    const subtotal = subtotalOf(f.serviceList);
+    if (subtotal <= 0) return f;
+    const net = netAmountOf(f.serviceList, f.discountType, f.discountValue);
+    return { ...f, amount: String(Math.round(net * 100) / 100) };
+  };
+
+  const setDiscount = (patch) => setForm((f) => recalcForm({ ...f, ...patch }));
+
   const setLineAmount = (index) => (e) => {
     const value = e.target.value;
     setForm((f) => {
       const serviceList = f.serviceList.map((item, i) => (i === index ? { ...item, amount: value } : item));
-      const subtotal = subtotalOf(serviceList);
-      return { ...f, serviceList, amount: subtotal > 0 ? String(subtotal) : f.amount };
+      return recalcForm({ ...f, serviceList });
     });
     setFormErrors((errs) => {
       if (!(`line-${index}` in errs)) return errs;
@@ -487,7 +531,7 @@ export function InvoiceScreen({ applicant }) {
     });
   };
 
-  const addLine = () => setForm((f) => ({ ...f, serviceList: [...f.serviceList, { service: "", amount: "" }] }));
+  const addLine = () => setForm((f) => recalcForm({ ...f, serviceList: [...f.serviceList, { service: "", amount: "" }] }));
   const removeLine = (index) => setForm((f) => {
     const serviceList = f.serviceList.filter((_, i) => i !== index);
     const removed = f.serviceList[index];
@@ -499,8 +543,7 @@ export function InvoiceScreen({ applicant }) {
         service = service.split(",").map((n) => n.trim()).filter((n) => n && n !== rmName).join(", ");
       }
     }
-    const subtotal = subtotalOf(serviceList);
-    return { ...f, serviceList, service, amount: subtotal > 0 ? String(subtotal) : f.amount };
+    return recalcForm({ ...f, serviceList, service });
   });
 
   const handleServiceSelection = (ids) => {
@@ -520,13 +563,11 @@ export function InvoiceScreen({ applicant }) {
         .filter((s) => !keptNames.has(s.serviceName))
         .map((s) => ({ service: s.serviceName, amount: String(Number(s.salePrice ?? 0)) }));
       const serviceList = [...kept, ...added];
-      const subtotal = subtotalOf(serviceList);
-      return {
+      return recalcForm({
         ...f,
         service: [...selectedNames].join(", "),
-        serviceList,
-        amount: subtotal > 0 ? String(subtotal) : f.amount
-      };
+        serviceList
+      });
     });
     setFormErrors((errs) => {
       if (!("service" in errs)) return errs;
@@ -546,8 +587,7 @@ export function InvoiceScreen({ applicant }) {
           ? { ...item, service: value, amount: String(Number(matched.salePrice ?? 0)) }
           : { ...item, service: value };
       });
-      const subtotal = subtotalOf(serviceList);
-      return { ...f, serviceList, amount: subtotal > 0 ? String(subtotal) : f.amount };
+      return recalcForm({ ...f, serviceList });
     });
     setFormErrors((errs) => {
       if (!(`line-${index}` in errs)) return errs;
@@ -629,6 +669,9 @@ export function InvoiceScreen({ applicant }) {
         applicantId: modalApplicant.applicantId,
         service: form.service.trim(),
         amount,
+        discountType: form.discountType || null,
+        discountValue: form.discountType ? toNumber(form.discountValue) : null,
+        discountAmount: discountAmountOf(form.serviceList, form.discountType, form.discountValue),
         paidAmount,
         balance: Math.max(amount - paidAmount, 0),
         remarks: form.remarks.trim(),
@@ -710,6 +753,8 @@ export function InvoiceScreen({ applicant }) {
 
   const amount = toNumber(form.amount);
   const paidAmount = toNumber(form.paidAmount || 0);
+  const subtotal = subtotalOf(form.serviceList);
+  const discountAmount = discountAmountOf(form.serviceList, form.discountType, form.discountValue);
   const derivedBalance = form.amount !== "" && amount > 0 ? Math.max(amount - paidAmount, 0) : null;
   const ledgerInvoiced = drawerTxns.reduce((a, t) => a + (Number(t.debit) || 0), 0);
   const ledgerPaid = drawerTxns.reduce((a, t) => a + (Number(t.credit) || 0), 0);
@@ -1189,7 +1234,12 @@ export function InvoiceScreen({ applicant }) {
                       <span className="ml-2 text-[10px] text-gray-400 font-medium">+{(inv.serviceList?.length ?? 0)} items</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-[#1A202C]">{fmtMoney(inv.amount)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-[#1A202C]">
+                    {fmtMoney(inv.amount)}
+                    {Number(inv.discountAmount) > 0 && (
+                      <div className="text-[10px] font-medium text-emerald-600">−{fmtMoney(inv.discountAmount)} discount</div>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-emerald-600">{fmtMoney(inv.paidAmount)}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-red-600">{fmtMoney(inv.balance)}</td>
                   <td className="px-4 py-3 text-[#718096]">{inv.currency}</td>
@@ -1390,21 +1440,48 @@ export function InvoiceScreen({ applicant }) {
               {services.map((s) => <option key={s.serviceId} value={s.serviceName} />)}
             </datalist>
 
-            {/* Amount & totals */}
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Total Amount</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.amount}
-                  onChange={setField("amount")}
-                  placeholder="0.00"
-                  className={`h-10 px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition ${formErrors.amount ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
-                />
-                {formErrors.amount && <p className="text-xs text-red-600">{formErrors.amount}</p>}
+            {/* Discount */}
+            <div className="mt-4 flex flex-col gap-2">
+              <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Discount <span className="font-normal normal-case text-[#718096]">(optional)</span></label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex rounded-lg border border-[rgba(0,0,0,0.12)] overflow-hidden">
+                  {["None", "Percentage", "Amount"].map((opt) => {
+                    const val = opt === "None" ? "" : opt;
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setDiscount({ discountType: val, discountValue: "" })}
+                        className={`px-3 h-9 text-xs font-semibold transition ${(form.discountType || "") === val ? "bg-[#C41E3A] text-white" : "bg-white text-[#718096] hover:bg-gray-50"}`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+                {form.discountType && (
+                  <div className="relative w-40">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.discountValue}
+                      onChange={(e) => setDiscount({ discountValue: e.target.value })}
+                      placeholder={form.discountType === "Percentage" ? "e.g. 10" : "e.g. 500"}
+                      autoFocus
+                      className={`h-9 w-full px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition ${formErrors.discount ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
+                    />
+                    {form.discountType === "Percentage" && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#718096]">%</span>
+                    )}
+                  </div>
+                )}
               </div>
+              {formErrors.discount && <p className="text-xs text-red-600">{formErrors.discount}</p>}
+            </div>
+
+            {/* Paid amount & currency */}
+            <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Paid Amount</label>
                 <input
@@ -1422,11 +1499,23 @@ export function InvoiceScreen({ applicant }) {
             </div>
 
             {/* Totals */}
-            {(derivedBalance !== null || form.amount !== "" || form.paidAmount !== "") && (
+            {(subtotal > 0 || form.amount !== "" || form.paidAmount !== "") && (
               <div className="mt-4 flex flex-col gap-1.5 rounded-lg border border-[rgba(0,0,0,0.08)] p-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-[#718096]">Subtotal</span>
-                  <span className="font-mono font-medium text-[#1A202C]">{fmtMoney(toNumber(form.amount))}</span>
+                  <span className="font-mono font-medium text-[#1A202C]">{fmtMoney(subtotal)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[#718096]">
+                      Discount{form.discountType === "Percentage" ? ` (${toNumber(form.discountValue)}%)` : ""}
+                    </span>
+                    <span className="font-mono font-medium text-emerald-600">- {fmtMoney(discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-[#1A202C]">Total (after discount)</span>
+                  <span className="font-mono font-semibold text-[#1A202C]">{fmtMoney(toNumber(form.amount))}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-[#718096]">Paid</span>
@@ -1438,6 +1527,7 @@ export function InvoiceScreen({ applicant }) {
                 </div>
               </div>
             )}
+            {formErrors.amount && <p className="text-xs text-red-600 mt-1">{formErrors.amount}</p>}
 
             {/* Remarks */}
             <div className="mt-4 flex flex-col gap-1">

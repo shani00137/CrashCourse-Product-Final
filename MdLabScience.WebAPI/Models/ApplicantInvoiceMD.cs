@@ -15,6 +15,9 @@ namespace MdLabScience.Models
         public Nullable<double> PaidAmount { get; set; }
         public Nullable<double> Balance { get; set; }
         public String Currency { get; set; }
+        public string DiscountType { get; set; }
+        public Nullable<double> DiscountValue { get; set; }
+        public Nullable<double> DiscountAmount { get; set; }
         public List<CertificateInvoiceMD> ServiceList { get; set; }
     }
 }

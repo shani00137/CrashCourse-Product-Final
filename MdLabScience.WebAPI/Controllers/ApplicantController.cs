@@ -1017,6 +1017,9 @@ IF NOT EXISTS (
                                    d.LastName,
                                    c.Remarks,
                                    c.DateTime,
+                                   c.DiscountType,
+                                   c.DiscountValue,
+                                   c.DiscountAmount,
                                    ServiceList = db.CertificateInvoiceTbs.Where(x => x.InvoiceId == c.InvoiceId).ToList()
                                }).OrderByDescending(x => x.InvoiceId).ToList();
                 return Ok(Courses);
@@ -1045,6 +1048,9 @@ IF NOT EXISTS (
                                    d.LastName,
                                    c.Remarks,
                                    c.DateTime,
+                                   c.DiscountType,
+                                   c.DiscountValue,
+                                   c.DiscountAmount,
                                    ServiceList = db.CertificateInvoiceTbs.Where(x => x.InvoiceId == c.InvoiceId).ToList()
                                }).OrderByDescending(x => x.InvoiceId).ToList();
                 return Ok(Courses);
@@ -1103,6 +1109,17 @@ IF NOT EXISTS (
             {
                 using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
                 {
+                    double discountAmount = 0;
+                    if (value.ServiceList != null)
+                    {
+                        double subtotal = value.ServiceList.Where(q => q.Amount.HasValue).Sum(q => q.Amount.Value);
+                        if (value.DiscountType == "Percentage" && value.DiscountValue.HasValue)
+                            discountAmount = Math.Min(subtotal * value.DiscountValue.Value / 100.0, subtotal);
+                        else if (value.DiscountType == "Amount" && value.DiscountValue.HasValue)
+                            discountAmount = Math.Min(value.DiscountValue.Value, subtotal);
+                        discountAmount = Math.Max(0, discountAmount);
+                    }
+
                     var UpdateQuery = db.ApplicantInvoiceTBs.Where(x => x.InvoiceId == value.InvoiceId).FirstOrDefault();
                     if (UpdateQuery != null)
                     {
@@ -1119,6 +1136,9 @@ IF NOT EXISTS (
                         UpdateQuery.Balance = value.Balance;
                         UpdateQuery.Remarks = value.Remarks;
                         UpdateQuery.Currency = value.Currency;
+                        UpdateQuery.DiscountType = value.DiscountType;
+                        UpdateQuery.DiscountValue = value.DiscountValue;
+                        UpdateQuery.DiscountAmount = discountAmount;
                         db.SaveChanges();
 
                         var Query = originalLedgerEntry;
@@ -1169,6 +1189,9 @@ IF NOT EXISTS (
                         appliantTransactionsTb.PaidAmount = value.PaidAmount;
                         appliantTransactionsTb.Remarks = value.Remarks;
                         appliantTransactionsTb.Currency = value.Currency;
+                        appliantTransactionsTb.DiscountType = value.DiscountType;
+                        appliantTransactionsTb.DiscountValue = value.DiscountValue;
+                        appliantTransactionsTb.DiscountAmount = discountAmount;
                         db.ApplicantInvoiceTBs.Add(appliantTransactionsTb);
                         db.SaveChanges();
 
