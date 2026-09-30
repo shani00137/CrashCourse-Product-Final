@@ -57,6 +57,18 @@ async function updateQuestionVerifiedBy(payload) {
     body: JSON.stringify(payload)
   });
 }
+// Column contract for the Excel question import, in workbook order.
+// Keep in sync with QuestionImportColumns in QuestionsController.cs
+const QUESTION_IMPORT_COLUMNS = [
+  { name: "CourseId", required: true, type: "Number", example: "1", note: "Must match an existing course ID." },
+  { name: "QuestionContent", required: true, type: "Text", example: "Which vitamin deficiency causes megaloblastic anaemia?", note: "The full question text." },
+  { name: "Option1", required: true, type: "Text", example: "Vitamin B12", note: "First answer choice." },
+  { name: "Option2", required: true, type: "Text", example: "Vitamin C", note: "Second answer choice." },
+  { name: "Option3", required: true, type: "Text", example: "Iron", note: "Third answer choice." },
+  { name: "Option4", required: true, type: "Text", example: "Calcium", note: "Fourth answer choice." },
+  { name: "RightOption", required: true, type: "Number (1-4)", example: "1", note: "Which Option column is correct." }
+];
+
 async function importQuestions(file) {
   const formData = new FormData();
   formData.append("file", file);
@@ -91,6 +103,7 @@ export {
   importQuestions,
   ocrPdf,
   parseOcrToQuestions,
+  QUESTION_IMPORT_COLUMNS,
   reviewQuestion,
   saveQuestion,
   updateQuestionVerifiedBy

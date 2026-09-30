@@ -156,10 +156,13 @@ export function QuestionFormScreen({ question, onBack }) {
           <RichTextEditor
             value={content}
             onChange={setContent}
-            placeholder="Type your question here... (supports rich text, images, lists)"
+            placeholder="Type your question here... (supports rich text, images, lists, maths & medical symbols)"
             className="min-h-[100px]"
+            minHeight="min-h-[100px]"
           />
-          <p className="text-[10px] text-[#A0AEC0] mt-1">Use the toolbar for bold, italic, underline, lists, or paste/drag images directly.</p>
+          <p className="text-[10px] text-[#A0AEC0] mt-1">
+            Use the toolbar for bold, italic, underline, super/subscript, lists, and the Σ button for maths and medical symbols. Paste or drag images directly.
+          </p>
         </Card>
 
         {/* Options */}
@@ -229,6 +232,8 @@ export function QuestionFormScreen({ question, onBack }) {
                       onChange={html => setOptions(prev => prev.map((v, j) => (j === i ? html : v)))}
                       placeholder={`Option ${String.fromCharCode(65 + i)} text...`}
                       className="min-h-[48px]"
+                      minHeight="min-h-[48px]"
+                      maxHeight="max-h-[120px]"
                     />
                   </div>
                 </div>

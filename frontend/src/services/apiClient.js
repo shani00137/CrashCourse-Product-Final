@@ -1,5 +1,5 @@
 import { getToken } from "./storage";
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5005";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5006";
 class ApiError extends Error {
   constructor(message, status) {
     super(message);

@@ -21,6 +21,12 @@ import { apiFetch } from "./apiClient";
  * @property {number} paidAmount
  * @property {number} balance
  * @property {string} currency
+ * @property {string} [discountType]       - "Percentage" or "Amount" when a discount applies.
+ * @property {number} [discountValue]
+ * @property {number} [discountAmount]
+ * @property {string} [taxType]            - "Percentage" or "Amount" when tax applies.
+ * @property {number} [taxValue]
+ * @property {number} [taxAmount]
  * @property {string} [firstName]
  * @property {string} [lastName]
  * @property {InvoiceLineItem[]} serviceList
@@ -32,8 +38,14 @@ import { apiFetch } from "./apiClient";
  * @property {number} invoiceId          - 0 for a new invoice, existing id to update.
  * @property {string} [invoiceNo]        - Required when updating so the ledger entry can be matched.
  * @property {number} applicantId
- * @property {number} amount
+ * @property {number} amount             - Grand total: subtotal - discount + tax.
  * @property {string} service
+ * @property {string} [discountType]     - "Percentage" or "Amount", null for no discount.
+ * @property {number} [discountValue]
+ * @property {number} [discountAmount]
+ * @property {string} [taxType]          - "Percentage" or "Amount", null for no tax.
+ * @property {number} [taxValue]
+ * @property {number} [taxAmount]
  * @property {number} paidAmount
  * @property {number} balance
  * @property {string} remarks

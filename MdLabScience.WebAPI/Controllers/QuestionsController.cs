@@ -548,102 +548,166 @@ namespace MdLabScience.Controllers
             return IsValid;
         }
 
+        /// <summary>Header columns ImportQuestion requires, in workbook order.</summary>
+        private static readonly string[] QuestionImportColumns =
+        {
+            "CourseId", "QuestionContent", "Option1", "Option2", "Option3", "Option4", "RightOption"
+        };
+
+        /// <summary>Reads a cell as trimmed text, tolerating header-name casing.</summary>
+        private static string Cell(DataRow row, string columnName)
+        {
+            if (!row.Table.Columns.Contains(columnName)) return "";
+            var value = row[columnName];
+            return value == null || value == DBNull.Value ? "" : value.ToString().Trim();
+        }
+
         [HttpPost]
         [Route("api/Questions/ImportQuestion")]
-        public async Task<string> ImportQuestion()
+        public async Task<IActionResult> ImportQuestion()
         {
-            string ResponseMessage = "";
-            DataTable dt = new DataTable();
             try
             {
-                if (Request.Form.Files.Count > 0)
+                if (Request.Form.Files.Count == 0)
                 {
-                    IExcelDataReader excelReader = null;
-                    var file = Request.Form.Files[0];
-                    var filename = file.FileName;
+                    return BadRequest(new { succeeded = false, message = "No file was uploaded. Attach a .xls or .xlsx workbook." });
+                }
 
-                    using (var stream = file.OpenReadStream())
+                var file = Request.Form.Files[0];
+                var filename = file.FileName ?? "";
+                var lowerName = filename.ToLowerInvariant();
+                if (!lowerName.EndsWith(".xls") && !lowerName.EndsWith(".xlsx"))
+                {
+                    return BadRequest(new { succeeded = false, message = "Invalid file type. Only .xls and .xlsx workbooks are accepted." });
+                }
+
+                DataTable dt = new DataTable();
+                using (var stream = file.OpenReadStream())
+                {
+                    IExcelDataReader excelReader = lowerName.EndsWith(".xls")
+                        ? ExcelReaderFactory.CreateBinaryReader(stream)
+                        : ExcelReaderFactory.CreateOpenXmlReader(stream);
+
+                    var conf = new ExcelDataSetConfiguration()
                     {
-                        if (filename.EndsWith(".xls"))
+                        ConfigureDataTable = (tableReader) => new ExcelDataTableConfiguration()
                         {
-                            excelReader = ExcelReaderFactory.CreateBinaryReader(stream);
+                            UseHeaderRow = true
                         }
-                        else if (filename.EndsWith(".xlsx"))
+                    };
+
+                    var dataSet = excelReader.AsDataSet(conf);
+                    if (dataSet.Tables.Count == 0)
+                    {
+                        return BadRequest(new { succeeded = false, message = "The workbook has no sheets." });
+                    }
+                    dt = dataSet.Tables[0];
+                }
+
+                var presentHeaders = dt.Columns.Cast<DataColumn>()
+                    .Select(c => c.ColumnName.Trim())
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var missing = QuestionImportColumns
+                    .Where(c => !presentHeaders.Contains(c))
+                    .ToList();
+                if (missing.Count > 0)
+                {
+                    return BadRequest(new
+                    {
+                        succeeded = false,
+                        message = "Missing required column(s): " + string.Join(", ", missing) +
+                                  ". Expected: " + string.Join(", ", QuestionImportColumns) + "."
+                    });
+                }
+
+                if (dt.Rows.Count == 0)
+                {
+                    return BadRequest(new { succeeded = false, message = "The workbook has a header row but no question rows." });
+                }
+
+                int imported = 0;
+                int skipped = 0;
+
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var existingIds = db.QuestionsTBs.Select(c => c.QuestionId).ToList();
+                    int nextQuestionId = existingIds.Count > 0 ? 1 + existingIds.Max() : 1;
+
+                    for (int i = 0; i < dt.Rows.Count; i++)
+                    {
+                        var row = dt.Rows[i];
+                        string content = Cell(row, "QuestionContent");
+                        string courseText = Cell(row, "CourseId");
+                        string rightText = Cell(row, "RightOption");
+
+                        bool hasContent = !string.IsNullOrWhiteSpace(content);
+                        if (!hasContent && string.IsNullOrWhiteSpace(courseText) && string.IsNullOrWhiteSpace(rightText))
                         {
-                            excelReader = ExcelReaderFactory.CreateOpenXmlReader(stream);
-                        }
-                        else
-                        {
-                            return "Not Valid";
+                            continue; // entirely blank row
                         }
 
-                        using (var rdr = ExcelReaderFactory.CreateOpenXmlReader(stream))
+                        if (!hasContent ||
+                            !ValidateIdentity(courseText, rightText) ||
+                            !int.TryParse(rightText, out int rightOption) ||
+                            rightOption < 1 || rightOption > 4)
                         {
-                            var conf = new ExcelDataSetConfiguration()
-                            {
-                                ConfigureDataTable = (tableReader) => new ExcelDataTableConfiguration()
-                                {
-                                    UseHeaderRow = true
-                                }
-                            };
-
-                            var dataSet = excelReader.AsDataSet(conf);
-                            dt = dataSet.Tables[0];
+                            skipped++;
+                            continue;
                         }
+
+                        var optionTexts = new string[4];
+                        for (int k = 1; k <= 4; k++)
+                        {
+                            optionTexts[k - 1] = Cell(row, "Option" + k);
+                        }
+                        if (optionTexts.Any(string.IsNullOrWhiteSpace))
+                        {
+                            skipped++; // all four options are required by the importer
+                            continue;
+                        }
+
+                        QuestionsTB question = new QuestionsTB();
+                        question.QuestionId = nextQuestionId;
+                        question.QuestionContent = content;
+                        question.CourseId = int.Parse(courseText);
+                        question.DateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
+                        db.QuestionsTBs.Add(question);
+
+                        for (int k = 1; k <= 4; k++)
+                        {
+                            QuestionOptionsTb option = new QuestionOptionsTb();
+                            option.QuestionId = nextQuestionId;
+                            option.Options = optionTexts[k - 1];
+                            option.IsRightAns = rightOption == k;
+                            db.QuestionOptionsTbs.Add(option);
+                        }
+
+                        nextQuestionId++;
+                        imported++;
                     }
 
-                    if (dt.Rows.Count > 0)
+                    if (imported > 0)
                     {
-                        int Counter = 0;
-                        for (int i = 0; i < dt.Rows.Count; i++)
-                        {
-                            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
-                            {
-                                bool IsValid = ValidateIdentity(dt.Rows[i]["CourseId"].ToString().Trim(), dt.Rows[i]["RightOption"].ToString().Trim());
-                                if (IsValid == true)
-                                {
-                                    int QuestionId = 1;
-                                    var GetMaxNo = (from c in db.QuestionsTBs select c.QuestionId).ToList();
-                                    if (GetMaxNo.Count > 0)
-                                    {
-                                        QuestionId = 1 + int.Parse(GetMaxNo.Max().ToString());
-                                    }
-                                    QuestionsTB Qt = new QuestionsTB();
-                                    Qt.QuestionContent = dt.Rows[i]["QuestionContent"].ToString();
-                                    Qt.CourseId = int.Parse(dt.Rows[i]["CourseId"].ToString());
-                                    Qt.QuestionId = QuestionId;
-                                    Qt.DateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
-                                    db.QuestionsTBs.Add(Qt);
-                                    db.SaveChanges();
-                                    Counter++;
-                                    for (int k = 1; k < 5; k++)
-                                    {
-                                        QuestionOptionsTb Qto = new QuestionOptionsTb();
-                                        Qto.QuestionId = QuestionId;
-                                        Qto.Options = dt.Rows[i]["Option" + k].ToString();
-                                        if (int.Parse(dt.Rows[i]["RightOption"].ToString()) == k)
-                                        {
-                                            Qto.IsRightAns = true;
-                                        }
-                                        else
-                                        {
-                                            Qto.IsRightAns = false;
-                                        }
-                                        db.QuestionOptionsTbs.Add(Qto);
-                                        db.SaveChanges();
-                                    }
-                                }
-                                ResponseMessage = Counter.ToString() + " Question Save Sucessfuly..!";
-                            }
-                        }
+                        db.SaveChanges();
                     }
                 }
+
+                string message = imported > 0
+                    ? imported + (imported == 1 ? " question imported successfully." : " questions imported successfully.")
+                    : "No questions were imported. Check that CourseId is a valid course and RightOption is 1-4.";
+                if (skipped > 0)
+                {
+                    message += " " + skipped + (skipped == 1 ? " row was skipped" : " rows were skipped") + " because the data was invalid.";
+                }
+
+                return Ok(new { succeeded = imported > 0, imported, skipped, message });
             }
             catch (Exception ex)
             {
-                ResponseMessage = ex.ToString();
+                var msg = ex.Message;
+                if (ex.InnerException != null) msg += " | Inner: " + ex.InnerException.Message;
+                return StatusCode(500, new { succeeded = false, message = msg });
             }
-            return ResponseMessage;
         }
 
         [HttpPost]
@@ -1144,8 +1208,57 @@ Question to review (JSON):
         public IActionResult DownloadQuestionModel(string filename)
         {
             var path = Path.Combine(_env.ContentRootPath, "ExcelFormate", filename + ".xlsx");
-            var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
-            return File(stream, "application/octet-stream", Path.GetFileName(path));
+            if (System.IO.File.Exists(path))
+            {
+                var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+                return File(stream, "application/octet-stream", Path.GetFileName(path));
+            }
+
+            // No bundled workbook available - generate a blank template matching
+            // exactly what ImportQuestion reads so the upload always lines up.
+            return File(
+                BuildQuestionImportTemplate(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                filename + ".xlsx"
+            );
+        }
+
+        /// <summary>
+        /// Creates an empty question-import workbook with the header row the
+        /// ImportQuestion endpoint requires, plus one worked example row.
+        /// </summary>
+        private byte[] BuildQuestionImportTemplate()
+        {
+            using (var workbook = new XLWorkbook())
+            {
+                var sheet = workbook.Worksheets.Add("Questions");
+                string[] headers = { "CourseId", "QuestionContent", "Option1", "Option2", "Option3", "Option4", "RightOption" };
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    var cell = sheet.Cell(1, i + 1);
+                    cell.Value = headers[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#C41E3A");
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+
+                sheet.Cell(2, 1).Value = 1;
+                sheet.Cell(2, 2).Value = "Which vitamin deficiency causes megaloblastic anaemia?";
+                sheet.Cell(2, 3).Value = "Vitamin B12";
+                sheet.Cell(2, 4).Value = "Vitamin C";
+                sheet.Cell(2, 5).Value = "Iron";
+                sheet.Cell(2, 6).Value = "Calcium";
+                sheet.Cell(2, 7).Value = 1;
+
+                sheet.Columns(1, headers.Length).AdjustToContents();
+                sheet.SheetView.FreezeRows(1);
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return stream.ToArray();
+                }
+            }
         }
 
         [HttpGet]

@@ -680,6 +680,7 @@ export function UploadFromPdfScreen({ onBack }) {
                           value={editData.questionContent}
                           onChange={html => setEditData({ ...editData, questionContent: html })}
                           placeholder="Question text..."
+                          minHeight="min-h-[80px]"
                         />
                         {editData.options.map((opt, oi) => (
                           <div key={oi} className="flex items-start gap-2">

@@ -11,8 +11,10 @@ import {
   AlertCircle,
   Users
 } from "lucide-react";
-import { Btn, BouncingDots, Card, Avatar, StatusBadge, SearchableSelect } from "../../shared/ui";
+import { toast } from "sonner";
+import { Btn, BouncingDots, Card, Avatar, Modal, StatusBadge, SearchableSelect } from "../../shared/ui";
 import {
+  deleteApplicant,
   getApplicants,
   getCountries,
   getActiveCourses
@@ -31,6 +33,8 @@ function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAdd
   const [page, setPage] = useState(1);
   const [countries, setCountries] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [toDelete, setToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   useEffect(() => {
     getCountries().then(setCountries).catch(() => {
     });
@@ -86,6 +90,25 @@ function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAdd
     setCountryId(null);
     setCourseId(null);
     setPage(1);
+  };
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      const res = await deleteApplicant(toDelete.applicantId);
+      toast.success(res?.message || "Applicant deleted.");
+      setToDelete(null);
+      // Step back a page if the deleted row was the last one on this page.
+      if (rows.length === 1 && page > 1) {
+        setPage(page - 1);
+      } else {
+        load();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete the applicant.");
+    } finally {
+      setDeleting(false);
+    }
   };
   return <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
@@ -185,7 +208,7 @@ function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAdd
                     <div className="flex items-center gap-1">
                       <button title="View details" onClick={() => onSelectApplicant(a)} className="p-1.5 rounded-lg text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 transition"><Eye size={14} /></button>
                       <button title="Edit applicant" onClick={() => onEditApplicant(a)} className="p-1.5 rounded-lg text-[#718096] hover:text-blue-600 hover:bg-blue-50 transition"><Edit2 size={14} /></button>
-                      <button title="Delete is not available" disabled className="p-1.5 rounded-lg text-[#718096] opacity-40 cursor-not-allowed"><Trash2 size={14} /></button>
+                      <button title="Delete applicant" onClick={() => setToDelete(a)} className="p-1.5 rounded-lg text-[#718096] hover:text-red-600 hover:bg-red-50 transition"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>)}
@@ -231,6 +254,32 @@ function ApplicantsScreen({ setScreen, onSelectApplicant, onEditApplicant, onAdd
           </div>
         </div>
       </Card>
+
+      {toDelete && (
+        <Modal title="Delete Applicant" onClose={() => !deleting && setToDelete(null)} className="max-w-md">
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-[#1A202C] leading-relaxed">
+              Are you sure you want to delete{" "}
+              <strong>{`${toDelete.firstName ?? ""} ${toDelete.lastName ?? ""}`.trim()}</strong>
+              {toDelete.registrationNo ? ` (${toDelete.registrationNo})` : ""}?
+            </p>
+            <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-100 px-3 py-2.5">
+              <AlertCircle size={14} className="text-red-600 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-red-700 leading-relaxed">
+                This permanently removes the applicant along with their invoices, ledger
+                transactions, status history, documents and course selections. This action
+                cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Btn variant="ghost" onClick={() => setToDelete(null)} disabled={deleting}>Cancel</Btn>
+              <Btn variant="danger" onClick={handleDelete} disabled={deleting}>
+                {deleting ? "Deleting…" : "Delete Applicant"}
+              </Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>;
 }
 export {

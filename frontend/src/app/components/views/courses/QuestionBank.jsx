@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FileSpreadsheet,
   Plus,
@@ -18,8 +18,15 @@ import {
   FileUp,
   Download
 } from "lucide-react";
-import { Btn, BouncingDots, Card, SearchableSelect } from "../../shared/ui";
-import { getAllQuestions, deleteQuestion, importQuestions, downloadQuestionModel, updateQuestionVerifiedBy } from "../../../../services/questionService";
+import { Btn, BouncingDots, Card, Modal, SearchableSelect } from "../../shared/ui";
+import {
+  QUESTION_IMPORT_COLUMNS,
+  deleteQuestion,
+  downloadQuestionModel,
+  getAllQuestions,
+  importQuestions,
+  updateQuestionVerifiedBy
+} from "../../../../services/questionService";
 import { getActiveCourses } from "../../../../services/applicantService";
 import { htmlToText } from "../../../../utils/html";
 
@@ -39,6 +46,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
   const [verifyingId, setVerifyingId] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState(null);
+  const [showImportFormat, setShowImportFormat] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -89,6 +97,21 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
   const start = (safePage - 1) * pageSize;
   const goToPage = (p) => setPage(Math.max(1, Math.min(p, totalPages)));
 
+  /** Page numbers to render, with null marking an elided range. */
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages = new Set([1, totalPages, safePage, safePage - 1, safePage + 1]);
+    if (safePage <= 3) [2, 3, 4].forEach((p) => pages.add(p));
+    if (safePage >= totalPages - 2) [totalPages - 1, totalPages - 2, totalPages - 3].forEach((p) => pages.add(p));
+    const sorted = [...pages].filter((p) => p >= 1 && p <= totalPages).sort((a, b) => a - b);
+    const withGaps = [];
+    sorted.forEach((p, i) => {
+      if (i > 0 && p - sorted[i - 1] > 1) withGaps.push(null);
+      withGaps.push(p);
+    });
+    return withGaps;
+  }, [totalPages, safePage]);
+
   const handleDelete = async (q) => {
     if (!window.confirm("Are you sure you want to delete this question?")) return;
     setDeletingId(q.questionId);
@@ -134,9 +157,9 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
     setImportMsg(null);
     try {
       const res = await importQuestions(file);
-      const msg = typeof res === "string" ? res : "Import completed";
-      setImportMsg({ type: "success", text: msg });
-      showToast("success", msg);
+      const msg = res?.message || "Import completed";
+      setImportMsg({ type: res?.succeeded === false ? "error" : "success", text: msg });
+      showToast(res?.succeeded === false ? "error" : "success", msg);
       load();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Import failed";
@@ -147,9 +170,21 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
     }
   };
 
-  const handleDownloadTemplate = async () => {
+  /** Opens the file picker only after the format guide has been shown. */
+  const openImportFormat = () => {
+    setShowImportFormat(true);
+  };
+
+  const pickImportFile = () => {
+    setShowImportFormat(false);
+    // Let the modal close before the native picker opens.
+    setTimeout(() => fileInputRef.current?.click(), 0);
+  };
+
+  const handleDownloadTemplate = async (fromFormat = false) => {
     try {
       await downloadQuestionModel("Question");
+      if (fromFormat) setShowImportFormat(false);
     } catch (err) {
       showToast("error", err instanceof Error ? err.message : "Download failed");
     }
@@ -164,10 +199,9 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
         <h1 className="text-xl font-semibold text-[#1A202C]">MCQ Question Bank</h1>
         <div className="flex gap-2">
           <input ref={fileInputRef} type="file" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleImportFile} className="hidden" />
-          <Btn variant="outline" icon={importing ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />} onClick={() => fileInputRef.current?.click()} disabled={importing}>
+          <Btn variant="outline" icon={importing ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />} onClick={openImportFormat} disabled={importing}>
             {importing ? "Importing..." : "Import Excel"}
           </Btn>
-          <Btn variant="outline" icon={<Download size={14} />} onClick={handleDownloadTemplate}>Template</Btn>
           <Btn variant="outline" icon={<FileUp size={14} />} onClick={() => setScreen("upload-from-pdf")}>Upload from PDF</Btn>
           <Btn variant="outline" icon={<Sparkles size={14} />} onClick={() => setScreen("generate-ai-question")}>Generate with AI</Btn>
           <Btn variant="outline" icon={<ShieldCheck size={14} />} onClick={() => setScreen("question-correction")}>Question Correction</Btn>
@@ -290,21 +324,97 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
 
       {!loading && !error && totalRecords > 0 && (
         <Card className="p-3">
-          <div className="flex items-center justify-between px-1">
+          <div className="flex items-center justify-between gap-3 flex-wrap px-1">
             <span className="text-xs text-[#718096]">
               {`Showing ${start + 1}\u2013${Math.min(start + pageSize, totalRecords)} of ${totalRecords} question${totalRecords === 1 ? "" : "s"}`}
             </span>
             <div className="flex items-center gap-1">
-              <button onClick={() => goToPage(safePage - 1)} disabled={safePage <= 1} className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed">
+              <button onClick={() => goToPage(safePage - 1)} disabled={safePage <= 1} className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed" title="Previous page">
                 <ChevronLeft size={14} className="mx-auto" />
               </button>
-              <span className="px-2 text-xs text-[#718096] whitespace-nowrap">Page {safePage} of {totalPages}</span>
-              <button onClick={() => goToPage(safePage + 1)} disabled={safePage >= totalPages} className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed">
+              {pageNumbers.map((p, i) =>
+                p === null ? (
+                  <span key={`gap-${i}`} className="px-1 text-xs text-[#A0AEC0]">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => goToPage(p)}
+                    title={`Page ${p}`}
+                    aria-current={p === safePage ? "page" : undefined}
+                    className={`w-7 h-7 rounded-md text-xs font-medium transition ${
+                      p === safePage
+                        ? "bg-[#C41E3A] text-white"
+                        : "text-[#718096] hover:bg-gray-100"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button onClick={() => goToPage(safePage + 1)} disabled={safePage >= totalPages} className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed" title="Next page">
                 <ChevronRight size={14} className="mx-auto" />
               </button>
             </div>
           </div>
         </Card>
+      )}
+
+      {showImportFormat && (
+        <Modal title="Excel Upload Format" onClose={() => !importing && setShowImportFormat(false)} className="max-w-3xl">
+          <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-1">
+            <p className="text-sm text-[#718096] leading-relaxed">
+              The workbook is read from the <strong className="text-[#1A202C]">first sheet</strong>. The header row
+              must contain every column below, spelled exactly as shown. Each following row is one question.
+            </p>
+
+            <div className="overflow-x-auto border border-[rgba(0,0,0,0.08)] rounded-lg">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-[#F7FAFC] text-[11px] uppercase tracking-wide text-[#718096]">
+                    <th className="text-left px-3 py-2">Column</th>
+                    <th className="text-left px-3 py-2">Type</th>
+                    <th className="text-left px-3 py-2">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {QUESTION_IMPORT_COLUMNS.map((col) => (
+                    <tr key={col.name} className="border-t border-[rgba(0,0,0,0.04)] align-top">
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="font-mono text-xs font-semibold text-[#C41E3A]">{col.name}</span>
+                        {col.required && <span className="ml-1 text-red-500 text-xs">*</span>}
+                        <div className="text-[10px] text-[#A0AEC0] mt-0.5">e.g. {col.example}</div>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-[#718096] whitespace-nowrap">{col.type}</td>
+                      <td className="px-3 py-2 text-xs text-[#1A202C]">{col.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2.5">
+              <AlertCircle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
+              <ul className="text-xs text-amber-700 leading-relaxed list-disc pl-4 space-y-0.5">
+                <li>Only the first sheet is imported.</li>
+                <li>Accepted files are .xls and .xlsx.</li>
+                <li>All four options are required, and RightOption must be 1, 2, 3 or 4.</li>
+                <li>Rows with a blank question text, unknown CourseId, or missing options are skipped and reported.</li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 border-t border-[rgba(0,0,0,0.08)] pt-4">
+              <Btn variant="ghost" icon={<Download size={14} />} onClick={() => handleDownloadTemplate(true)} disabled={importing}>
+                Download Template
+              </Btn>
+              <div className="flex gap-2">
+                <Btn variant="ghost" onClick={() => setShowImportFormat(false)} disabled={importing}>Cancel</Btn>
+                <Btn variant="primary" icon={<FileSpreadsheet size={14} />} onClick={pickImportFile} disabled={importing}>
+                  {importing ? "Importing…" : "Choose Excel File"}
+                </Btn>
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {toast && (

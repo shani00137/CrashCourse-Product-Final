@@ -20,6 +20,18 @@ async function updateApplicant(payload) {
 async function changeApplicantStatus(applicantId) {
   return apiFetch(`/api/Applicant/api/Applicant/ChangeApplicantStatus/${applicantId}`);
 }
+
+/**
+ * Permanently delete an applicant together with their invoices, line items,
+ * ledger entries, status history, course selections and documents.
+ * @param {number} applicantId
+ * @returns {Promise<{ succeeded: boolean, message: string, applicantId: number }>}
+ */
+async function deleteApplicant(applicantId) {
+  return apiFetch(`/api/Applicant/api/Applicant/DeleteApplicant/${applicantId}`, {
+    method: "DELETE"
+  });
+}
 async function getCountries() {
   return apiFetch("/api/Course/api/Course/GetCountryName");
 }
@@ -34,6 +46,7 @@ async function getActiveApplicants() {
 }
 export {
   changeApplicantStatus,
+  deleteApplicant,
   getActiveApplicants,
   getActiveApplicantsByCourse,
   getActiveCourses,

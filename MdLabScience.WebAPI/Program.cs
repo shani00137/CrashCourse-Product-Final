@@ -81,10 +81,24 @@ var app = builder.Build();
 
 if (!string.IsNullOrEmpty(connectionString))
 {
-    try
+    using (var db = new MdLabScienceDbEntities())
     {
-        using var db = new MdLabScienceDbEntities();
-        db.Database.ExecuteSqlRaw(@"
+        // Each block runs in its own try/catch so a failure in one table never
+        // prevents the remaining tables from being upgraded.
+        void RunMigration(string name, string sql)
+        {
+            try
+            {
+                db.Database.ExecuteSqlRaw(sql);
+                Console.WriteLine($"[Migration] {name} verified.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Migration] {name} FAILED: {ex.Message}");
+            }
+        }
+
+        RunMigration("ServiceTb PurchasePrice/SalePrice", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ServiceTb') AND name = 'PurchasePrice')
             BEGIN
                 ALTER TABLE ServiceTb ADD PurchasePrice DECIMAL(18,2) NOT NULL DEFAULT 0;
@@ -94,8 +108,8 @@ if (!string.IsNullOrEmpty(connectionString))
                 ALTER TABLE ServiceTb ADD SalePrice DECIMAL(18,2) NOT NULL DEFAULT 0;
             END
         ");
-        Console.WriteLine("[Migration] PurchasePrice and SalePrice columns verified.");
-        db.Database.ExecuteSqlRaw(@"
+
+        RunMigration("CertificateInvoiceTb PurchaseAmount/IsCompleted", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('CertificateInvoiceTb') AND name = 'PurchaseAmount')
             BEGIN
                 ALTER TABLE CertificateInvoiceTb ADD PurchaseAmount FLOAT NULL;
@@ -105,22 +119,22 @@ if (!string.IsNullOrEmpty(connectionString))
                 ALTER TABLE CertificateInvoiceTb ADD IsCompleted BIT NOT NULL DEFAULT 0;
             END
         ");
-        Console.WriteLine("[Migration] CertificateInvoiceTb columns verified.");
-        db.Database.ExecuteSqlRaw(@"
+
+        RunMigration("QuestionsTB VerifiedBy", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('QuestionsTB') AND name = 'VerifiedBy')
             BEGIN
                 ALTER TABLE QuestionsTB ADD VerifiedBy NVARCHAR(50) NULL;
             END
         ");
-        Console.WriteLine("[Migration] QuestionsTB VerifiedBy column verified.");
-        db.Database.ExecuteSqlRaw(@"
+
+        RunMigration("AppUserTb IsAIAllowed", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AppUserTb') AND name = 'IsAIAllowed')
             BEGIN
                 ALTER TABLE AppUserTb ADD IsAIAllowed BIT NULL;
             END
         ");
-        Console.WriteLine("[Migration] AppUserTb IsAIAllowed column verified.");
-        db.Database.ExecuteSqlRaw(@"
+
+        RunMigration("ApplicantInvoiceTB discount columns", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ApplicantInvoiceTB') AND name = 'DiscountType')
             BEGIN
                 ALTER TABLE ApplicantInvoiceTB ADD DiscountType NVARCHAR(20) NULL;
@@ -134,11 +148,37 @@ if (!string.IsNullOrEmpty(connectionString))
                 ALTER TABLE ApplicantInvoiceTB ADD DiscountAmount FLOAT NULL;
             END
         ");
-        Console.WriteLine("[Migration] ApplicantInvoiceTB discount columns verified.");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[Migration] Auto-migration skipped: {ex.Message}");
+
+        RunMigration("ApplicantInvoiceTB tax columns", @"
+            IF OBJECT_ID('ApplicantInvoiceTB') IS NULL
+            BEGIN
+                RAISERROR('ApplicantInvoiceTB does not exist in this database.', 16, 1);
+                RETURN;
+            END
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ApplicantInvoiceTB') AND name = 'TaxType')
+            BEGIN
+                ALTER TABLE ApplicantInvoiceTB ADD TaxType NVARCHAR(20) NULL;
+            END
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ApplicantInvoiceTB') AND name = 'TaxValue')
+            BEGIN
+                ALTER TABLE ApplicantInvoiceTB ADD TaxValue FLOAT NULL;
+            END
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ApplicantInvoiceTB') AND name = 'TaxAmount')
+            BEGIN
+                ALTER TABLE ApplicantInvoiceTB ADD TaxAmount FLOAT NULL;
+            END
+        ");
+
+        // The backfill must be its own batch: SQL Server compiles an entire batch
+        // before running it, so referencing TaxAmount in the same batch that adds
+        // the column fails with "Invalid column name 'TaxAmount'".
+        RunMigration("ApplicantInvoiceTB tax backfill", @"
+            IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ApplicantInvoiceTB') AND name = 'TaxAmount')
+            BEGIN
+                UPDATE ApplicantInvoiceTB SET TaxAmount = 0 WHERE TaxAmount IS NULL;
+            END
+        ");
+
     }
 }
 

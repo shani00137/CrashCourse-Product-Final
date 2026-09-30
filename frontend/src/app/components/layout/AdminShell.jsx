@@ -10,7 +10,6 @@ import {
   Shield,
   Smartphone,
   Database,
-  Camera,
   Lock,
   ChevronLeft,
   ChevronRight,
@@ -51,7 +50,6 @@ import { RolesScreen } from "../views/users/Roles";
 import { UserAccountsScreen } from "../views/users/UserAccounts";
 import { ChangePasswordScreen } from "../views/users/ChangePassword";
 import { CertificatesScreen } from "../views/reports/Certificates";
-import { ScreenshotsScreen } from "../views/reports/Screenshots";
 import { BackupScreen } from "../views/reports/Backup";
 import { SettingsScreen } from "../views/settings/Settings";
 import { ProfitLossScreen } from "../views/applicants/ProfitLoss";
@@ -103,7 +101,6 @@ const navGroups = [
     label: "Reports & System",
     items: [
       { icon: Award, label: "Certificates", screen: "certificates" },
-      { icon: Camera, label: "Screenshots", screen: "screenshots" },
       { icon: Database, label: "Backup DB", screen: "backup" },
       { icon: Lock, label: "Change Password", screen: "change-password" },
       { icon: Settings, label: "Settings", screen: "settings" },
@@ -165,7 +162,6 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     roles: ["Users & Access", "Roles & Permissions"],
     "user-accounts": ["Users & Access", "User Accounts"],
     certificates: ["Reports & System", "Certificates"],
-    screenshots: ["Reports & System", "Screenshots"],
     backup: ["Reports & System", "Backup DB"],
     "change-password": ["Reports & System", "Change Password"],
     settings: ["Reports & System", "Settings"],
@@ -207,7 +203,6 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     roles: <RolesScreen />,
     "user-accounts": <UserAccountsScreen />,
     certificates: <CertificatesScreen />,
-    screenshots: <ScreenshotsScreen />,
     backup: <BackupScreen />,
     "change-password": <ChangePasswordScreen />,
     settings: <SettingsScreen />,

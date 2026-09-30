@@ -18,6 +18,9 @@ namespace MdLabScience.Models
         public string DiscountType { get; set; }
         public Nullable<double> DiscountValue { get; set; }
         public Nullable<double> DiscountAmount { get; set; }
+        public string TaxType { get; set; }
+        public Nullable<double> TaxValue { get; set; }
+        public Nullable<double> TaxAmount { get; set; }
         public List<CertificateInvoiceMD> ServiceList { get; set; }
     }
 }

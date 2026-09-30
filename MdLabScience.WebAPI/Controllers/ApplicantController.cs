@@ -1020,6 +1020,9 @@ IF NOT EXISTS (
                                    c.DiscountType,
                                    c.DiscountValue,
                                    c.DiscountAmount,
+                                   c.TaxType,
+                                   c.TaxValue,
+                                   c.TaxAmount,
                                    ServiceList = db.CertificateInvoiceTbs.Where(x => x.InvoiceId == c.InvoiceId).ToList()
                                }).OrderByDescending(x => x.InvoiceId).ToList();
                 return Ok(Courses);
@@ -1051,6 +1054,9 @@ IF NOT EXISTS (
                                    c.DiscountType,
                                    c.DiscountValue,
                                    c.DiscountAmount,
+                                   c.TaxType,
+                                   c.TaxValue,
+                                   c.TaxAmount,
                                    ServiceList = db.CertificateInvoiceTbs.Where(x => x.InvoiceId == c.InvoiceId).ToList()
                                }).OrderByDescending(x => x.InvoiceId).ToList();
                 return Ok(Courses);
@@ -1120,6 +1126,17 @@ IF NOT EXISTS (
                         discountAmount = Math.Max(0, discountAmount);
                     }
 
+                    // Tax is applied on top of the net amount (subtotal - discount) and defaults to 0.
+                    double taxBase = Math.Max((value.ServiceList ?? new List<CertificateInvoiceMD>())
+                        .Where(q => q.Amount.HasValue)
+                        .Sum(q => q.Amount.Value) - discountAmount, 0);
+                    double taxAmount = 0;
+                    if (value.TaxType == "Percentage" && value.TaxValue.HasValue)
+                        taxAmount = taxBase * Math.Max(value.TaxValue.Value, 0) / 100.0;
+                    else if (value.TaxType == "Amount" && value.TaxValue.HasValue)
+                        taxAmount = Math.Max(value.TaxValue.Value, 0);
+                    taxAmount = Math.Round(Math.Max(0, taxAmount), 2);
+
                     var UpdateQuery = db.ApplicantInvoiceTBs.Where(x => x.InvoiceId == value.InvoiceId).FirstOrDefault();
                     if (UpdateQuery != null)
                     {
@@ -1139,6 +1156,9 @@ IF NOT EXISTS (
                         UpdateQuery.DiscountType = value.DiscountType;
                         UpdateQuery.DiscountValue = value.DiscountValue;
                         UpdateQuery.DiscountAmount = discountAmount;
+                        UpdateQuery.TaxType = value.TaxType;
+                        UpdateQuery.TaxValue = string.IsNullOrEmpty(value.TaxType) ? null : value.TaxValue;
+                        UpdateQuery.TaxAmount = taxAmount;
                         db.SaveChanges();
 
                         var Query = originalLedgerEntry;
@@ -1192,6 +1212,9 @@ IF NOT EXISTS (
                         appliantTransactionsTb.DiscountType = value.DiscountType;
                         appliantTransactionsTb.DiscountValue = value.DiscountValue;
                         appliantTransactionsTb.DiscountAmount = discountAmount;
+                        appliantTransactionsTb.TaxType = value.TaxType;
+                        appliantTransactionsTb.TaxValue = string.IsNullOrEmpty(value.TaxType) ? null : value.TaxValue;
+                        appliantTransactionsTb.TaxAmount = taxAmount;
                         db.ApplicantInvoiceTBs.Add(appliantTransactionsTb);
                         db.SaveChanges();
 
@@ -1308,6 +1331,116 @@ IF NOT EXISTS (
             catch (Exception ex)
             {
                 return StatusCode(500, new { succeeded = false, message = ex.Message });
+            }
+        }
+
+        [HttpDelete]
+        [Route("api/Applicant/DeleteApplicant/{id}")]
+        public IActionResult DeleteApplicant(int id)
+        {
+            try
+            {
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var applicant = db.ApplicantsTbs.FirstOrDefault(x => x.ApplicantId == id);
+                    if (applicant == null)
+                    {
+                        return NotFound(new { succeeded = false, message = "Applicant not found." });
+                    }
+
+                    // Remove invoices together with their line items and ledger entries.
+                    var invoiceIds = db.ApplicantInvoiceTBs
+                        .Where(x => x.ApplicantId == id)
+                        .Select(x => x.InvoiceId)
+                        .ToList();
+                    if (invoiceIds.Count > 0)
+                    {
+                        var idSet = new HashSet<int>(invoiceIds);
+                        var lineItems = db.CertificateInvoiceTbs
+                            .Where(x => x.InvoiceId.HasValue && idSet.Contains(x.InvoiceId.Value))
+                            .ToList();
+                        if (lineItems.Count > 0) db.CertificateInvoiceTbs.RemoveRange(lineItems);
+
+                        var invoices = db.ApplicantInvoiceTBs
+                            .Where(x => idSet.Contains(x.InvoiceId))
+                            .ToList();
+                        db.ApplicantInvoiceTBs.RemoveRange(invoices);
+                    }
+
+                    var transactions = db.ApplicantTransactionTBs
+                        .Where(x => x.ApplicantId == id)
+                        .ToList();
+                    if (transactions.Count > 0) db.ApplicantTransactionTBs.RemoveRange(transactions);
+
+                    var statusHistory = db.ApplicantStatusTransactionsTbs
+                        .Where(x => x.ApplicantId == id)
+                        .ToList();
+                    if (statusHistory.Count > 0) db.ApplicantStatusTransactionsTbs.RemoveRange(statusHistory);
+
+                    var courses = db.ApplicantCourseSelectionTbs
+                        .Where(x => x.ApplicantId == id)
+                        .ToList();
+                    if (courses.Count > 0) db.ApplicantCourseSelectionTbs.RemoveRange(courses);
+
+                    var dataFlowTransfer = db.DataFlowTransferTBs
+                        .Where(x => x.ApplicantId == id)
+                        .ToList();
+                    if (dataFlowTransfer.Count > 0) db.DataFlowTransferTBs.RemoveRange(dataFlowTransfer);
+
+                    var dataFlowVerification = db.DataFlowVerificationTbs
+                        .Where(x => x.ApplicantId == id)
+                        .ToList();
+                    if (dataFlowVerification.Count > 0) db.DataFlowVerificationTbs.RemoveRange(dataFlowVerification);
+
+                    var documents = db.AdditionalDocumentTbs
+                        .Where(x => x.ApplicantId == id)
+                        .ToList();
+                    if (documents.Count > 0) db.AdditionalDocumentTbs.RemoveRange(documents);
+
+                    var screenshotFiles = db.AppUserScreenshotTBs
+                        .Where(x => x.ApplicantId == id)
+                        .ToList();
+                    if (screenshotFiles.Count > 0) db.AppUserScreenshotTBs.RemoveRange(screenshotFiles);
+
+                    db.ApplicantsTbs.Remove(applicant);
+                    db.SaveChanges();
+
+                    // Best-effort cleanup of the applicant's photo and screenshot files on disk.
+                    foreach (var shot in screenshotFiles)
+                    {
+                        TryDeleteFile(shot.ImageUrl);
+                    }
+                    TryDeleteFile(applicant.PhotoUrl);
+
+                    return Ok(new
+                    {
+                        succeeded = true,
+                        message = $"Applicant {applicant.RegistrationNo ?? id.ToString()} deleted successfully.",
+                        applicantId = id
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { succeeded = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>Deletes a file stored under the content root, ignoring any failure.</summary>
+        private void TryDeleteFile(string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath)) return;
+            try
+            {
+                var path = Path.Combine(_env.ContentRootPath, relativePath);
+                if (System.IO.File.Exists(path))
+                {
+                    System.IO.File.Delete(path);
+                }
+            }
+            catch
+            {
+                // File cleanup is best-effort and must never fail the delete.
             }
         }
 

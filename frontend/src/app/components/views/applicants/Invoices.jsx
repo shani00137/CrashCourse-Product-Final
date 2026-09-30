@@ -35,6 +35,8 @@ const emptyForm = () => ({
   remarks: "",
   discountType: "",
   discountValue: "",
+  taxType: "",
+  taxValue: "0",
   serviceList: []
 });
 
@@ -71,6 +73,25 @@ function netAmountOf(serviceList, discountType, discountValue) {
   return Math.max(subtotalOf(serviceList) - discountAmountOf(serviceList, discountType, discountValue), 0);
 }
 
+/** Money value of the tax (0 when no tax is set). Applied on the discounted subtotal. */
+function taxAmountOf(serviceList, discountType, discountValue, taxType, taxValue) {
+  const value = toNumber(taxValue);
+  if (taxType === "Percentage") {
+    if (!(value > 0)) return 0;
+    return netAmountOf(serviceList, discountType, discountValue) * (value / 100);
+  }
+  if (taxType === "Amount") {
+    if (!(value > 0)) return 0;
+    return value;
+  }
+  return 0;
+}
+
+/** Grand total: subtotal - discount + tax. */
+function grandTotalOf(serviceList, discountType, discountValue, taxType, taxValue) {
+  return netAmountOf(serviceList, discountType, discountValue) + taxAmountOf(serviceList, discountType, discountValue, taxType, taxValue);
+}
+
 function fmtMoney(value) {
   return toNumber(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -91,54 +112,6 @@ function invoiceStatus(inv) {
 
 function validateForm(form) {
   const errors = {};
-  const openPaymentModal = () => {
-    if (ledgerOutstanding <= 0) return;
-    setPaymentAmount("");
-    setPaymentRemarks("");
-    setPaymentError("");
-    setShowPaymentModal(true);
-  };
-
-  const closePaymentModal = () => {
-    if (paymentSaving) return;
-    setShowPaymentModal(false);
-    setPaymentAmount("");
-    setPaymentRemarks("");
-    setPaymentError("");
-  };
-
-  const handlePayment = async () => {
-    const amount = Number(paymentAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setPaymentError("Enter a payment amount greater than zero.");
-      return;
-    }
-    if (amount > ledgerOutstanding + 0.000001) {
-      setPaymentError("Payment cannot exceed the outstanding balance.");
-      return;
-    }
-
-    setPaymentSaving(true);
-    setPaymentError("");
-    try {
-      const res = await recordApplicantPayment(drawerApplicant.applicantId, {
-        amount,
-        remarks: paymentRemarks.trim() || undefined
-      });
-      const txns = await getApplicantTransactions(drawerApplicant.applicantId);
-      setDrawerTxns(Array.isArray(txns) ? txns : []);
-      load();
-      setShowPaymentModal(false);
-      setPaymentAmount("");
-      setPaymentRemarks("");
-      toast.success(res?.message || "Payment recorded successfully.");
-    } catch (err) {
-      setPaymentError(err instanceof Error ? err.message : "Failed to record payment.");
-    } finally {
-      setPaymentSaving(false);
-    }
-  };
-
   const amount = toNumber(form.amount);
   const paidAmount = toNumber(form.paidAmount || 0);
   if (!form.service.trim()) errors.service = "Service is required.";
@@ -160,6 +133,16 @@ function validateForm(form) {
   } else if (form.discountType === "Amount") {
     if (form.discountValue === "" || discountValue < 0 || discountValue > subtotal) {
       errors.discount = "Discount amount cannot exceed the subtotal.";
+    }
+  }
+  const taxValue = toNumber(form.taxValue);
+  if (form.taxType === "Percentage") {
+    if (taxValue < 0 || taxValue > 100) {
+      errors.tax = "Tax percentage must be between 0 and 100.";
+    }
+  } else if (form.taxType === "Amount") {
+    if (taxValue < 0) {
+      errors.tax = "Tax amount cannot be negative.";
     }
   }
   form.serviceList.forEach((item, i) => {
@@ -487,6 +470,8 @@ export function InvoiceScreen({ applicant }) {
       remarks: inv.remarks ?? "",
       discountType: inv.discountType === "Percentage" || inv.discountType === "Amount" ? inv.discountType : "",
       discountValue: inv.discountValue != null && Number(inv.discountValue) > 0 ? String(inv.discountValue) : "",
+      taxType: inv.taxType === "Percentage" || inv.taxType === "Amount" ? inv.taxType : "",
+      taxValue: inv.taxValue != null && Number(inv.taxValue) > 0 ? String(inv.taxValue) : "0",
       serviceList: (inv.serviceList ?? []).map((l) => ({ service: l.service ?? "", amount: l.amount ?? "" }))
     });
     setFormErrors({});
@@ -507,15 +492,25 @@ export function InvoiceScreen({ applicant }) {
     });
   };
 
-  /** Recompute the net total from line items minus any discount. */
+  /** Recompute the invoice total from line items, discount and tax. */
   const recalcForm = (f) => {
     const subtotal = subtotalOf(f.serviceList);
     if (subtotal <= 0) return f;
-    const net = netAmountOf(f.serviceList, f.discountType, f.discountValue);
-    return { ...f, amount: String(Math.round(net * 100) / 100) };
+    const total = grandTotalOf(f.serviceList, f.discountType, f.discountValue, f.taxType, f.taxValue);
+    return { ...f, amount: String(Math.round(total * 100) / 100) };
   };
 
   const setDiscount = (patch) => setForm((f) => recalcForm({ ...f, ...patch }));
+
+  const setTax = (patch) => {
+    setForm((f) => recalcForm({ ...f, ...patch }));
+    setFormErrors((errs) => {
+      if (!("tax" in errs)) return errs;
+      const cleaned = { ...errs };
+      delete cleaned.tax;
+      return cleaned;
+    });
+  };
 
   const setLineAmount = (index) => (e) => {
     const value = e.target.value;
@@ -607,55 +602,8 @@ export function InvoiceScreen({ applicant }) {
       setFormErrors(errors);
       return;
     }
-    const openPaymentModal = () => {
-    if (ledgerOutstanding <= 0) return;
-    setPaymentAmount("");
-    setPaymentRemarks("");
-    setPaymentError("");
-    setShowPaymentModal(true);
-  };
 
-  const closePaymentModal = () => {
-    if (paymentSaving) return;
-    setShowPaymentModal(false);
-    setPaymentAmount("");
-    setPaymentRemarks("");
-    setPaymentError("");
-  };
-
-  const handlePayment = async () => {
-    const amount = Number(paymentAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setPaymentError("Enter a payment amount greater than zero.");
-      return;
-    }
-    if (amount > ledgerOutstanding + 0.000001) {
-      setPaymentError("Payment cannot exceed the outstanding balance.");
-      return;
-    }
-
-    setPaymentSaving(true);
-    setPaymentError("");
-    try {
-      const res = await recordApplicantPayment(drawerApplicant.applicantId, {
-        amount,
-        remarks: paymentRemarks.trim() || undefined
-      });
-      const txns = await getApplicantTransactions(drawerApplicant.applicantId);
-      setDrawerTxns(Array.isArray(txns) ? txns : []);
-      load();
-      setShowPaymentModal(false);
-      setPaymentAmount("");
-      setPaymentRemarks("");
-      toast.success(res?.message || "Payment recorded successfully.");
-    } catch (err) {
-      setPaymentError(err instanceof Error ? err.message : "Failed to record payment.");
-    } finally {
-      setPaymentSaving(false);
-    }
-  };
-
-  const amount = toNumber(form.amount);
+    const amount = toNumber(form.amount);
     const paidAmount = toNumber(form.paidAmount || 0);
     const serviceList = form.serviceList
       .filter((item) => item.service.trim() && item.amount !== "")
@@ -672,6 +620,9 @@ export function InvoiceScreen({ applicant }) {
         discountType: form.discountType || null,
         discountValue: form.discountType ? toNumber(form.discountValue) : null,
         discountAmount: discountAmountOf(form.serviceList, form.discountType, form.discountValue),
+        taxType: form.taxType || null,
+        taxValue: form.taxType ? toNumber(form.taxValue) : null,
+        taxAmount: taxAmountOf(form.serviceList, form.discountType, form.discountValue, form.taxType, form.taxValue),
         paidAmount,
         balance: Math.max(amount - paidAmount, 0),
         remarks: form.remarks.trim(),
@@ -755,6 +706,7 @@ export function InvoiceScreen({ applicant }) {
   const paidAmount = toNumber(form.paidAmount || 0);
   const subtotal = subtotalOf(form.serviceList);
   const discountAmount = discountAmountOf(form.serviceList, form.discountType, form.discountValue);
+  const taxAmount = taxAmountOf(form.serviceList, form.discountType, form.discountValue, form.taxType, form.taxValue);
   const derivedBalance = form.amount !== "" && amount > 0 ? Math.max(amount - paidAmount, 0) : null;
   const ledgerInvoiced = drawerTxns.reduce((a, t) => a + (Number(t.debit) || 0), 0);
   const ledgerPaid = drawerTxns.reduce((a, t) => a + (Number(t.credit) || 0), 0);
@@ -1207,8 +1159,8 @@ export function InvoiceScreen({ applicant }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[rgba(0,0,0,0.06)] bg-[#F7FAFC]">
-                {["Invoice No", "Applicant", "Date", "Service", "Amount", "Paid", "Balance", "Currency", "Status", "Actions"].map((h) => (
-                  <th key={h} className={`px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide ${["Amount", "Paid", "Balance"].includes(h) ? "text-right" : "text-left"}`}>{h}</th>
+                {["Invoice No", "Applicant", "Date", "Service", "Amount", "Tax", "Paid", "Balance", "Currency", "Status", "Actions"].map((h) => (
+                  <th key={h} className={`px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide ${["Amount", "Tax", "Paid", "Balance"].includes(h) ? "text-right" : "text-left"}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1238,6 +1190,12 @@ export function InvoiceScreen({ applicant }) {
                     {fmtMoney(inv.amount)}
                     {Number(inv.discountAmount) > 0 && (
                       <div className="text-[10px] font-medium text-emerald-600">−{fmtMoney(inv.discountAmount)} discount</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-xs text-[#1A202C]">
+                    {fmtMoney(inv.taxAmount)}
+                    {inv.taxType === "Percentage" && Number(inv.taxValue) > 0 && (
+                      <div className="text-[10px] text-[#718096]">{toNumber(inv.taxValue)}%</div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-xs text-emerald-600">{fmtMoney(inv.paidAmount)}</td>
@@ -1480,6 +1438,51 @@ export function InvoiceScreen({ applicant }) {
               {formErrors.discount && <p className="text-xs text-red-600">{formErrors.discount}</p>}
             </div>
 
+            {/* Tax */}
+            <div className="mt-4 flex flex-col gap-2">
+              <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">
+                Tax <span className="font-normal normal-case text-[#718096]">(optional, defaults to zero)</span>
+              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex rounded-lg border border-[rgba(0,0,0,0.12)] overflow-hidden">
+                  {["None", "Percentage", "Amount"].map((opt) => {
+                    const val = opt === "None" ? "" : opt;
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setTax({ taxType: val, taxValue: val ? "0" : "" })}
+                        className={`px-3 h-9 text-xs font-semibold transition ${(form.taxType || "") === val ? "bg-[#C41E3A] text-white" : "bg-white text-[#718096] hover:bg-gray-50"}`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="relative w-40">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.taxValue}
+                    onChange={(e) => setTax({ taxValue: e.target.value })}
+                    placeholder="0.00"
+                    disabled={!form.taxType}
+                    className={`h-9 w-full px-3 rounded-lg border bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition disabled:opacity-60 disabled:cursor-not-allowed ${formErrors.tax ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
+                  />
+                  {form.taxType === "Percentage" && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#718096]">%</span>
+                  )}
+                </div>
+                {form.taxType && (
+                  <span className="text-[11px] text-[#718096]">
+                    Tax amount: <span className="font-mono font-semibold text-[#1A202C]">{fmtMoney(taxAmount)} {form.currency}</span>
+                  </span>
+                )}
+              </div>
+              {formErrors.tax && <p className="text-xs text-red-600">{formErrors.tax}</p>}
+            </div>
+
             {/* Paid amount & currency */}
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
@@ -1513,8 +1516,16 @@ export function InvoiceScreen({ applicant }) {
                     <span className="font-mono font-medium text-emerald-600">- {fmtMoney(discountAmount)}</span>
                   </div>
                 )}
+                {taxAmount > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[#718096]">
+                      Tax{form.taxType === "Percentage" ? ` (${toNumber(form.taxValue)}%)` : ""}
+                    </span>
+                    <span className="font-mono font-medium text-[#1A202C]">+ {fmtMoney(taxAmount)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-[#1A202C]">Total (after discount)</span>
+                  <span className="font-medium text-[#1A202C]">Total (after discount &amp; tax)</span>
                   <span className="font-mono font-semibold text-[#1A202C]">{fmtMoney(toNumber(form.amount))}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">

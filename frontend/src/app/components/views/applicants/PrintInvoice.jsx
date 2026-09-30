@@ -11,6 +11,9 @@ function PrintInvoice({ invoice, onClose }) {
   const discountAmount = Math.max(Number(invoice.discountAmount ?? 0), 0);
   const netTotal = Math.max(totalSale - discountAmount, 0);
   const discountLabel = invoice.discountType === "Percentage" ? ` (${Number(invoice.discountValue || 0)}%)` : "";
+  const taxAmount = Math.max(Number(invoice.taxAmount ?? 0), 0);
+  const taxLabel = invoice.taxType === "Percentage" ? ` (${Number(invoice.taxValue || 0)}%)` : "";
+  const grandTotal = netTotal + taxAmount;
 
   const handlePrint = () => {
     const printWindow = window.open("", "_blank", "width=800,height=1000");
@@ -137,9 +140,14 @@ function PrintInvoice({ invoice, onClose }) {
           <span class="label">Discount${discountLabel}</span>
           <span class="value" style="color:#059669">- ${discountAmount.toFixed(2)}</span>
         </div>` : ""}
+        ${taxAmount > 0 ? `
+        <div class="totals-row">
+          <span class="label">Tax${taxLabel}</span>
+          <span class="value">+ ${taxAmount.toFixed(2)}</span>
+        </div>` : ""}
         <div class="totals-row total">
-          <span class="label">Total (after discount)</span>
-          <span class="value">${netTotal.toFixed(2)} ${invoice.currency || ""}</span>
+          <span class="label">Total (after discount &amp; tax)</span>
+          <span class="value">${grandTotal.toFixed(2)} ${invoice.currency || ""}</span>
         </div>
         <div class="totals-row">
           <span class="label">Paid Amount</span>
@@ -227,9 +235,15 @@ function PrintInvoice({ invoice, onClose }) {
               <span className="font-mono">- {discountAmount.toFixed(2)}</span>
             </div>
           )}
+          {taxAmount > 0 && (
+            <div className="flex justify-between text-xs text-[#718096] pt-1.5">
+              <span>Tax{taxLabel}</span>
+              <span className="font-mono">+ {taxAmount.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-xs font-semibold text-[#1A202C] border-t border-[rgba(0,0,0,0.06)] pt-2">
-            <span>Total (after discount)</span>
-            <span className="font-mono">{netTotal.toFixed(2)} {invoice.currency || ""}</span>
+            <span>Total (after discount &amp; tax)</span>
+            <span className="font-mono">{grandTotal.toFixed(2)} {invoice.currency || ""}</span>
           </div>
         </div>
 
