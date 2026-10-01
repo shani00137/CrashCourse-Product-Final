@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { Btn } from "../../shared/ui";
+import logoUrl from "../../../../assets/icon.png";
 
 function PrintInvoice({ invoice, onClose }) {
   if (!invoice) return null;
@@ -15,8 +16,28 @@ function PrintInvoice({ invoice, onClose }) {
   const taxLabel = invoice.taxType === "Percentage" ? ` (${Number(invoice.taxValue || 0)}%)` : "";
   const grandTotal = netTotal + taxAmount;
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const printWindow = window.open("", "_blank", "width=800,height=1000");
+    if (!printWindow) {
+      alert("The print window was blocked. Please allow pop-ups for this site and try again.");
+      return;
+    }
+
+    // The print document is written into a blank window with no access to the
+    // app's asset URLs, so the logo has to be inlined as a base64 data URI.
+    // Imported lazily with ?inline to keep the ~170KB image out of the main bundle.
+    let logoDataUri = "";
+    try {
+      const { default: inlineLogo } = await import("../../../../assets/icon.png?inline");
+      logoDataUri = inlineLogo;
+    } catch {
+      logoDataUri = "";
+    }
+
+    const logoMarkup = logoDataUri
+      ? `<img class="company-logo" src="${logoDataUri}" alt="Health Planning Consultancies" />`
+      : "";
+
     let serviceRows = "";
     serviceList.forEach((item, i) => {
       const statusColor = item.isCompleted ? "#059669" : "#d97706";
@@ -42,9 +63,11 @@ function PrintInvoice({ invoice, onClose }) {
   <title>Invoice ${invoice.invoiceNo}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; padding: 40px; font-weight: 700; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; padding: 40px; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .invoice-container { max-width: 750px; margin: 0 auto; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 3px solid #C41E3A; padding-bottom: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 3px solid #C41E3A; padding-bottom: 20px; gap: 20px; }
+    .header-left { display: flex; align-items: center; gap: 20px; }
+    .company-logo { width: 120px; height: 120px; object-fit: contain; flex-shrink: 0; }
     .company-name { font-size: 24px; font-weight: 700; color: #C41E3A; letter-spacing: -0.5px; }
     .company-sub { font-size: 11px; color: #334155; margin-top: 4px; }
     .company-meta { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(0,0,0,0.12); font-size: 11px; color: #4a5568; line-height: 1.7; }
@@ -83,17 +106,20 @@ function PrintInvoice({ invoice, onClose }) {
 <body>
   <div class="invoice-container">
     <div class="header">
-      <div>
-        <div class="company-name">Health Planning Consultancies</div>
-        <div class="company-sub">Medical Education &amp; Certification Services</div>
-        <div class="company-meta">
-          <div class="meta-row">
-            <span class="meta-label">Address:</span>
-            <span>Office No. 584 How AI-Anz, Dubai</span>
-          </div>
-          <div class="meta-row">
-            <span class="meta-label">Tax Registration No.:</span>
-            <span>104880139100003</span>
+      <div class="header-left">
+        ${logoMarkup}
+        <div>
+          <div class="company-name">Health Planning Consultancies</div>
+          <div class="company-sub">Medical Education &amp; Certification Services</div>
+          <div class="company-meta">
+            <div class="meta-row">
+              <span class="meta-label">Address:</span>
+              <span>Office No. 584 How AI-Anz, Dubai</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Tax Registration No.:</span>
+              <span>104880139100003</span>
+            </div>
           </div>
         </div>
       </div>
@@ -193,9 +219,12 @@ function PrintInvoice({ invoice, onClose }) {
 
         <div className="border border-[rgba(0,0,0,0.08)] rounded-xl p-5 mb-4">
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-xs font-semibold text-[#1A202C]">Health Planning Consultancies</p>
-              <p className="text-[15px] text-[#718096]">Invoice {invoice.invoiceNo}</p>
+            <div className="flex items-center gap-4">
+              <img src={logoUrl} alt="Health Planning Consultancies" className="w-20 h-20 object-contain flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-[#1A202C]">Health Planning Consultancies</p>
+                <p className="text-[15px] text-[#718096]">Invoice {invoice.invoiceNo}</p>
+              </div>
             </div>
             <div className="text-right">
               <p className="text-[15px] text-[#718096]">Date</p>
