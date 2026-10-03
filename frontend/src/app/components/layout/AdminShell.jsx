@@ -29,6 +29,7 @@ import {
   BarChart3,
   TrendingUp,
   ShieldCheck,
+  Database,
 } from "lucide-react";
 import { Avatar } from "../shared/ui";
 import { DashboardScreen } from "../views/dashboard/Dashboard";
