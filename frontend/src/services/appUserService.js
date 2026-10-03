@@ -38,6 +38,12 @@ async function blockAppUser(appUserId) {
 async function unblockAppUser(appUserId) {
   return apiFetch(`/api/AppUser/api/AppUser/UnblockUser/${appUserId}`);
 }
+async function getAllUserScreenShots(filter) {
+  return apiFetch("/api/AppUser/api/AppUser/GetAllUserScreenShots", {
+    method: "POST",
+    body: JSON.stringify(filter)
+  });
+}
 async function changeAIAllowed(payload) {
   return apiFetch(`/api/AppUser/api/AppUser/ChangeAIAllowed?appUserId=${encodeURIComponent(payload.appUserId)}&isAIAllowed=${payload.isAIAllowed}`, {
     method: "POST"
@@ -54,5 +60,6 @@ export {
   changeAppUserPlan,
   blockAppUser,
   unblockAppUser,
+  getAllUserScreenShots,
   changeAIAllowed
 };
