@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Lock, LockOpen, Trash2, Search, X, ChevronLeft, ChevronRight, AlertCircle, Users, RefreshCw, Eye, EyeOff, Check, Wand2, Zap, Ban, Sparkles } from "lucide-react";
+import { Plus, Lock, LockOpen, Trash2, Search, X, ChevronLeft, ChevronRight, AlertCircle, Users, RefreshCw, Eye, EyeOff, Check, Wand2, Zap, Ban, Sparkles, Gauge, Timer, Award, TrendingUp, BookOpen, ClipboardList, Target } from "lucide-react";
 import { Avatar, Btn, BouncingDots, Card, Input, Modal, SearchableSelect, StatusBadge } from "../../shared/ui";
-import { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan, blockAppUser, unblockAppUser, changeAIAllowed } from "../../../../services/appUserService";
+import { getAppUsers, saveAppUser, deleteAppUser, resetAppUserPassword, resetAppUserDeviceId, getAppUserDetail, changeAppUserPlan, blockAppUser, unblockAppUser, changeAIAllowed, getUserKpi } from "../../../../services/appUserService";
 import { getActiveApplicants } from "../../../../services/applicantService";
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+/** 5400 seconds → "1h 30m" / "45m" / "<1m" */
+const formatDuration = (totalSeconds) => {
+  const s = Math.max(0, Number(totalSeconds) || 0);
+  if (s < 60) return "<1m";
+  const minutes = Math.floor(s / 60);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+};
 const addYearsISO = (n) => {
   const d = new Date();
   d.setFullYear(d.getFullYear() + n);
@@ -16,6 +25,23 @@ const parseDate = (s) => {
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   return Number.isNaN(d.getTime()) ? null : d;
 };
+
+/** Single figure inside the User KPI modal. */
+function KpiTile({ icon, label, value, sub, color = "#C41E3A" }) {
+  return (
+    <div className="rounded-xl border border-[rgba(0,0,0,0.07)] bg-[#F7FAFC] px-3 py-3">
+      <span
+        className="inline-flex items-center justify-center w-7 h-7 rounded-lg mb-2"
+        style={{ backgroundColor: `${color}1F`, color }}
+      >
+        {icon}
+      </span>
+      <p className="text-lg font-semibold text-[#1A202C] leading-tight">{value}</p>
+      <p className="text-[11px] font-semibold text-[#718096] uppercase tracking-wide mt-0.5">{label}</p>
+      {sub && <p className="text-[11px] text-[#A0AEC0] mt-1">{sub}</p>}
+    </div>
+  );
+}
 
 export function MobileUsersScreen() {
   const pageSize = 20;
@@ -56,6 +82,10 @@ export function MobileUsersScreen() {
   const [planSaving, setPlanSaving] = useState(false);
   const [planError, setPlanError] = useState("");
   const [planSuccess, setPlanSuccess] = useState("");
+  const [kpiTarget, setKpiTarget] = useState(null);
+  const [kpi, setKpi] = useState(null);
+  const [kpiLoading, setKpiLoading] = useState(false);
+  const [kpiError, setKpiError] = useState("");
   const planCloseTimer = useRef(null);
 
   const planPreview = (() => {
@@ -102,6 +132,26 @@ export function MobileUsersScreen() {
   }, [page, debouncedSearch]);
 
   useEffect(() => load(), [load]);
+
+  /** Opens the KPI panel for one mobile user and calculates it server-side. */
+  async function openKpi(u) {
+    setKpiTarget(u);
+    setKpi(null);
+    setKpiError("");
+    setKpiLoading(true);
+    try {
+      const data = await getUserKpi(u.appUserId);
+      if (data && typeof data === "object") {
+        setKpi(data);
+      } else {
+        setKpiError("No KPI data available for this user yet.");
+      }
+    } catch (err) {
+      setKpiError(err instanceof Error ? err.message : "Failed to calculate KPI.");
+    } finally {
+      setKpiLoading(false);
+    }
+  }
 
   async function openAddModal() {
     setShowAddModal(true);
@@ -464,6 +514,7 @@ export function MobileUsersScreen() {
                   <td className="px-4 py-3 text-[#718096] text-xs font-mono">{u.loginOn ? new Date(u.loginOn).toLocaleString() : "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
+                      <button onClick={() => openKpi(u)} className="p-1.5 text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 rounded-lg transition" title="View KPI (reading time, exercises, tests)"><Gauge size={14} /></button>
                       <button onClick={() => openReset(u)} className="p-1.5 text-[#718096] hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Change Password"><Lock size={14} /></button>
                       <button
                         onClick={() => { setMessage(""); setDeviceResetTarget(u); }}
@@ -536,8 +587,79 @@ export function MobileUsersScreen() {
           </div>
         </div>
       </Card>
+      {/* ── User KPI ─────────────────────────────────────────────── */}
+      {kpiTarget && (
+        <Modal title={`KPI — ${displayName(kpiTarget)}`} onClose={() => setKpiTarget(null)} className="max-w-2xl">
+          <div className="flex flex-col gap-4">
+            {kpiLoading && <BouncingDots label="Calculating KPI…" />}
+            {!kpiLoading && kpiError && (
+              <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
+                <AlertCircle size={14} /> {kpiError}
+              </div>
+            )}
+            {!kpiLoading && !kpiError && kpi && (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <KpiTile
+                    icon={<Timer size={15} />}
+                    color="#0891B2"
+                    label="Reading Time"
+                    value={formatDuration(kpi.readingSeconds)}
+                    sub={`${kpi.lessonsStarted || 0} lesson${(kpi.lessonsStarted || 0) === 1 ? "" : "s"} started`}
+                  />
+                  <KpiTile
+                    icon={<BookOpen size={15} />}
+                    color="#16A34A"
+                    label="Exercises Completed"
+                    value={String(kpi.exercisesCompleted ?? 0)}
+                    sub="finished exercises"
+                  />
+                  <KpiTile
+                    icon={<ClipboardList size={15} />}
+                    color="#7C3AED"
+                    label="Tests Taken"
+                    value={String(kpi.testsTaken ?? 0)}
+                    sub={`${kpi.testsCompleted ?? 0} completed · ${kpi.testsInProgress ?? 0} in progress`}
+                  />
+                  <KpiTile
+                    icon={<Award size={15} />}
+                    color="#F59E0B"
+                    label="Tests Passed"
+                    value={`${kpi.testsPassed ?? 0}/${kpi.testsCompleted ?? 0}`}
+                    sub="scored 60% or more"
+                  />
+                  <KpiTile
+                    icon={<TrendingUp size={15} />}
+                    color="#C41E3A"
+                    label="Average Score"
+                    value={`${kpi.avgScore ?? 0}%`}
+                    sub={`Best ${kpi.bestScore ?? 0}%`}
+                  />
+                  <KpiTile
+                    icon={<Target size={15} />}
+                    color="#166534"
+                    label="Overall Result"
+                    value={`${kpi.overallScore ?? 0}%`}
+                    sub={`${kpi.totalRightAnswers ?? 0}/${kpi.totalQuestions ?? 0} answers correct`}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(0,0,0,0.08)] bg-[#F7FAFC] px-4 py-3 text-xs text-[#718096]">
+                  <span>
+                    Last test result:{" "}
+                    <strong className="text-[#1A202C]">{kpi.lastResult || "No tests yet"}</strong>
+                  </span>
+                  {kpi.lastTestDate && <span className="font-mono">{new Date(kpi.lastTestDate).toLocaleString()}</span>}
+                </div>
+              </>
+            )}
+            <div className="flex justify-end border-t border-[rgba(0,0,0,0.08)] pt-3">
+              <Btn variant="ghost" onClick={() => setKpiTarget(null)}>Close</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
       {showAddModal && (
-        <Modal title="Add Mobile User" onClose={() => setShowAddModal(false)}>
+      <Modal title="Add Mobile User" onClose={() => setShowAddModal(false)}>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Applicant</label>

@@ -264,11 +264,12 @@ function CoursesScreen() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[rgba(0,0,0,0.06)] bg-[#F7FAFC]">
-                {["Course Code", "Course Name", "Attachment", "Status", "Actions"].map((h) => <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide whitespace-nowrap">{h}</th>)}
+                {["ID", "Course Code", "Course Name", "Attachment", "Status", "Actions"].map((h) => <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide whitespace-nowrap">{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {rows.map((c) => <tr key={c.courseId} className="border-b border-[rgba(0,0,0,0.04)] hover:bg-[#F7FAFC] transition-colors">
+                  <td className="px-4 py-3 font-mono text-xs text-[#718096] font-medium whitespace-nowrap" title="Course ID">{c.courseId}</td>
                   <td className="px-4 py-3 font-mono text-xs text-[#C41E3A] font-medium whitespace-nowrap">{c.courseCode}</td>
                   <td className="px-4 py-3 font-medium text-[#1A202C]">{c.courseName}</td>
                   <td className="px-4 py-3">

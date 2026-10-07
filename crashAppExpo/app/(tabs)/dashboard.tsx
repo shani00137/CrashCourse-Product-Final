@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { colors, gradients, shadows, radii } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useStudyData } from "@/hooks/useStudyData";
+import { UserKpiModal } from "@/components/UserKpiModal";
 import { resolveDomain } from "@/utils/aiTutor";
 
 const logoSource = require("@/assets/logo/logo.jpg");
@@ -42,6 +43,7 @@ export default function DashboardScreen() {
   const aiDomain = resolveDomain(user?.courseName);
 
   const study = useStudyData(appUserId);
+  const [kpiOpen, setKpiOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -429,11 +431,40 @@ export default function DashboardScreen() {
                 <Text style={styles.quickActionSubtitle}>Progress & scores</Text>
               </LinearGradient>
             </TouchableOpacity>
+
+            {/* My KPI — reading time, exercises, tests and results */}
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => setKpiOpen(true)}
+              activeOpacity={0.9}
+            >
+              <LinearGradient
+                colors={gradients.header}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.quickActionInner}
+              >
+                <View style={styles.quickActionIconBox}>
+                  <Ionicons name="speedometer" size={20} color={colors.white} />
+                </View>
+                <Text style={styles.quickActionTitle}>My KPI</Text>
+                <Text style={styles.quickActionSubtitle}>
+                  Reading time, exercises & test results
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.bottomSpacer} />
       </View>
+
+      <UserKpiModal
+        visible={kpiOpen}
+        onClose={() => setKpiOpen(false)}
+        appUserId={appUserId}
+        userName={user?.name}
+      />
     </ScrollView>
   );
 }
@@ -792,10 +823,12 @@ const styles = StyleSheet.create({
   },
   quickActionsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   quickActionCard: {
     flex: 1,
+    flexBasis: "48%",
     borderRadius: radii.lg,
     overflow: "hidden",
   },

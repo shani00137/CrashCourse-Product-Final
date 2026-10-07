@@ -864,6 +864,74 @@ export async function getReadingTime(
   };
 }
 
+export interface ExerciseCompleteInput {
+  appUserId: number;
+  courseId: number;
+  exerciseStart: number;
+  exerciseEnd: number;
+  questions: number;
+  rightQuestions: number;
+}
+
+/**
+ * Records that the user finished an exercise so it counts towards their KPI.
+ * Best-effort: a failure (e.g. the KPI table not migrated yet) never blocks
+ * the exercise flow.
+ */
+export async function markExerciseComplete(input: ExerciseCompleteInput): Promise<boolean> {
+  try {
+    const data = await request<unknown>(ENDPOINTS.markExerciseComplete, input);
+    if (!data || typeof data !== "object") return false;
+    return (data as Record<string, unknown>).succeeded !== false;
+  } catch {
+    return false;
+  }
+}
+
+export interface UserKpi {
+  appUserId: number;
+  readingSeconds: number;
+  lessonsStarted: number;
+  exercisesCompleted: number;
+  testsTaken: number;
+  testsCompleted: number;
+  testsPassed: number;
+  testsInProgress: number;
+  avgScore: number;
+  bestScore: number;
+  totalQuestions: number;
+  totalRightAnswers: number;
+  overallScore: number;
+  lastTestDate: string | null;
+  lastResult: string;
+}
+
+/**
+ * Fetches the KPI figures calculated by the API for a user: reading time,
+ * exercises completed, tests taken and the results of those tests.
+ */
+export async function getUserKpi(appUserId: number): Promise<UserKpi> {
+  const data = await get<unknown>(ENDPOINTS.getUserKpi(appUserId));
+  const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+  return {
+    appUserId: Number(r.appUserId) || appUserId,
+    readingSeconds: Number(r.readingSeconds) || 0,
+    lessonsStarted: Number(r.lessonsStarted) || 0,
+    exercisesCompleted: Number(r.exercisesCompleted) || 0,
+    testsTaken: Number(r.testsTaken) || 0,
+    testsCompleted: Number(r.testsCompleted) || 0,
+    testsPassed: Number(r.testsPassed) || 0,
+    testsInProgress: Number(r.testsInProgress) || 0,
+    avgScore: Number(r.avgScore) || 0,
+    bestScore: Number(r.bestScore) || 0,
+    totalQuestions: Number(r.totalQuestions) || 0,
+    totalRightAnswers: Number(r.totalRightAnswers) || 0,
+    overallScore: Number(r.overallScore) || 0,
+    lastTestDate: typeof r.lastTestDate === "string" ? (r.lastTestDate as string) : null,
+    lastResult: typeof r.lastResult === "string" ? r.lastResult : "No tests yet",
+  };
+}
+
 export interface UserTestInfo {
   testId: number;
   courseId: number;

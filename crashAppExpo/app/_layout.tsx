@@ -1,12 +1,12 @@
 import { Stack, useRouter } from "expo-router";
 import { useEffect } from "react";
-import * as Notifications from "expo-notifications";
 import { usePreventScreenCapture } from "expo-screen-capture";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AppProvider } from "@/context/AppContext";
 import AccountBlockWatchdog from "@/components/AccountBlockWatchdog";
 import UpdatePrompt from "@/components/UpdatePrompt";
+import { addNotificationResponseReceivedListener } from "@/services/notifications";
 
 export default function RootLayout() {
   const router = useRouter();
@@ -19,14 +19,12 @@ export default function RootLayout() {
   // Route taps on "Exam Test." notifications to the test screen, mirroring the
   // old Flutter app's behavior of opening the pending test.
   useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const title = response.notification.request.content.title ?? "";
-        if (/exam test/i.test(title)) {
-          router.push("/test");
-        }
+    const sub = addNotificationResponseReceivedListener((response) => {
+      const title = response.notification.request.content.title ?? "";
+      if (/exam test/i.test(title)) {
+        router.push("/test");
       }
-    );
+    });
     return () => sub.remove();
   }, [router]);
 

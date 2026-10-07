@@ -93,11 +93,37 @@ async function downloadQuestionModel(filename) {
   a.remove();
   window.URL.revokeObjectURL(url);
 }
+
+/**
+ * Downloads every question matching the current Question Bank filters
+ * (course + search text) as an .xlsx workbook. `courseId` may be null to
+ * export all courses; the search term is applied server-side so the file
+ * matches the list on screen, not just the visible page.
+ */
+async function exportQuestions({ courseId = null, searchTerm = "" } = {}) {
+  const token = getToken();
+  const params = new URLSearchParams();
+  if (searchTerm && searchTerm.trim()) params.set("searchTerm", searchTerm.trim());
+  const qs = params.toString();
+  const url = `${API_BASE_URL}/api/Questions/api/Questions/ExportQuestion/${courseId ?? 0}${qs ? `?${qs}` : ""}`;
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok) throw new Error("Export failed");
+  const blob = await response.blob();
+  const objectUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = "Questions.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(objectUrl);
+}
 export {
   bulkSaveQuestions,
   deleteQuestion,
   downloadQuestionModel,
   editQuestion,
+  exportQuestions,
   generateAiQuestions,
   getAllQuestions,
   importQuestions,

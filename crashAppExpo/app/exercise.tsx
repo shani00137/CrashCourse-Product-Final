@@ -24,6 +24,7 @@ import {
   takeExercise,
   getExerciseQuestionCount,
   getReadingTime,
+  markExerciseComplete,
   blockAppUser,
   TakeQuestion,
 } from "@/services/api";
@@ -347,6 +348,17 @@ export default function ExerciseScreen() {
 
   const handleComplete = () => {
     addTestResult({ name: headerCourseName, score, total: totalQ });
+    // Record the completion server-side so it counts towards the user's KPI.
+    if (user?.appUserId && cId > 0 && startN > 0 && endN > 0) {
+      void markExerciseComplete({
+        appUserId: user.appUserId,
+        courseId: cId,
+        exerciseStart: startN,
+        exerciseEnd: endN,
+        questions: totalQ,
+        rightQuestions: score,
+      });
+    }
     AsyncStorage.removeItem(PROGRESS_KEY(cId, startN, endN)).catch(() => {});
     router.replace("/(tabs)/dashboard");
   };

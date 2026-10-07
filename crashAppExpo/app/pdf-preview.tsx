@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -12,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Slider from "@react-native-community/slider";
 import { colors, gradients } from "@/constants/theme";
 import { buildPdfViewerHtml, pdfPageKey } from "@/constants/pdfViewerHtml";
 import { bytesToBase64, loadSecurePdfBytes } from "@/services/securePdf";
@@ -30,7 +32,9 @@ export default function PdfPreviewScreen() {
   const [ready, setReady] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [zoom, setZoom] = useState(1);
+  // While the user drags the page slider we preview the target page number
+  // here without jumping until the finger is lifted.
+  const [dragPage, setDragPage] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [pdfLoaded, setPdfLoaded] = useState(false);
@@ -46,9 +50,15 @@ export default function PdfPreviewScreen() {
   // Android navigation keys. Lift the content above the system inset, pull the
   // bottom region (viewer + toolbar) in from the left/right edges as well, and
   // keep a small grey margin below the PDF so it never overlays the nav keys.
+  // Some Android devices/font-scaling setups report a 0 inset, so always keep a
+  // minimum bottom gap on Android.
   const insets = useSafeAreaInsets();
   const sidePad = Math.max(insets.left, 8);
   const sidePadRight = Math.max(insets.right, 8);
+  const bottomPad = Math.max(
+    insets.bottom + 6,
+    Platform.OS === "android" ? 28 : 10
+  );
 
   useEffect(() => {
     if (!uri) {
@@ -150,6 +160,16 @@ export default function PdfPreviewScreen() {
     setAttempt((a) => a + 1);
   };
 
+  // Ask the WebView viewer to jump to a specific page (used by the slider).
+  const jumpToPage = (page: number) => {
+    const web = webRef.current;
+    if (!web || totalPages <= 0) return;
+    const target = Math.max(1, Math.min(totalPages, Math.round(page)));
+    web.injectJavaScript(
+      `if (window.__goToPage) { window.__goToPage(${target}); } true`
+    );
+  };
+
   const handleMessage = (e: { nativeEvent: { data: string } }) => {
     try {
       const d = JSON.parse(e.nativeEvent.data);
@@ -174,25 +194,8 @@ export default function PdfPreviewScreen() {
     }
   };
 
-  const cmd = (c: "next" | "prev" | "in" | "out") => {
-    if (c === "in") setZoom((z) => Math.min(4, Math.round(z * 1.25 * 100) / 100));
-    if (c === "out") setZoom((z) => Math.max(0.4, Math.round(z / 1.25 * 100) / 100));
-    // Don't silently swallow taps while the WebView hasn't mounted yet; report
-    // back to the toolbar instead of pretending navigation succeeded.
-    const web = webRef.current;
-    if (!web) return;
-    web.injectJavaScript(
-      `if (window.__nav) { window.__nav("${c}"); } else { ` +
-        `try { window.ReactNativeWebView.postMessage(JSON.stringify({type:"error", message:"Viewer not ready"})); } catch (e) {} ` +
-        `} true`
-    );
-  };
-
-  const canPrev = currentPage > 1;
-  const canNext = totalPages === 0 || currentPage < totalPages;
-
   return (
-    <View style={[styles.flex, { paddingBottom: insets.bottom }]}>
+    <View style={[styles.flex, { paddingBottom: bottomPad }]}>
       {/* Header */}
       <LinearGradient
         colors={gradients.darkRedGrad}
@@ -265,44 +268,32 @@ export default function PdfPreviewScreen() {
         )}
       </View>
 
-      {/* Toolbar */}
+      {/* Toolbar — page indicator + slider to jump pages. */}
       <View style={[styles.toolbar, { marginLeft: sidePad, marginRight: sidePadRight }]}>
-        <TouchableOpacity style={styles.toolButton} onPress={() => cmd("out")} activeOpacity={0.8}>
-          <Ionicons name="remove" size={20} color={colors.foreground} />
-        </TouchableOpacity>
-        <Text style={styles.zoomLabel}>{Math.round(zoom * 100)}%</Text>
-        <TouchableOpacity style={styles.toolButton} onPress={() => cmd("in")} activeOpacity={0.8}>
-          <Ionicons name="add" size={20} color={colors.foreground} />
-        </TouchableOpacity>
-        <View style={styles.toolDivider} />
         <Text style={styles.pageLabel} numberOfLines={1}>
-          {totalPages > 0 ? `Page ${currentPage} of ${totalPages}` : "Loading pages…"}
+          {totalPages > 0
+            ? `Page ${dragPage ?? currentPage} of ${totalPages}`
+            : "Loading pages…"}
         </Text>
-        <View style={styles.toolFiller} />
-        <TouchableOpacity
-          style={[styles.toolButton, !canPrev && styles.toolButtonDisabled]}
-          disabled={!canPrev}
-          onPress={() => cmd("prev")}
-          activeOpacity={0.8}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={20}
-            color={canPrev ? colors.foreground : "#CBD5E0"}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.toolButton, !canNext && styles.toolButtonDisabled]}
-          disabled={!canNext}
-          onPress={() => cmd("next")}
-          activeOpacity={0.8}
-        >
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color={canNext ? colors.foreground : "#CBD5E0"}
-          />
-        </TouchableOpacity>
+        <Slider
+          style={styles.slider}
+          minimumValue={1}
+          maximumValue={Math.max(1, totalPages)}
+          step={1}
+          value={currentPage}
+          disabled={totalPages <= 1}
+          tapToSeek
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primary}
+          onSlidingStart={() => setDragPage(currentPage)}
+          onValueChange={(v) => setDragPage(Math.round(v))}
+          onSlidingComplete={(v) => {
+            const target = Math.round(v);
+            setDragPage(null);
+            jumpToPage(target);
+          }}
+        />
       </View>
     </View>
   );
@@ -410,52 +401,27 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   toolbar: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    gap: 2,
     paddingHorizontal: 12,
     paddingVertical: 8,
     paddingBottom: 12,
     backgroundColor: colors.card,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    // Keep the toolbar tappable even when the native WebView layer sits above
+    // Keep the toolbar visible even when the native WebView layer sits above
     // sibling views (a known WKWebView behaviour).
     zIndex: 10,
     elevation: 10,
   },
-  toolButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#F7FAFC",
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  toolButtonDisabled: {
-    opacity: 0.4,
-  },
-  zoomLabel: {
-    minWidth: 40,
-    textAlign: "center",
-    fontSize: 12,
+  pageLabel: {
+    fontSize: 13,
     fontWeight: "700",
     color: colors.foreground,
   },
-  toolDivider: {
-    width: 1,
-    height: 22,
-    backgroundColor: colors.border,
-    marginHorizontal: 2,
-  },
-  pageLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.mutedForeground,
-  },
-  toolFiller: {
-    flex: 1,
+  slider: {
+    width: "100%",
+    height: 32,
   },
 });

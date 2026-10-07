@@ -49,6 +49,10 @@ async function changeAIAllowed(payload) {
     method: "POST"
   });
 }
+/** Calculated KPI (reading time, exercises, tests, results) for one mobile user. */
+async function getUserKpi(appUserId) {
+  return apiFetch(`/api/UserKpi/api/UserKpi/GetUserKpi/${appUserId}`);
+}
 
 export {
   getAppUsers,
@@ -61,5 +65,6 @@ export {
   blockAppUser,
   unblockAppUser,
   getAllUserScreenShots,
-  changeAIAllowed
+  changeAIAllowed,
+  getUserKpi
 };

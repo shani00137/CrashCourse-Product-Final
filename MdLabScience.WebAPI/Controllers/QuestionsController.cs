@@ -439,7 +439,7 @@ namespace MdLabScience.Controllers
 
         [HttpGet]
         [Route("api/Questions/ExportQuestion/{CourseId}")]
-        public IActionResult ExportQuestion(int CourseId)
+        public IActionResult ExportQuestion(int CourseId, [FromQuery] string searchTerm = "")
         {
             DataTable dt = new DataTable();
 
@@ -462,9 +462,13 @@ namespace MdLabScience.Controllers
 
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
+                // CourseId <= 0 means "every course"; searchTerm narrows the export
+                // to the same filter the Question Bank list is showing.
+                string term = (searchTerm ?? "").Trim();
                 var Query = (from c in db.QuestionsTBs
                              join q in db.CourseTbs on c.CourseId equals q.CourseId
-                             where c.CourseId == CourseId
+                             where (CourseId <= 0 || c.CourseId == CourseId)
+                                   && (string.IsNullOrEmpty(term) || c.QuestionContent.Contains(term))
                              select new
                              {
                                  c.QuestionContent,

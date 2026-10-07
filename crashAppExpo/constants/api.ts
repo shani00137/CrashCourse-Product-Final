@@ -23,6 +23,9 @@ export const ENDPOINTS = {
     `/Questions/api/Questions/GetExerciseQuestionCount/${courseId}`,
   explainQuestion: "/Questions/api/Questions/ExplainQuestion",
   saveReadingTime: "/ReadingTime/api/ReadingTime/SaveReadingTime",
+  markExerciseComplete: "/UserKpi/api/UserKpi/MarkExerciseComplete",
+  getUserKpi: (appUserId: number) =>
+    `/UserKpi/api/UserKpi/GetUserKpi/${appUserId}`,
   getAllReadingTime: (appUserId: number) =>
     `/ReadingTime/api/ReadingTime/GetAllReadingTime/${appUserId}`,
   getReadingTime: (appUserId: number, courseId: number, start: number, end: number) =>

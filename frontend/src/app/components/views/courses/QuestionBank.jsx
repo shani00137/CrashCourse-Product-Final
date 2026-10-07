@@ -23,6 +23,7 @@ import {
   QUESTION_IMPORT_COLUMNS,
   deleteQuestion,
   downloadQuestionModel,
+  exportQuestions,
   getAllQuestions,
   importQuestions,
   updateQuestionVerifiedBy
@@ -45,6 +46,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
   const [deletingId, setDeletingId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [importMsg, setImportMsg] = useState(null);
   const [showImportFormat, setShowImportFormat] = useState(false);
   const fileInputRef = useRef(null);
@@ -190,6 +192,19 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
     }
   };
 
+  /** Downloads all questions matching the current course + search filters. */
+  const handleDownloadExcel = async () => {
+    setExporting(true);
+    try {
+      await exportQuestions({ courseId, searchTerm: debouncedSearch });
+      showToast("success", "Excel download started");
+    } catch (err) {
+      showToast("error", err instanceof Error ? err.message : "Download failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const courseOptions = courses.map(c => ({ id: c.courseId, label: `${c.courseCode} — ${c.courseName}` }));
   const searching = search.trim() !== debouncedSearch;
 
@@ -199,6 +214,9 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
         <h1 className="text-xl font-semibold text-[#1A202C]">MCQ Question Bank</h1>
         <div className="flex gap-2">
           <input ref={fileInputRef} type="file" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleImportFile} className="hidden" />
+          <Btn variant="outline" icon={exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} onClick={handleDownloadExcel} disabled={exporting || loading}>
+            {exporting ? "Preparing file…" : "Download Excel"}
+          </Btn>
           <Btn variant="outline" icon={importing ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />} onClick={openImportFormat} disabled={importing}>
             {importing ? "Importing..." : "Import Excel"}
           </Btn>

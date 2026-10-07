@@ -1,8 +1,11 @@
 import { useEffect, useRef } from "react";
-import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import { checkAppUserStatus } from "@/services/api";
+import {
+  addNotificationReceivedListener,
+  addNotificationResponseReceivedListener,
+} from "@/services/notifications";
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -30,14 +33,14 @@ export default function AccountBlockWatchdog() {
   useEffect(() => {
     handledRef.current = false;
 
-    const receivedSub = Notifications.addNotificationReceivedListener((n) => {
+    const receivedSub = addNotificationReceivedListener((n) => {
       const title = (n.request.content.title ?? "").toLowerCase();
       if (/account block/.test(title)) {
         forceLogout();
       }
     });
 
-    const responseSub = Notifications.addNotificationResponseReceivedListener((res) => {
+    const responseSub = addNotificationResponseReceivedListener((res) => {
       const title = (res.notification.request.content.title ?? "").toLowerCase();
       if (/account block/.test(title)) {
         forceLogout();
