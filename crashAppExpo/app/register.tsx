@@ -15,7 +15,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, gradients, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { useApp } from "@/context/AppContext";
 import {
   registerApplicantWithAppUser,
@@ -27,6 +28,8 @@ import {
 } from "@/services/api";
 
 export default function RegisterScreen() {
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { login } = useApp();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -334,7 +337,7 @@ login(
 
           {countriesError && !countriesLoading ? (
             <View style={styles.courseErrorBox}>
-              <Ionicons name="cloud-offline-outline" size={15} color="#B91C1C" />
+              <Ionicons name="cloud-offline-outline" size={15} color={colors.redDeepText} />
               <Text style={styles.courseErrorText}>{countriesError}</Text>
             </View>
           ) : null}
@@ -470,7 +473,7 @@ login(
 
           {coursesError && !coursesLoading ? (
             <View style={styles.courseErrorBox}>
-              <Ionicons name="cloud-offline-outline" size={15} color="#B91C1C" />
+              <Ionicons name="cloud-offline-outline" size={15} color={colors.redDeepText} />
               <Text style={styles.courseErrorText}>{coursesError}</Text>
             </View>
           ) : null}
@@ -601,7 +604,7 @@ login(
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,
@@ -725,9 +728,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#FFF0F2",
+    backgroundColor: colors.redLight,
     borderWidth: 1,
-    borderColor: "#FECDD3",
+    borderColor: colors.primaryBorder,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -735,7 +738,7 @@ const styles = StyleSheet.create({
   },
   courseErrorText: {
     flex: 1,
-    color: "#B91C1C",
+    color: colors.redDeepText,
     fontSize: 12,
   },
   modalOverlay: {
@@ -832,9 +835,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#F0F9F0",
+    backgroundColor: colors.greenLight,
     borderWidth: 1,
-    borderColor: "#BBF7D0",
+    borderColor: colors.successBorder,
     borderRadius: radii.lg,
     padding: 14,
     marginTop: 20,
@@ -849,13 +852,13 @@ const styles = StyleSheet.create({
   },
   trialSubtitle: {
     fontSize: 12,
-    color: "#166534",
+    color: colors.green,
     marginTop: 2,
   },
   errorBox: {
-    backgroundColor: "#FFF0F2",
+    backgroundColor: colors.redLight,
     borderWidth: 1,
-    borderColor: "#FECDD3",
+    borderColor: colors.primaryBorder,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,

@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, StyleProp, ViewStyle } from "react-native";
-import { colors, radii } from "@/constants/theme";
+import { type ThemePalette } from "@/constants/theme";
+import { useThemedStyles } from "@/context/ThemeContext";
 
 interface AvatarProps {
   name: string;
@@ -11,6 +12,7 @@ interface AvatarProps {
 }
 
 export function Avatar({ name, size = 80, image, ringColor = "rgba(255,255,255,0.3)", style }: AvatarProps) {
+  const styles = useThemedStyles(makeStyles);
   const initial = name?.charAt(0).toUpperCase() || "U";
   return (
     <View
@@ -25,14 +27,14 @@ export function Avatar({ name, size = 80, image, ringColor = "rgba(255,255,255,0
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  text: {
-    color: colors.white,
-    fontWeight: "700",
-  },
-});
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
+    container: {
+      backgroundColor: "rgba(255,255,255,0.2)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    text: {
+      color: colors.white,
+      fontWeight: "700",
+    },
+  });

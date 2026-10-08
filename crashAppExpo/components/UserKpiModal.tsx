@@ -10,7 +10,8 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, gradients, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { getUserKpi, type UserKpi } from "@/services/api";
 
 interface UserKpiModalProps {
@@ -47,6 +48,8 @@ export function UserKpiModal({ visible, onClose, appUserId, userName }: UserKpiM
   const [kpi, setKpi] = useState<UserKpi | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const load = useCallback(async () => {
     if (!appUserId) {
@@ -243,7 +246,7 @@ export function UserKpiModal({ visible, onClose, appUserId, userName }: UserKpiM
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",

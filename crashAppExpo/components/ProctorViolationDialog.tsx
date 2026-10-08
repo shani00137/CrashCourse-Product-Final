@@ -2,7 +2,8 @@ import React from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 
 interface ProctorViolationDialogProps {
   visible: boolean;
@@ -13,6 +14,8 @@ export default function ProctorViolationDialog({
   visible,
   onAcknowledge,
 }: ProctorViolationDialogProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   return (
     <Modal
       visible={visible}
@@ -70,7 +73,7 @@ export default function ProctorViolationDialog({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   overlay: {
     flex: 1,
     alignItems: "center",

@@ -179,6 +179,24 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
 
+        // Pro-upgrade approval workflow: trial users send a request from the
+        // app; it lands in this table and the plan changes ONLY after an
+        // administrator approves the row in the admin panel.
+        RunMigration("ProUpgradeRequestTb", @"
+            IF OBJECT_ID(N'dbo.ProUpgradeRequestTb', N'U') IS NULL
+            BEGIN
+                CREATE TABLE ProUpgradeRequestTb (
+                    ProUpgradeRequestId INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    AppUserId INT NOT NULL,
+                    ApplicantId INT NOT NULL,
+                    RequestedOn DATETIME NOT NULL,
+                    Status NVARCHAR(20) NOT NULL CONSTRAINT DF_ProUpgradeRequestTb_Status DEFAULT (N'Pending'),
+                    ResolvedOn DATETIME NULL,
+                    ApprovedMonths INT NULL
+                );
+            END
+        ");
+
     }
 }
 

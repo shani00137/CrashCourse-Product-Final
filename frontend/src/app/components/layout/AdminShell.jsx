@@ -30,6 +30,7 @@ import {
   TrendingUp,
   ShieldCheck,
   Database,
+  Crown,
 } from "lucide-react";
 import { Avatar } from "../shared/ui";
 import { DashboardScreen } from "../views/dashboard/Dashboard";
@@ -47,6 +48,7 @@ import { UploadFromPdfScreen } from "../views/courses/UploadFromPdf";
 import { QuestionCorrectionScreen } from "../views/courses/QuestionCorrection";
 import { CreateTestScreen } from "../views/courses/CreateTest";
 import { MobileUsersScreen } from "../views/users/MobileUsers";
+import { ProUpgradeRequestsScreen } from "../views/users/ProUpgradeRequests";
 import { RolesScreen } from "../views/users/Roles";
 import { UserAccountsScreen } from "../views/users/UserAccounts";
 import { ChangePasswordScreen } from "../views/users/ChangePassword";
@@ -95,6 +97,7 @@ const navGroups = [
     label: "Users & Access",
     items: [
       { icon: Smartphone, label: "Mobile Users", screen: "mobile-users" },
+      { icon: Crown, label: "Pro Requests", screen: "pro-requests" },
       { icon: Shield, label: "Roles & Permissions", screen: "roles" },
       { icon: User, label: "User Accounts", screen: "user-accounts" },
     ],
@@ -162,6 +165,7 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     "question-correction": ["Questions", "Question Correction"],
     "create-test": ["Questions", "Create Test"],
     "mobile-users": ["Users & Access", "Mobile Users"],
+    "pro-requests": ["Users & Access", "Pro Upgrade Requests"],
     roles: ["Users & Access", "Roles & Permissions"],
     "user-accounts": ["Users & Access", "User Accounts"],
     certificates: ["Reports & System", "Certificates"],
@@ -204,6 +208,7 @@ export function AdminShell({ screen, setScreen, user, onLogout, selectedApplican
     "question-correction": <QuestionCorrectionScreen onBack={() => setScreen("question-bank")} />,
     "create-test": <CreateTestScreen user={user} />,
     "mobile-users": <MobileUsersScreen />,
+    "pro-requests": <ProUpgradeRequestsScreen />,
     roles: <RolesScreen />,
     "user-accounts": <UserAccountsScreen />,
     certificates: <CertificatesScreen />,

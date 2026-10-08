@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, gradients, shadows } from "@/constants/theme";
+import { type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 
 interface AppHeaderProps {
   title: string;
@@ -18,15 +19,17 @@ export function AppHeader({
   title,
   subtitle,
   showBack = true,
-  customGradient = gradients.header,
+  customGradient,
   rightElement,
   children,
 }: AppHeaderProps) {
   const router = useRouter();
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   return (
     <LinearGradient
-      colors={customGradient}
+      colors={customGradient ?? gradients.header}
       start={{ x: 0, y: 0 }}
       end={{ x: 0.8, y: 1 }}
       style={styles.container}
@@ -55,7 +58,7 @@ export function AppHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   container: {
     paddingTop: 88,
     paddingBottom: 24,

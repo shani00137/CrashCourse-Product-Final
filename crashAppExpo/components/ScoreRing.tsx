@@ -1,7 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { colors } from "@/constants/theme";
+import { type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 
 interface ScoreRingProps {
   pct: number;
@@ -16,10 +17,14 @@ export function ScoreRing({
   pct,
   size = 128,
   strokeWidth = 10,
-  color = colors.green,
-  trackColor = "#E5E7EB",
+  color: colorProp,
+  trackColor: trackColorProp,
   label = "Score",
 }: ScoreRingProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const color = colorProp ?? colors.green;
+  const trackColor = trackColorProp ?? colors.border;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - pct / 100);
@@ -56,7 +61,7 @@ export function ScoreRing({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   center: {
     position: "absolute",
     alignItems: "center",

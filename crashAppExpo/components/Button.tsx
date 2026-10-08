@@ -9,7 +9,8 @@ import {
   TextStyle,
   ViewStyle,
 } from "react-native";
-import { colors } from "@/constants/theme";
+import { type ThemePalette } from "@/constants/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 type Variant = "primary" | "green" | "outline" | "ghost" | "destructive" | "secondary";
 type Size = "sm" | "md" | "lg";
@@ -35,6 +36,8 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
+  const palette = useTheme();
+  const variants = makeVariants(palette);
   const variantStyle = variants[variant];
   const sizeStyle = sizes[size];
 
@@ -90,48 +93,52 @@ const sizes = {
   lg: { paddingVertical: 18, paddingHorizontal: 24, text: { fontSize: 16 } as TextStyle },
 };
 
-const variants: Record<
+const makeVariants = ({
+  colors,
+}: ThemePalette): Record<
   Variant,
   { container: ViewStyle; text: TextStyle; spinnerColor: string }
-> = {
-  primary: {
-    container: { backgroundColor: colors.primary },
-    text: { color: colors.white },
-    spinnerColor: colors.white,
-  },
-  green: {
-    container: { backgroundColor: colors.green },
-    text: { color: colors.white },
-    spinnerColor: colors.white,
-  },
-  outline: {
-    container: {
-      backgroundColor: colors.card,
-      borderWidth: 1,
-      borderColor: colors.border,
+> => {
+  return {
+    primary: {
+      container: { backgroundColor: colors.primary },
+      text: { color: colors.white },
+      spinnerColor: colors.white,
     },
-    text: { color: colors.foreground },
-    spinnerColor: colors.primary,
-  },
-  ghost: {
-    container: { backgroundColor: "transparent" },
-    text: { color: colors.primary },
-    spinnerColor: colors.primary,
-  },
-  destructive: {
-    container: {
-      backgroundColor: "#FFF0F0",
-      borderWidth: 1,
-      borderColor: "#FECACA",
+    green: {
+      container: { backgroundColor: colors.greenSolid },
+      text: { color: colors.white },
+      spinnerColor: colors.white,
     },
-    text: { color: colors.red },
-    spinnerColor: colors.red,
-  },
-  secondary: {
-    container: {
-      backgroundColor: colors.muted,
+    outline: {
+      container: {
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.border,
+      },
+      text: { color: colors.foreground },
+      spinnerColor: colors.primary,
     },
-    text: { color: colors.green },
-    spinnerColor: colors.green,
-  },
+    ghost: {
+      container: { backgroundColor: "transparent" },
+      text: { color: colors.primary },
+      spinnerColor: colors.primary,
+    },
+    destructive: {
+      container: {
+        backgroundColor: colors.redLight,
+        borderWidth: 1,
+        borderColor: colors.dangerBorderSoft,
+      },
+      text: { color: colors.red },
+      spinnerColor: colors.red,
+    },
+    secondary: {
+      container: {
+        backgroundColor: colors.muted,
+      },
+      text: { color: colors.green },
+      spinnerColor: colors.green,
+    },
+  };
 };

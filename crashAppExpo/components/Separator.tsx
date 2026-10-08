@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
-import { colors } from "@/constants/theme";
+import { type ThemePalette } from "@/constants/theme";
+import { useThemedStyles } from "@/context/ThemeContext";
 
 type Orientation = "horizontal" | "vertical";
 
@@ -10,6 +11,7 @@ interface SeparatorProps {
 }
 
 export function Separator({ orientation = "horizontal", style }: SeparatorProps) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View
       style={[
@@ -22,15 +24,15 @@ export function Separator({ orientation = "horizontal", style }: SeparatorProps)
   );
 }
 
-const styles = StyleSheet.create({
-  horizontal: {
-    height: 1,
-    width: "100%",
-    backgroundColor: colors.border,
-  },
-  vertical: {
-    width: 1,
-    height: "100%",
-    backgroundColor: colors.border,
-  },
-});
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
+    horizontal: {
+      height: 1,
+      width: "100%",
+      backgroundColor: colors.border,
+    },
+    vertical: {
+      width: 1,
+      height: "100%",
+      backgroundColor: colors.border,
+    },
+  });

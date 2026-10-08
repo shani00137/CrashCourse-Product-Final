@@ -14,7 +14,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, gradients, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { useApp } from "@/context/AppContext";
 import {
   loginAppUser,
@@ -25,6 +26,8 @@ import {
 const logoSource = require("@/assets/logo/logo.jpg");
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { login } = useApp();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -206,7 +209,7 @@ login(
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,
@@ -248,7 +251,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 18,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -337,9 +340,9 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   errorBox: {
-    backgroundColor: "#FFF0F2",
+    backgroundColor: colors.redLight,
     borderWidth: 1,
-    borderColor: "#FECDD3",
+    borderColor: colors.primaryBorder,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,

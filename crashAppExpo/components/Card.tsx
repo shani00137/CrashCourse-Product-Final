@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, StyleProp, ViewStyle } from "react-native";
-import { colors, shadows, radii } from "@/constants/theme";
+import { shadows, radii, type ThemePalette } from "@/constants/theme";
+import { useThemedStyles } from "@/context/ThemeContext";
 
 interface CardProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface CardProps {
 }
 
 export function Card({ children, style, onPress, shadow = true, border = true }: CardProps) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View
       style={[
@@ -34,6 +36,7 @@ interface CardHeaderProps {
 }
 
 export function CardHeader({ title, subtitle, action, style, children }: CardHeaderProps) {
+  const styles = useThemedStyles(makeStyles);
   if (children) return <View style={[styles.header, style]}>{children}</View>;
   return (
     <View style={[styles.header, style]}>
@@ -47,14 +50,16 @@ export function CardHeader({ title, subtitle, action, style, children }: CardHea
 }
 
 export function CardContent({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const styles = useThemedStyles(makeStyles);
   return <View style={[styles.content, style]}>{children}</View>;
 }
 
 export function CardFooter({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const styles = useThemedStyles(makeStyles);
   return <View style={[styles.footer, style]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: radii.lg,

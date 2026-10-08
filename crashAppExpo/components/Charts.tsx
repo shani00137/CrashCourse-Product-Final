@@ -9,7 +9,8 @@ import Svg, {
   Rect,
   Line,
 } from "react-native-svg";
-import { colors, radii } from "@/constants/theme";
+import { type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 
 interface AreaChartProps {
   data: { day: string; minutes: number }[];
@@ -21,7 +22,9 @@ const CHART_PAD = 8;
 const CHART_TOP = 16;
 const CHART_BOTTOM = 24;
 
-export function AreaChart({ data, height = 140, color = colors.primary }: AreaChartProps) {
+export function AreaChart({ data, height = 140, color: colorProp }: AreaChartProps) {
+  const { colors } = useTheme();
+  const color = colorProp ?? colors.primary;
   const width = 100; // normalized width
   const maxY = Math.max(...data.map((d) => d.minutes));
   const chartHeight = height - CHART_TOP - CHART_BOTTOM;
@@ -70,7 +73,10 @@ interface BarChartProps {
   minDomain?: number;
 }
 
-export function BarChart({ data, height = 130, color = colors.green, minDomain = 55 }: BarChartProps) {
+export function BarChart({ data, height = 130, color: colorProp, minDomain = 55 }: BarChartProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const color = colorProp ?? colors.green;
   const width = 100;
   const maxY = 100;
   const chartHeight = height - CHART_TOP - CHART_BOTTOM;
@@ -108,7 +114,7 @@ export function BarChart({ data, height = 130, color = colors.green, minDomain =
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   labels: {
     flexDirection: "row",
     justifyContent: "space-between",

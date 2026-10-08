@@ -13,8 +13,9 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, gradients, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import {
   getUserTests,
   generateTest,
@@ -35,7 +36,6 @@ const optionLabels = ["A", "B", "C", "D"];
 const TEST_QUESTION_COUNT = 10;
 const TEST_DURATION_MINUTES = 15;
 const MAX_TEST_QUESTIONS = 50;
-const TRIAL_TEST_LIMIT = 2;
 
 type TestPhase = "select" | "running" | "result";
 type CreateMode = "random" | "ai";
@@ -44,6 +44,8 @@ type DifficultyLevel = "Easy" | "Medium" | "Hard";
 const DIFFICULTY_LEVELS: DifficultyLevel[] = ["Easy", "Medium", "Hard"];
 
 export default function TestScreen() {
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user, addTestResult } = useApp();
   const [phase, setPhase] = useState<TestPhase>("select");
   const [tests, setTests] = useState<UserTestInfo[]>([]);
@@ -182,6 +184,14 @@ export default function TestScreen() {
 
   const openTest = useCallback(
     async (test: UserTestInfo, isCompleted: boolean) => {
+      if (isTrial) {
+        notify(
+          "Test locked",
+          "Tests are disabled on the 5-day trial. Request the Pro upgrade from Settings to take tests.",
+          { icon: "lock-closed-outline" }
+        );
+        return;
+      }
       try {
         setOpening(true);
         const res = await conductTestByUser(test.testId);
@@ -214,7 +224,7 @@ export default function TestScreen() {
         notify("Error", e instanceof Error ? e.message : String(e), { icon: "alert-circle-outline", tone: "danger" });
       }
     },
-    []
+    [isTrial, notify]
   );
 
   const handleCreate = useCallback(async () => {
@@ -222,11 +232,11 @@ export default function TestScreen() {
       notify("Missing details", "Log in with a registered course to create a test.", { icon: "person-circle-outline" });
       return;
     }
-    if (isTrial && tests.length >= TRIAL_TEST_LIMIT) {
+    if (isTrial) {
       notify(
-        "Trial limit reached",
-        "Your 5-day trial includes 2 tests. Upgrade to create unlimited tests.",
-        { icon: "diamond-outline" }
+        "Test locked",
+        "Tests are disabled on the 5-day trial. Request the Pro upgrade from Settings to take tests.",
+        { icon: "lock-closed-outline" }
       );
       return;
     }
@@ -234,7 +244,7 @@ export default function TestScreen() {
     setCreateMode(null);
     setDifficulty("Medium");
     setCreateDialog(true);
-  }, [courseId, isTrial, tests.length]);
+  }, [courseId, isTrial]);
 
   const handleGenerate = useCallback(async () => {
     const parsed = parseInt(questionCount, 10);
@@ -243,11 +253,11 @@ export default function TestScreen() {
       notify("Missing details", "Log in with a registered course to create a test.", { icon: "person-circle-outline" });
       return;
     }
-    if (isTrial && tests.length >= TRIAL_TEST_LIMIT) {
+    if (isTrial) {
       notify(
-        "Trial limit reached",
-        "Your 5-day trial includes 2 tests. Upgrade to create unlimited tests.",
-        { icon: "diamond-outline" }
+        "Test locked",
+        "Tests are disabled on the 5-day trial. Request the Pro upgrade from Settings to take tests.",
+        { icon: "lock-closed-outline" }
       );
       return;
     }
@@ -425,7 +435,24 @@ export default function TestScreen() {
             </View>
           ) : null}
 
-          {tests.map((test) => {
+          {isTrial ? (
+            <View style={styles.emptyBox}>
+              <Ionicons name="lock-closed-outline" size={32} color={colors.mutedForeground} />
+              <Text style={styles.emptyTitle}>Tests disabled on trial</Text>
+              <Text style={styles.emptyText}>
+                Taking tests is a Pro feature. Request the Pro upgrade from
+                Settings to create and take tests.
+              </Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => router.push("/(tabs)/settings")}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.retryButtonText}>Go to Settings</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            tests.map((test) => {
             const total = test.questions || TEST_QUESTION_COUNT;
             const answered = Math.min(test.answeredQuestions, total);
             const progress = test.isCompleted ? 100 : total > 0 ? (answered / total) * 100 : 0;
@@ -445,7 +472,7 @@ export default function TestScreen() {
                   <View
                     style={[
                       styles.testIconBox,
-                      { backgroundColor: test.isCompleted ? "#F0F9F0" : "#FFF7ED" },
+                      { backgroundColor: test.isCompleted ? colors.greenLight : colors.warningSoftBg },
                     ]}
                   >
                     <Text style={styles.testIcon}>
@@ -487,7 +514,8 @@ export default function TestScreen() {
                 </View>
               </TouchableOpacity>
             );
-          })}
+          })
+          )}
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
@@ -501,7 +529,7 @@ export default function TestScreen() {
           </View>
         )}
 
-        {canCreate && (
+        {canCreate && !isTrial && (
           <TouchableOpacity
             style={[styles.fab, creating && styles.fabDisabled]}
             onPress={handleCreate}
@@ -557,11 +585,6 @@ export default function TestScreen() {
               <Text style={styles.dialogHint}>
                 Between 1 and {MAX_TEST_QUESTIONS}. AI generation takes a few seconds.
               </Text>
-              {isTrial && (
-                <Text style={styles.dialogHint}>
-                  Trial: {tests.length} of {TRIAL_TEST_LIMIT} tests used.
-                </Text>
-              )}
 
               <Text style={styles.dialogLabel}>Generate with</Text>
               <View style={styles.modeRow}>
@@ -708,7 +731,7 @@ export default function TestScreen() {
           <View
             style={[
               styles.resultIconCircle,
-              { backgroundColor: passed ? "#F0FDF4" : "#FFF0F2" },
+              { backgroundColor: passed ? colors.successBg : colors.redLight },
             ]}
           >
             <Ionicons
@@ -771,22 +794,22 @@ export default function TestScreen() {
                     styles.reviewStatusBadge,
                     {
                       backgroundColor: unattempted
-                        ? "#F3F4F6"
+                        ? colors.muted
                         : isCorrect
-                          ? "#F0FDF4"
-                          : "#FFF0F2",
+                          ? colors.successBg
+                          : colors.redLight,
                     },
                   ]}
                 >
                   <Ionicons
                     name={unattempted ? "remove-circle" : isCorrect ? "checkmark-circle" : "close-circle"}
                     size={13}
-                    color={unattempted ? "#6B7280" : isCorrect ? "#16A34A" : colors.primary}
+                    color={unattempted ? colors.textSecondary : isCorrect ? "#16A34A" : colors.primary}
                   />
                   <Text
                     style={[
                       styles.reviewStatusText,
-                      { color: unattempted ? "#6B7280" : isCorrect ? "#16A34A" : colors.primary },
+                      { color: unattempted ? colors.textSecondary : isCorrect ? "#16A34A" : colors.primary },
                     ]}
                   >
                     {unattempted ? "Not answered" : isCorrect ? "Correct" : "Wrong"}
@@ -802,20 +825,20 @@ export default function TestScreen() {
                   const isPicked = oi === pickedIdx;
                   let bg = colors.card;
                   let border = colors.border;
-                  let badgeBg = "#F3F4F6";
-                  let badgeColor = "#6B7280";
+                  let badgeBg = colors.muted;
+                  let badgeColor = colors.textSecondary;
                   let badge = optionLabels[oi];
                   if (isCorrectOption) {
-                    bg = "#F0FDF4";
+                    bg = colors.successBg;
                     border = "#22C55E";
-                    badgeBg = "#DCFCE7";
+                    badgeBg = colors.successTint;
                     badgeColor = colors.green;
                     badge = "\u2713";
                   } else if (isPicked) {
-                    bg = "#FFF0F2";
+                    bg = colors.redLight;
                     border = "#F87171";
-                    badgeBg = "#FEE2E2";
-                    badgeColor = "#DC2626";
+                    badgeBg = colors.redTint;
+                    badgeColor = colors.red;
                     badge = "\u2717";
                   }
                   return (
@@ -969,7 +992,7 @@ export default function TestScreen() {
                 style={[
                   styles.optionRow,
                   isSelected
-                    ? { backgroundColor: "#FFF0F2", borderColor: colors.primary }
+                    ? { backgroundColor: colors.redLight, borderColor: colors.primary }
                     : { backgroundColor: colors.card, borderColor: colors.border },
                 ]}
                 onPress={() => pickOption(idx)}
@@ -978,13 +1001,13 @@ export default function TestScreen() {
                 <View
                   style={[
                     styles.optionBadge,
-                    { backgroundColor: isSelected ? "#FFE4E8" : "#F3F4F6" },
+                    { backgroundColor: isSelected ? colors.pinkTint : colors.muted },
                   ]}
                 >
                   <Text
                     style={[
                       styles.optionBadgeText,
-                      { color: isSelected ? colors.primary : "#6B7280" },
+                      { color: isSelected ? colors.primary : colors.textSecondary },
                     ]}
                   >
                     {optionLabels[idx]}
@@ -1026,7 +1049,7 @@ export default function TestScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1475,9 +1498,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FFFBEB",
+    backgroundColor: colors.warningBg,
     borderWidth: 1,
-    borderColor: "#FED7AA",
+    borderColor: colors.warningSoftBorder,
     borderRadius: radii.lg,
     padding: 14,
     marginTop: 4,
@@ -1486,7 +1509,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     lineHeight: 18,
-    color: "#92400E",
+    color: colors.warningText,
   },
   resultIconCircle: {
     width: 96,
@@ -1682,7 +1705,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
   },
   nextButton: {
-    backgroundColor: colors.green,
+    backgroundColor: colors.greenSolid,
   },
   ctaButtonText: {
     color: colors.white,

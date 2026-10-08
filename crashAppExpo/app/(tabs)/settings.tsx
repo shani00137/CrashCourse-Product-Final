@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -14,30 +14,19 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, gradients, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { useApp } from "@/context/AppContext";
-import { changePlan, isTrialByDates } from "@/services/api";
+import {
+  requestProUpgrade,
+  getMyProRequest,
+  getUserDetailById,
+  isTrialByDates,
+} from "@/services/api";
 import { Avatar } from "@/components/Avatar";
 import { Toggle } from "@/components/Toggle";
 import { Separator } from "@/components/Separator";
 import { Button } from "@/components/Button";
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function addYearsISO(n: number) {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() + n);
-  return d.toISOString().slice(0, 10);
-}
-
-function parseDate(s: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
-  if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 
 const settingGroups = [
   {
@@ -65,6 +54,8 @@ const settingGroups = [
 
 export default function SettingsScreen() {
   const { user, logout, updateUser } = useApp();
+  const { colors, gradients, isDark, setMode } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
@@ -73,60 +64,81 @@ export default function SettingsScreen() {
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     "Push Notifications": true,
     "Email Notifications": false,
-    "Dark Mode": false,
     "Two-Factor Auth": false,
   });
   const [saved, setSaved] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
   const [planModalOpen, setPlanModalOpen] = useState(false);
-  const [planFrom, setPlanFrom] = useState(todayISO());
-  const [planTo, setPlanTo] = useState(addYearsISO(1));
   const [planSaving, setPlanSaving] = useState(false);
   const [planMessage, setPlanMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  // True while an upgrade request waits for the owner's approval in the
+  // admin panel — the button is replaced by a "pending" notice.
+  const [pendingRequest, setPendingRequest] = useState(false);
 
-  const previewTrial = isTrialByDates(
-    parseDate(planFrom) ? planFrom : undefined,
-    planTo
-  );
+  // Refresh the plan + latest upgrade-request status from the server so the
+  // badge flips to Pro as soon as the administrator approves it (no re-login
+  // needed), and so a pending request shows as pending after app restarts.
+  useEffect(() => {
+    const appUserId = user?.appUserId;
+    if (!user || user.isGuest || !appUserId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [detail, myRequest] = await Promise.all([
+          getUserDetailById(appUserId).catch(() => null),
+          getMyProRequest(appUserId),
+        ]);
+        if (cancelled) return;
+        if (detail) {
+          const isTrial = isTrialByDates(detail.registrationDate, detail.expiryDate);
+          const planExpiry = detail.expiryDate ? detail.expiryDate.slice(0, 10) : undefined;
+          if (isTrial !== user.isTrial || planExpiry !== user.planExpiry) {
+            updateUser({ isTrial, planExpiry });
+          }
+        }
+        setPendingRequest(myRequest?.status === "Pending");
+      } catch {
+        // Best-effort refresh; the stored values remain in place.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleChangePlan = async () => {
+  // Trial users cannot edit plan dates. They only send an upgrade request;
+  // the owner receives it by email + it waits in the admin panel, and the
+  // plan changes only after the owner approves it there.
+  const handleRequestUpgrade = async () => {
     if (!user?.appUserId) {
-      setPlanMessage({ ok: false, text: "You must be logged in to change your plan." });
-      return;
-    }
-    const fromDate = parseDate(planFrom) ? planFrom : undefined;
-    const toDate = parseDate(planTo);
-    if (!toDate) {
-      setPlanMessage({ ok: false, text: "Use a valid To date in YYYY-MM-DD format." });
+      setPlanMessage({ ok: false, text: "You must be logged in to send a request." });
       return;
     }
     setPlanSaving(true);
     setPlanMessage(null);
     try {
-      const res = await changePlan({
-        appUserId: user.appUserId,
-        fromDate,
-        toDate: planTo,
-      });
+      const res = await requestProUpgrade(user.appUserId);
       if (res.succeeded) {
-        const nextTrial = isTrialByDates(fromDate, res.expiryDate || toDate.toISOString());
-        updateUser({
-          isTrial: nextTrial,
-          planExpiry: res.expiryDate ? res.expiryDate.slice(0, 10) : planTo,
+        setPendingRequest(true);
+        setPlanMessage({
+          ok: true,
+          text:
+            res.message ||
+            "Upgrade request sent to the owner. Your plan will change to Pro after approval.",
         });
-        setPlanMessage({ ok: true, text: "Plan updated." });
         setPlanModalOpen(false);
       } else {
         setPlanMessage({
           ok: false,
-          text: res.message || "Failed to update the plan.",
+          text: res.message || "Failed to send the upgrade request.",
         });
       }
     } catch (e) {
       setPlanMessage({
         ok: false,
-        text: e instanceof Error ? e.message : "Failed to update the plan.",
+        text: e instanceof Error ? e.message : "Failed to send the upgrade request.",
       });
     } finally {
       setPlanSaving(false);
@@ -263,24 +275,33 @@ export default function SettingsScreen() {
               </View>
               <Text style={styles.planSubtitle}>
                 {user.isTrial
-                  ? "You're on the 5-day free trial. Set a Pro date range for unrestricted access."
+                  ? "You're on the 5-day free trial. Request the Pro upgrade below — the owner approves it before your plan changes."
                   : `Premium plan active${
                       user.planExpiry ? ` until ${user.planExpiry}` : ""
                     }.`}
               </Text>
-              <TouchableOpacity
-                style={styles.planButton}
-                onPress={() => {
-                  setPlanFrom(todayISO());
-                  setPlanTo(addYearsISO(1));
-                  setPlanMessage(null);
-                  setPlanModalOpen(true);
-                }}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="swap-horizontal" size={16} color={colors.white} />
-                <Text style={styles.planButtonText}>Change Plan Dates</Text>
-              </TouchableOpacity>
+              {user.isTrial && !pendingRequest && (
+                <TouchableOpacity
+                  style={styles.planButton}
+                  onPress={() => {
+                    setPlanMessage(null);
+                    setPlanModalOpen(true);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="send-outline" size={16} color={colors.white} />
+                  <Text style={styles.planButtonText}>Request Pro Upgrade</Text>
+                </TouchableOpacity>
+              )}
+              {user.isTrial && pendingRequest && (
+                <View style={styles.planPendingBox}>
+                  <Ionicons name="hourglass-outline" size={16} color={colors.amber} />
+                  <Text style={styles.planPendingText}>
+                    Upgrade request pending — waiting for the owner's approval in
+                    the backend. Your plan stays unchanged until then.
+                  </Text>
+                </View>
+              )}
               {planMessage ? (
                 <View
                   style={[
@@ -316,10 +337,18 @@ export default function SettingsScreen() {
                     <Text style={styles.settingLabel}>{item.label}</Text>
                     {item.type === "toggle" ? (
                       <Toggle
-                        value={toggles[item.label]}
-                        onValueChange={(v) =>
-                          setToggles((t) => ({ ...t, [item.label]: v }))
+                        value={
+                          item.label === "Dark Mode"
+                            ? isDark
+                            : toggles[item.label]
                         }
+                        onValueChange={(v) => {
+                          if (item.label === "Dark Mode") {
+                            setMode(v ? "dark" : "light");
+                          } else {
+                            setToggles((t) => ({ ...t, [item.label]: v }));
+                          }
+                        }}
                       />
                     ) : (
                       <View style={styles.settingNavValue}>
@@ -341,7 +370,7 @@ export default function SettingsScreen() {
             onPress={handleLogout}
             style={styles.logoutButton}
           >
-            <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+            <Ionicons name="log-out-outline" size={18} color={colors.dangerBright} />
             <Text style={styles.logoutText}>Sign Out</Text>
           </Button>
 
@@ -351,20 +380,21 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
 
-      {/* Change plan modal */}
+      {/* Request pro upgrade modal — plan dates are read-only on mobile */}
       <Modal
         visible={planModalOpen}
         transparent
         animationType="fade"
-        onRequestClose={() => setPlanModalOpen(false)}
+        onRequestClose={() => !planSaving && setPlanModalOpen(false)}
       >
         <View style={styles.planModalOverlay}>
           <View style={styles.planModalCard}>
             <View style={styles.planModalHeader}>
               <View style={styles.planModalHeaderText}>
-                <Text style={styles.planModalTitle}>Change Plan</Text>
+                <Text style={styles.planModalTitle}>Request Pro Upgrade</Text>
                 <Text style={styles.planModalSubtitle}>
-                  Set the active period for this account.
+                  Plan dates are managed by the owner and can't be edited in the
+                  app. Send your request and you'll be upgraded after approval.
                 </Text>
               </View>
               <TouchableOpacity
@@ -376,65 +406,59 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.planFieldLabel}>Active From (YYYY-MM-DD)</Text>
+            <Text style={styles.planFieldLabel}>Current plan</Text>
             <TextInput
-              style={styles.planDateInput}
-              value={planFrom}
-              onChangeText={setPlanFrom}
-              placeholder="e.g. 2026-09-08"
-              placeholderTextColor={colors.mutedForeground}
-              autoCapitalize="none"
+              style={[styles.planDateInput, styles.planDateInputDisabled]}
+              value={user?.isTrial ? "Trial" : "Pro"}
+              editable={false}
             />
 
             <Text style={[styles.planFieldLabel, styles.planFieldLabelSpacing]}>
-              Active Until (YYYY-MM-DD)
+              Plan expires (read-only)
             </Text>
             <TextInput
-              style={styles.planDateInput}
-              value={planTo}
-              onChangeText={setPlanTo}
-              placeholder="e.g. 2027-09-08"
+              style={[styles.planDateInput, styles.planDateInputDisabled]}
+              value={user?.planExpiry || "—"}
+              editable={false}
+              placeholder="yyyy-mm-dd"
               placeholderTextColor={colors.mutedForeground}
-              autoCapitalize="none"
             />
 
             <View style={styles.planPreviewBox}>
-              <Ionicons
-                name={previewTrial ? "time-outline" : "diamond-outline"}
-                size={16}
-                color={previewTrial ? colors.amber : colors.green}
-              />
+              <Ionicons name="lock-closed-outline" size={16} color={colors.mutedForeground} />
               <Text style={styles.planPreviewText}>
-                Resulting plan:{" "}
-                <Text
-                  style={{
-                    fontWeight: "700",
-                    color: previewTrial ? colors.amber : colors.green,
-                  }}
-                >
-                  {previewTrial ? "Trial (5 days)" : "Pro"}
-                </Text>
+                Dates are disabled on mobile. The owner sets the Pro period when
+                approving your request.
               </Text>
             </View>
+
+            {planMessage && !planMessage.ok ? (
+              <View style={[styles.planMessage, styles.planMessageErr]}>
+                <Text style={[styles.planMessageText, styles.planMessageTextErr]}>
+                  {planMessage.text}
+                </Text>
+              </View>
+            ) : null}
 
             <View style={styles.planModalActions}>
               <TouchableOpacity
                 style={[styles.planModalBtn, styles.planModalBtnGhost]}
                 onPress={() => setPlanModalOpen(false)}
+                disabled={planSaving}
                 activeOpacity={0.85}
               >
                 <Text style={styles.planModalBtnGhostText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.planModalBtn, styles.planModalBtnPrimary]}
-                onPress={handleChangePlan}
+                onPress={handleRequestUpgrade}
                 disabled={planSaving}
                 activeOpacity={0.85}
               >
                 {planSaving ? (
                   <ActivityIndicator color={colors.white} />
                 ) : (
-                  <Text style={styles.planModalBtnPrimaryText}>Apply Plan</Text>
+                  <Text style={styles.planModalBtnPrimaryText}>Send Request</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -445,7 +469,7 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,
@@ -593,15 +617,15 @@ const styles = StyleSheet.create({
     marginTop: 12,
     padding: 8,
     borderRadius: 12,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: colors.successBg,
     borderWidth: 1,
-    borderColor: "#BBF7D0",
+    borderColor: colors.successBorder,
     alignItems: "center",
   },
   savedText: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#166534",
+    color: colors.green,
   },
   groupCard: {
     padding: 0,
@@ -668,7 +692,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.amber,
   },
   planBadgePro: {
-    backgroundColor: colors.green,
+    backgroundColor: colors.greenSolid,
   },
   planBadgeText: {
     color: colors.white,
@@ -695,6 +719,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+  planPendingBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderRadius: radii.lg,
+    backgroundColor: colors.warningBg,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
+  },
+  planPendingText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.warningText,
+    fontWeight: "500",
+  },
   planMessage: {
     marginTop: 12,
     padding: 10,
@@ -702,19 +743,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   planMessageOk: {
-    backgroundColor: "#F0FDF4",
-    borderColor: "#BBF7D0",
+    backgroundColor: colors.successBg,
+    borderColor: colors.successBorder,
   },
   planMessageErr: {
-    backgroundColor: "#FFF0F2",
-    borderColor: "#FECDD3",
+    backgroundColor: colors.redLight,
+    borderColor: colors.primaryBorder,
   },
   planMessageText: {
     fontSize: 12,
     fontWeight: "500",
   },
   planMessageTextOk: {
-    color: "#166534",
+    color: colors.green,
   },
   planMessageTextErr: {
     color: colors.primary,
@@ -781,6 +822,11 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     ...shadows.sm,
   },
+  planDateInputDisabled: {
+    opacity: 0.65,
+    backgroundColor: colors.muted,
+    color: colors.mutedForeground,
+  },
   planPreviewBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -833,7 +879,7 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#EF4444",
+    color: colors.dangerBright,
   },
   footerText: {
     textAlign: "center",

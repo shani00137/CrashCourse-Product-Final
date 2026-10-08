@@ -10,12 +10,14 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Image } from "expo-image";
-import { colors, gradients } from "@/constants/theme";
+import { type ThemePalette } from "@/constants/theme";
+import { useThemedStyles } from "@/context/ThemeContext";
 import { useApp } from "@/context/AppContext";
 
 const logoSource = require("@/assets/logo/logo.jpg");
 
 export default function SplashScreen() {
+  const styles = useThemedStyles(makeStyles);
   const { user, userLoaded } = useApp();
   const scale = useRef(new Animated.Value(0.6)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -163,7 +165,7 @@ export default function SplashScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
@@ -212,7 +214,7 @@ const styles = StyleSheet.create({
     width: 144,
     height: 144,
     borderRadius: 72,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",

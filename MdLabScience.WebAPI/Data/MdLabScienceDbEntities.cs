@@ -52,6 +52,7 @@ namespace MdLabScience.DbContext
         public virtual DbSet<UserReadingTimeTb> UserReadingTimeTbs { get; set; }
         public virtual DbSet<UserExerciseProgressTb> UserExerciseProgressTbs { get; set; }
         public virtual DbSet<AppVersionTb> AppVersionTbs { get; set; }
+        public virtual DbSet<ProUpgradeRequestTb> ProUpgradeRequestTbs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -230,6 +231,11 @@ namespace MdLabScience.DbContext
             {
                 entity.HasKey(e => e.Id);
                 entity.ToTable("AppVersionTb");
+            });
+            modelBuilder.Entity<ProUpgradeRequestTb>(entity =>
+            {
+                entity.HasKey(e => e.ProUpgradeRequestId);
+                entity.ToTable("ProUpgradeRequestTb");
             });
         }
     }

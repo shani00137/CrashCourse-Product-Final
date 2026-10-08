@@ -8,7 +8,8 @@ import {
   StyleProp,
   ViewStyle,
 } from "react-native";
-import { colors, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -29,6 +30,8 @@ export function Input({
   ...props
 }: InputProps) {
   const [focused, setFocused] = useState(false);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   return (
     <View style={[styles.container, style]}>
@@ -55,7 +58,7 @@ export function Input({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   container: {
     gap: 8,
   },

@@ -12,7 +12,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { colors, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import {
   checkForUpdates,
   UpdateCheckResult,
@@ -29,6 +30,8 @@ export default function UpdatePrompt() {
   const [visible, setVisible] = useState(false);
   const [info, setInfo] = useState<UpdateCheckResult | null>(null);
   const [opening, setOpening] = useState(false);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const runCheck = useCallback(async () => {
     try {
@@ -190,7 +193,7 @@ export default function UpdatePrompt() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(13,13,13,0.72)",
@@ -250,7 +253,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   versionChipLatest: {
-    backgroundColor: colors.green,
+    backgroundColor: colors.greenSolid,
   },
   versionChipLabel: {
     fontSize: 11,

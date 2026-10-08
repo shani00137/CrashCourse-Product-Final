@@ -12,7 +12,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Image } from "expo-image";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { colors, gradients, shadows, radii } from "@/constants/theme";
+import { shadows, radii, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { useApp } from "@/context/AppContext";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useStudyData } from "@/hooks/useStudyData";
@@ -34,6 +35,8 @@ interface StatMeta {
 }
 
 export default function DashboardScreen() {
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const { user } = useApp();
 
@@ -73,7 +76,7 @@ export default function DashboardScreen() {
       unit: "total",
       icon: "time-outline",
       color: colors.teal,
-      bg: "#ECFEFF",
+      bg: colors.tealLight,
     },
     {
       key: "tests",
@@ -82,7 +85,7 @@ export default function DashboardScreen() {
       unit: "completed",
       icon: "document-text-outline",
       color: colors.primary,
-      bg: "#FFF0F2",
+      bg: colors.redLight,
     },
     {
       key: "avg",
@@ -90,8 +93,8 @@ export default function DashboardScreen() {
       value: study.loading ? "…" : study.avgScore > 0 ? `${study.avgScore}%` : "—",
       unit: "overall",
       icon: "star-outline",
-      color: "#F59E0B",
-      bg: "#FFFBEB",
+      color: colors.amber,
+      bg: colors.warningBg,
     },
     {
       key: "best",
@@ -100,7 +103,7 @@ export default function DashboardScreen() {
       unit: "personal",
       icon: "trophy-outline",
       color: colors.green,
-      bg: "#F0F9F0",
+      bg: colors.greenLight,
     },
   ];
 
@@ -274,7 +277,7 @@ export default function DashboardScreen() {
                 }
                 activeOpacity={0.9}
               >
-                <View style={[styles.courseIconBox, { backgroundColor: "#FFFBEB" }]}>
+                <View style={[styles.courseIconBox, { backgroundColor: colors.warningBg }]}>
                   <Ionicons name="book-outline" size={20} color={colors.brown} />
                 </View>
                 <View style={styles.courseInfo}>
@@ -305,7 +308,7 @@ export default function DashboardScreen() {
               }
               activeOpacity={0.9}
             >
-              <View style={[styles.courseIconBox, { backgroundColor: "#FFFBEB" }]}>
+              <View style={[styles.courseIconBox, { backgroundColor: colors.warningBg }]}>
                 <Ionicons name="book-outline" size={20} color={colors.brown} />
               </View>
               <View style={styles.courseInfo}>
@@ -349,7 +352,7 @@ export default function DashboardScreen() {
                   <View
                     style={[
                       styles.testIconBox,
-                      { backgroundColor: passed ? "#F0FDF4" : "#FFF0F2" },
+                      { backgroundColor: passed ? colors.successBg : colors.redLight },
                     ]}
                   >
                     <Ionicons
@@ -378,7 +381,7 @@ export default function DashboardScreen() {
               onPress={() => router.push("/test")}
               activeOpacity={0.9}
             >
-              <View style={[styles.courseIconBox, { backgroundColor: "#FFF0F2" }]}>
+              <View style={[styles.courseIconBox, { backgroundColor: colors.redLight }]}>
                 <Ionicons name="document-text-outline" size={20} color={colors.primary} />
               </View>
               <View style={styles.courseInfo}>
@@ -469,7 +472,7 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,
@@ -507,7 +510,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 16,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",

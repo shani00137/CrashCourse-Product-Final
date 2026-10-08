@@ -13,7 +13,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { colors, gradients, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { RichText } from "@/components/RichText";
 import { useApp } from "@/context/AppContext";
 import { resolveDomain, isRelevant, outOfScopeMessage, inScopeDefault, type AiDomain } from "@/utils/aiTutor";
@@ -67,6 +68,7 @@ function getAIResponse(input: string, domain: AiDomain, courseName: string, topi
 }
 
 const TypingDots = () => {
+  const styles = useThemedStyles(makeStyles);
   const anims = [0, 1, 2].map((i) => useRef(new Animated.Value(1)).current);
 
   useEffect(() => {
@@ -114,6 +116,8 @@ function buildWelcomeMessage(domain: AiDomain, courseName: string): Message {
 }
 
 export default function AIAgentScreen() {
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user } = useApp();
   const domain = resolveDomain(user?.courseName);
   const courseName = user?.courseName || "your course";
@@ -396,7 +400,7 @@ export default function AIAgentScreen() {
           style={[
             styles.sendButton,
             {
-              backgroundColor: input.trim() && !typing ? colors.primary : "#E5E7EB",
+              backgroundColor: input.trim() && !typing ? colors.primary : colors.border,
               ...(input.trim() && !typing ? shadows.md : {}),
             },
           ]}
@@ -419,7 +423,7 @@ export default function AIAgentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,
@@ -589,7 +593,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderBottomLeftRadius: 6,
     borderWidth: 1,
-    borderColor: "#DCFCE7",
+    borderColor: colors.successTint,
     paddingHorizontal: 16,
     paddingVertical: 12,
     ...shadows.sm,
@@ -663,7 +667,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 20,
-    backgroundColor: "#FFF0F2",
+    backgroundColor: colors.redLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,

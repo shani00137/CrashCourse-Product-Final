@@ -1,4 +1,5 @@
 import { View, Text, Platform } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
 interface RichTextProps {
   text: string;
@@ -6,7 +7,9 @@ interface RichTextProps {
   textColor?: string;
 }
 
-export function RichText({ text, fontSize = 13.5, textColor = "#1A1F1A" }: RichTextProps) {
+export function RichText({ text, fontSize = 13.5, textColor }: RichTextProps) {
+  const { colors } = useTheme();
+  const resolvedTextColor = textColor ?? colors.foreground;
   return (
     <View>
       {text.split("\n").map((line, i) => {
@@ -30,7 +33,7 @@ export function RichText({ text, fontSize = 13.5, textColor = "#1A1F1A" }: RichT
               style={{
                 fontSize: 11,
                 fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-                color: textColor,
+                color: resolvedTextColor,
                 marginBottom: 2,
               }}
             >
@@ -44,11 +47,11 @@ export function RichText({ text, fontSize = 13.5, textColor = "#1A1F1A" }: RichT
         return (
           <Text
             key={i}
-            style={{ fontSize, lineHeight: fontSize * 1.5, color: textColor, marginBottom: 3 }}
+            style={{ fontSize, lineHeight: fontSize * 1.5, color: resolvedTextColor, marginBottom: 3 }}
           >
             {parts.map((part, j) =>
               part.startsWith("**") && part.endsWith("**") ? (
-                <Text key={j} style={{ fontWeight: "700", color: textColor }}>
+                <Text key={j} style={{ fontWeight: "700", color: resolvedTextColor }}>
                   {part.slice(2, -2)}
                 </Text>
               ) : (

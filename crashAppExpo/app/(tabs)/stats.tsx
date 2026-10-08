@@ -10,18 +10,12 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, gradients, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { useApp } from "@/context/AppContext";
 import { AreaChart, BarChart } from "@/components/Charts";
 import { ProgressBar } from "@/components/ProgressBar";
 import { useStudyData } from "@/hooks/useStudyData";
-
-const achievements = [
-  { icon: "📚", label: "First Test", sub: "Completed a test", color: "#C41E3A" },
-  { icon: "🏆", label: "Top 10%", sub: "Score 90%+ in a test", color: "#166534" },
-  { icon: "⏱️", label: "Half Hour", sub: "30+ min of reading", color: "#0891B2" },
-  { icon: "💊", label: "Exam Ready", sub: "5+ tests completed", color: "#F59E0B" },
-];
 
 function testPct(right: number | undefined, questions: number | undefined): number {
   const total = questions || 1;
@@ -30,9 +24,18 @@ function testPct(right: number | undefined, questions: number | undefined): numb
 }
 
 export default function StatsScreen() {
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const { user } = useApp();
   const study = useStudyData(user?.appUserId);
+
+  const achievements = [
+    { icon: "📚", label: "First Test", sub: "Completed a test", color: colors.primary },
+    { icon: "🏆", label: "Top 10%", sub: "Score 90%+ in a test", color: colors.green },
+    { icon: "⏱️", label: "Half Hour", sub: "30+ min of reading", color: colors.teal },
+    { icon: "💊", label: "Exam Ready", sub: "5+ tests completed", color: colors.amber },
+  ];
 
   useFocusEffect(
     useCallback(() => {
@@ -268,7 +271,7 @@ export default function StatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,

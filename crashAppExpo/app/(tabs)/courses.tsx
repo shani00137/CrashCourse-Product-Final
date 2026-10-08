@@ -14,7 +14,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, gradients, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { useApp } from "@/context/AppContext";
 import {
   getApplicantCourses,
@@ -35,6 +36,8 @@ import {
 } from "@/constants/readingTime";
 
 export default function CoursesScreen() {
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const { user } = useApp();
 
@@ -122,6 +125,13 @@ export default function CoursesScreen() {
   };
 
   const openPdfPicker = async () => {
+    if (isTrial) {
+      Alert.alert(
+        "PDF locked",
+        "PDF books are disabled on the 5-day trial. Request the Pro upgrade from Settings to view them."
+      );
+      return;
+    }
     const cid = courseId ?? 0;
     if (!cid) {
       Alert.alert("No course", "Register a course first to see its PDF books.");
@@ -145,6 +155,14 @@ export default function CoursesScreen() {
   };
 
   const openPdf = (item: CourseMaterialInfo) => {
+    if (isTrial) {
+      Alert.alert(
+        "PDF locked",
+        "PDF books are disabled on the 5-day trial. Request the Pro upgrade from Settings to view them."
+      );
+      setPdfSheet(false);
+      return;
+    }
     const url = coursePdfUrl(item.courseUrl);
     if (!url) return;
     setPdfSheet(false);
@@ -232,12 +250,20 @@ export default function CoursesScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={styles.pdfButton}
+                  style={[styles.pdfButton, isTrial && styles.pdfButtonLocked]}
                   onPress={openPdfPicker}
                   activeOpacity={0.85}
                 >
-                  <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-                  <Text style={styles.pdfButtonText}>PDF</Text>
+                  <Ionicons
+                    name={isTrial ? "lock-closed" : "document-text-outline"}
+                    size={20}
+                    color={isTrial ? colors.mutedForeground : colors.primary}
+                  />
+                  <Text
+                    style={[styles.pdfButtonText, isTrial && styles.pdfButtonTextLocked]}
+                  >
+                    PDF
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -249,7 +275,7 @@ export default function CoursesScreen() {
 
               {isTrial && exercises.length > 0 && (
                 <View style={styles.trialBanner}>
-                  <Ionicons name="sparkles-outline" size={14} color="#B45309" />
+                  <Ionicons name="sparkles-outline" size={14} color={colors.brown} />
                   <Text style={styles.trialBannerText}>
                     5-day trial — the first {TRIAL_EXERCISE_LIMIT} of{" "}
                     {exercises.length} exercises are unlocked.
@@ -418,7 +444,7 @@ export default function CoursesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,
@@ -492,7 +518,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: "#FFF0F2",
+    backgroundColor: colors.redLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -519,7 +545,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    backgroundColor: "#FFF0F2",
+    backgroundColor: colors.redLight,
     borderWidth: 1,
     borderColor: "rgba(196,30,58,0.18)",
     borderRadius: 14,
@@ -531,6 +557,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: colors.primary,
     letterSpacing: 0.4,
+  },
+  pdfButtonLocked: {
+    backgroundColor: colors.muted,
+    borderColor: colors.border,
+  },
+  pdfButtonTextLocked: {
+    color: colors.mutedForeground,
   },
   sheetBackdrop: {
     flex: 1,
@@ -550,7 +583,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: colors.slateBg,
     marginBottom: 12,
   },
   sheetHeader: {
@@ -573,7 +606,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 12,
-    backgroundColor: "#F7FAFC",
+    backgroundColor: colors.subtleBg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -593,7 +626,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#F7FAFC",
+    backgroundColor: colors.subtleBg,
     borderRadius: 14,
     padding: 12,
     marginBottom: 10,
@@ -604,7 +637,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: "#FFF0F2",
+    backgroundColor: colors.redLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -629,7 +662,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: colors.primary,
-    backgroundColor: "#FFF0F2",
+    backgroundColor: colors.redLight,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 999,
@@ -638,8 +671,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FFF7E6",
-    borderColor: "#FCD34D",
+    backgroundColor: colors.warningSoftBg,
+    borderColor: colors.amberBorder,
     borderWidth: 1,
     borderRadius: radii.md,
     paddingHorizontal: 12,
@@ -650,18 +683,18 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: "600",
-    color: "#92400E",
+    color: colors.warningText,
   },
   exerciseCardLocked: {
     opacity: 0.6,
-    borderColor: "#E5E7EB",
+    borderColor: colors.border,
   },
   exerciseIconBoxLocked: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: colors.muted,
   },
   lockedBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: colors.muted,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -688,7 +721,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#FFF0F2",
+    backgroundColor: colors.redLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -715,7 +748,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: colors.muted,
     overflow: "hidden",
   },
   readingFill: {

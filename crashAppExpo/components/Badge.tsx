@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, ViewStyle, StyleProp } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
 interface BadgeProps {
   label: string;
@@ -8,10 +9,13 @@ interface BadgeProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export function Badge({ label, color = "#C41E3A", bg = "#FFF0F2", style }: BadgeProps) {
+export function Badge({ label, color, bg, style }: BadgeProps) {
+  const { colors } = useTheme();
+  const backgroundColor = bg ?? colors.redLight;
+  const textColor = color ?? colors.primary;
   return (
-    <View style={[styles.badge, { backgroundColor: bg }, style]}>
-      <Text style={[styles.text, { color }]}>{label}</Text>
+    <View style={[styles.badge, { backgroundColor }, style]}>
+      <Text style={[styles.text, { color: textColor }]}>{label}</Text>
     </View>
   );
 }

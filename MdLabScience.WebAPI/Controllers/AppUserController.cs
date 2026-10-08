@@ -4,6 +4,7 @@ using MdLabScience.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +19,20 @@ namespace MdLabScience.Controllers
     public class AppUserController : ControllerBase
     {
         private static TimeZoneInfo Pakistan_Standard_Time = TimeZoneInfo.FindSystemTimeZoneById("Pakistan Standard Time");
+
+        private readonly IConfiguration _config;
+
+        public AppUserController(IConfiguration config)
+        {
+            _config = config;
+        }
+
+        // Only tokens issued to panel administrators (UserType=Admin claim set
+        // by LoginController) may change plans. Mobile app users carry
+        // UserType=AppUser and are locked out of ChangePlan entirely — a trial
+        // user can only ASK for Pro via RequestProUpgrade.
+        private bool IsAdmin =>
+            string.Equals(User.FindFirst("UserType")?.Value, "Admin", StringComparison.OrdinalIgnoreCase);
 
         [HttpPost]
         [Route("api/AppUser/GetAllUsers")]
@@ -162,7 +177,81 @@ namespace MdLabScience.Controllers
                 appUserTb.CreateOn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
                 db.AppUserTbs.Add(appUserTb);
                 db.SaveChanges();
+
+                // Every app registration is a 5-day trial: auto-email the owner
+                // about the new trial user. Data is read synchronously here, the
+                // SMTP send itself runs in the background so a slow or down mail
+                // server never blocks or fails the signup.
+                NotifyOwnerOfTrialRegistration(value, MaxId, db);
+
                 return Ok(new { succeeded = true, appUserId = MaxId, applicantId = value.ApplicantId, userName = value.UserName, message = "Save Successfully" });
+            }
+        }
+
+        // Builds + queues the "new trial registration" email to the owner inbox.
+        [NonAction]
+        private void NotifyOwnerOfTrialRegistration(AppUserModel value, int appUserId, MdLabScienceDbEntities db)
+        {
+            try
+            {
+                string courseName = value.Course ?? "";
+                try
+                {
+                    var courseSelection = db.ApplicantCourseSelectionTbs
+                        .Where(x => x.ApplicantId == value.ApplicantId)
+                        .OrderByDescending(x => x.CourseSelectionId)
+                        .FirstOrDefault();
+                    if (courseSelection != null && courseSelection.CourseId > 0)
+                    {
+                        string selected = db.CourseTbs
+                            .Where(x => x.CourseId == courseSelection.CourseId)
+                            .Select(x => x.CourseName)
+                            .FirstOrDefault();
+                        if (!string.IsNullOrEmpty(selected))
+                        {
+                            courseName = selected;
+                        }
+                    }
+                }
+                catch
+                {
+                    // fall back to the course name sent by the app
+                }
+
+                var applicant = db.ApplicantsTbs.Where(x => x.ApplicantId == value.ApplicantId).FirstOrDefault();
+                DateTime registeredOn = applicant?.RegistrationDate ?? DateTime.Now;
+                DateTime trialExpires = applicant?.ExpiryDate ?? DateTime.Now.AddDays(5);
+
+                string fullName = ((value.FirstName ?? "") + " " + (value.LastName ?? "")).Trim();
+                if (string.IsNullOrEmpty(fullName))
+                {
+                    fullName = value.UserName ?? "-";
+                }
+
+                string subject = "New Trial Registration - " + (value.UserName ?? fullName);
+                string body = EmailService.BuildInfoEmail(
+                    "New Trial Registration",
+                    "A new user just registered in the Crash Course app and starts a 5-day free trial.",
+                    new List<KeyValuePair<string, string>>
+                    {
+                        new KeyValuePair<string, string>("Name", fullName),
+                        new KeyValuePair<string, string>("Username", value.UserName ?? "-"),
+                        new KeyValuePair<string, string>("Email", value.Email ?? "-"),
+                        new KeyValuePair<string, string>("Mobile", value.Mobile ?? "-"),
+                        new KeyValuePair<string, string>("Address", value.Address ?? "-"),
+                        new KeyValuePair<string, string>("Course", string.IsNullOrEmpty(courseName) ? "-" : courseName),
+                        new KeyValuePair<string, string>("App User Id", appUserId > 0 ? appUserId.ToString() : "-"),
+                        new KeyValuePair<string, string>("Applicant Id", value.ApplicantId > 0 ? value.ApplicantId.ToString() : "-"),
+                        new KeyValuePair<string, string>("Trial Started", registeredOn.ToString("yyyy-MM-dd HH:mm")),
+                        new KeyValuePair<string, string>("Trial Expires", trialExpires.ToString("yyyy-MM-dd HH:mm")),
+                    },
+                    "This is an automatic notification from the Crash Course app.");
+
+                EmailService.SendToAdminFireAndForget(_config, subject, body);
+            }
+            catch
+            {
+                // Never let an email problem break registration.
             }
         }
 
@@ -224,6 +313,16 @@ namespace MdLabScience.Controllers
         [Route("api/AppUser/ChangePlan")]
         public IActionResult ChangePlan([FromBody] ChangePlanModel value)
         {
+            if (!IsAdmin)
+            {
+                // Hard server-side guard: the plan can only be changed by the
+                // administrator from the backend panel.
+                return StatusCode(403, new
+                {
+                    succeeded = false,
+                    message = "Plans can only be changed by an administrator. No changes were applied."
+                });
+            }
             try
             {
                 using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
@@ -266,6 +365,155 @@ namespace MdLabScience.Controllers
             catch (Exception ex)
             {
                 return Ok(new { succeeded = false, message = ex.ToString(), expiryDate = (DateTime?)null });
+            }
+        }
+
+        [HttpPost]
+        [Route("api/AppUser/RequestProUpgrade")]
+        public IActionResult RequestProUpgrade([FromBody] RequestProUpgradeModel value)
+        {
+            try
+            {
+                // A logged-in user may only raise a request for their own account.
+                string? tokenUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!IsAdmin && (string.IsNullOrEmpty(tokenUserId) || tokenUserId != value.AppUserId.ToString()))
+                {
+                    return StatusCode(403, new
+                    {
+                        succeeded = false,
+                        emailSent = false,
+                        message = "You can only request an upgrade for your own account."
+                    });
+                }
+
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var appUser = db.AppUserTbs.Where(x => x.AppUserId == value.AppUserId).FirstOrDefault();
+                    if (appUser == null)
+                    {
+                        return Ok(new { succeeded = false, emailSent = false, message = "User not found." });
+                    }
+
+                    var applicant = db.ApplicantsTbs.Where(x => x.ApplicantId == appUser.ApplicantId).FirstOrDefault();
+                    if (applicant == null)
+                    {
+                        return Ok(new { succeeded = false, emailSent = false, message = "Applicant not found." });
+                    }
+
+                    // Already on a full (non-trial) plan? Nothing to approve.
+                    if (applicant.RegistrationDate.HasValue && applicant.ExpiryDate.HasValue)
+                    {
+                        double spanDays = (applicant.ExpiryDate.Value - applicant.RegistrationDate.Value).TotalDays;
+                        if (spanDays > 6)
+                        {
+                            return Ok(new
+                            {
+                                succeeded = false,
+                                emailSent = false,
+                                status = "Approved",
+                                message = "You already have a Pro plan."
+                            });
+                        }
+                    }
+
+                    // Persist the request so the owner can approve it from the
+                    // admin panel (Users & Access -> Pro Requests). Re-tapping
+                    // the button refreshes the existing pending row instead of
+                    // creating duplicates or spamming the owner inbox.
+                    DateTime requestedOn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
+                    var pending = db.ProUpgradeRequestTbs
+                        .Where(x => x.AppUserId == value.AppUserId && x.Status == "Pending")
+                        .OrderByDescending(x => x.ProUpgradeRequestId)
+                        .FirstOrDefault();
+                    bool isNewRequest = pending == null;
+                    if (pending == null)
+                    {
+                        pending = new ProUpgradeRequestTb
+                        {
+                            AppUserId = value.AppUserId,
+                            ApplicantId = applicant.ApplicantId ?? 0,
+                            RequestedOn = requestedOn,
+                            Status = "Pending"
+                        };
+                        db.ProUpgradeRequestTbs.Add(pending);
+                    }
+                    else
+                    {
+                        pending.RequestedOn = requestedOn;
+                    }
+                    db.SaveChanges();
+
+                    if (!isNewRequest)
+                    {
+                        // Already waiting on the owner — don't email again.
+                        return Ok(new
+                        {
+                            succeeded = true,
+                            emailSent = false,
+                            status = "Pending",
+                            message = "Your upgrade request is already pending approval. The owner will review it in the admin panel."
+                        });
+                    }
+
+                    string courseName = "-";
+                    var courseSelection = db.ApplicantCourseSelectionTbs
+                        .Where(x => x.ApplicantId == applicant.ApplicantId)
+                        .OrderByDescending(x => x.CourseSelectionId)
+                        .FirstOrDefault();
+                    if (courseSelection != null && courseSelection.CourseId > 0)
+                    {
+                        courseName = db.CourseTbs
+                            .Where(x => x.CourseId == courseSelection.CourseId)
+                            .Select(x => x.CourseName)
+                            .FirstOrDefault() ?? "-";
+                    }
+
+                    string fullName = ((applicant.FirstName ?? "") + " " + (applicant.LastName ?? "")).Trim();
+                    if (string.IsNullOrEmpty(fullName))
+                    {
+                        fullName = appUser.UserName ?? "-";
+                    }
+
+                    string subject = "Pro Upgrade Request - " + (appUser.UserName ?? fullName);
+                    string body = EmailService.BuildInfoEmail(
+                        "Pro Upgrade Request",
+                        "A trial user requested an upgrade to the Pro version. The plan stays unchanged until you approve it.",
+                        new List<KeyValuePair<string, string>>
+                        {
+                            new KeyValuePair<string, string>("Name", fullName),
+                            new KeyValuePair<string, string>("Username", appUser.UserName ?? "-"),
+                            new KeyValuePair<string, string>("Email", applicant.Email ?? "-"),
+                            new KeyValuePair<string, string>("Mobile", applicant.Mobile ?? "-"),
+                            new KeyValuePair<string, string>("Address", applicant.Address ?? "-"),
+                            new KeyValuePair<string, string>("Course", courseName),
+                            new KeyValuePair<string, string>("App User Id", appUser.AppUserId.ToString()),
+                            new KeyValuePair<string, string>("Applicant Id", applicant.ApplicantId.ToString()),
+                            new KeyValuePair<string, string>("Request Id", pending.ProUpgradeRequestId.ToString()),
+                            new KeyValuePair<string, string>("Plan Start", applicant.RegistrationDate?.ToString("yyyy-MM-dd") ?? "-"),
+                            new KeyValuePair<string, string>("Plan Expires", applicant.ExpiryDate?.ToString("yyyy-MM-dd") ?? "-"),
+                            new KeyValuePair<string, string>("Requested On", requestedOn.ToString("yyyy-MM-dd HH:mm")),
+                        },
+                        "Approve in the admin panel: Users & Access > Pro Requests (Request Id " + pending.ProUpgradeRequestId + "). The plan changes to Pro only after you approve it.");
+
+                    bool sent = EmailService.SendToAdmin(_config, subject, body, out string emailError);
+
+                    // NOTE: the plan is intentionally NOT changed here — only a
+                    // request email goes to the owner, who approves it manually
+                    // in the admin panel.
+                    return Ok(new
+                    {
+                        succeeded = true,
+                        emailSent = sent,
+                        status = "Pending",
+                        message = sent
+                            ? "Your upgrade request has been sent to the owner for approval."
+                            : "Your request was recorded (email notification failed: " + emailError + ")"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { succeeded = false, emailSent = false, message = ex.Message });
             }
         }
 

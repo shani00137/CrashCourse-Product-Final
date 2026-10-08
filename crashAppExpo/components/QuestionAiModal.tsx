@@ -13,7 +13,8 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { RichText } from "@/components/RichText";
 import { explainQuestion } from "@/services/api";
 
@@ -47,6 +48,8 @@ export function QuestionAiModal({
   const [answer, setAnswer] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   useEffect(() => {
     if (visible) {
@@ -257,7 +260,7 @@ export function QuestionAiModal({
                 styles.sendButton,
                 {
                   backgroundColor:
-                    prompt.trim() && !loading ? colors.primary : "#E5E7EB",
+                    prompt.trim() && !loading ? colors.primary : colors.border,
                   ...(prompt.trim() && !loading ? shadows.md : {}),
                 },
               ]}
@@ -282,7 +285,7 @@ export function QuestionAiModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",
@@ -384,7 +387,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   optionBadgeCorrect: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: colors.successTint,
     color: colors.green,
   },
   optionText: {
@@ -455,7 +458,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.redLight,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: "#FECDD3",
+    borderColor: colors.primaryBorder,
     padding: 14,
     marginTop: 12,
   },
@@ -463,7 +466,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 19,
-    color: "#9F1239",
+    color: colors.roseDeep,
   },
   answerBox: {
     marginTop: 12,

@@ -14,11 +14,18 @@ import { WebView } from "react-native-webview";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Slider from "@react-native-community/slider";
-import { colors, gradients } from "@/constants/theme";
+import { type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { buildPdfViewerHtml, pdfPageKey } from "@/constants/pdfViewerHtml";
 import { bytesToBase64, loadSecurePdfBytes } from "@/services/securePdf";
+import { useApp } from "@/context/AppContext";
 
 export default function PdfPreviewScreen() {
+  const { colors, gradients } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const { user } = useApp();
+  const isTrial = !!user?.isTrial;
+
   const params = useLocalSearchParams<{
     url: string;
     fileName: string;
@@ -61,7 +68,7 @@ export default function PdfPreviewScreen() {
   );
 
   useEffect(() => {
-    if (!uri) {
+    if (!uri || isTrial) {
       setReady(true);
       return;
     }
@@ -111,7 +118,7 @@ export default function PdfPreviewScreen() {
       cancelled = true;
       feedAbortRef.current = true;
     };
-  }, [uri, attempt]);
+  }, [uri, attempt, isTrial]);
 
   useEffect(() => {
     if (!loading) return;
@@ -193,6 +200,48 @@ export default function PdfPreviewScreen() {
       // ignore non-JSON payloads
     }
   };
+
+  // PDF books are a Pro feature: trial users never download or render them.
+  if (isTrial) {
+    return (
+      <View style={[styles.flex, { paddingBottom: bottomPad }]}>
+        <LinearGradient
+          colors={gradients.darkRedGrad}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={18} color={colors.white} />
+          </TouchableOpacity>
+          <View style={styles.headerTextBlock}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {fileName}
+            </Text>
+          </View>
+        </LinearGradient>
+        <View style={styles.center}>
+          <Ionicons name="lock-closed-outline" size={40} color={colors.mutedForeground} />
+          <Text style={styles.errorTitle}>PDF locked for trial users</Text>
+          <Text style={styles.errorText}>
+            PDF books are available on the Pro plan. Request the Pro upgrade
+            from Settings to view them.
+          </Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => router.back()}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.retryText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.flex, { paddingBottom: bottomPad }]}>
@@ -299,7 +348,7 @@ export default function PdfPreviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,

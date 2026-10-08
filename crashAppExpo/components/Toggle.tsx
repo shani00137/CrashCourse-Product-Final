@@ -1,6 +1,6 @@
 import React from "react";
 import { Switch, StyleSheet } from "react-native";
-import { colors } from "@/constants/theme";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ToggleProps {
   value: boolean;
@@ -9,14 +9,15 @@ interface ToggleProps {
 }
 
 export function Toggle({ value, onValueChange, disabled }: ToggleProps) {
+  const { colors } = useTheme();
   return (
     <Switch
       value={value}
       onValueChange={onValueChange}
       disabled={disabled}
-      trackColor={{ false: "#D1D5DB", true: colors.primary }}
+      trackColor={{ false: colors.borderStrong, true: colors.primary }}
       thumbColor={colors.white}
-      ios_backgroundColor="#D1D5DB"
+      ios_backgroundColor={colors.borderStrong}
       style={styles.container}
     />
   );

@@ -4,6 +4,7 @@ import { usePreventScreenCapture } from "expo-screen-capture";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AppProvider } from "@/context/AppContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import AccountBlockWatchdog from "@/components/AccountBlockWatchdog";
 import UpdatePrompt from "@/components/UpdatePrompt";
 import { addNotificationResponseReceivedListener } from "@/services/notifications";
@@ -30,10 +31,13 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppProvider>
-        <AccountBlockWatchdog />
-        <UpdatePrompt />
-        <StatusBar style="light" />
+      <ThemeProvider>
+        <AppProvider>
+          <AccountBlockWatchdog />
+          <UpdatePrompt />
+          {/* Brand headers are red gradients in both modes, so the bar keeps
+              light content (per expo-status-bar v57 docs: "light" = light text). */}
+          <StatusBar style="light" />
         <Stack
           screenOptions={{
             headerShown: false,
@@ -48,7 +52,8 @@ export default function RootLayout() {
           <Stack.Screen name="test" options={{ presentation: "modal", animation: "slide_from_right" }} />
           <Stack.Screen name="ai-agent" options={{ presentation: "modal", animation: "slide_from_right" }} />
         </Stack>
-      </AppProvider>
+        </AppProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

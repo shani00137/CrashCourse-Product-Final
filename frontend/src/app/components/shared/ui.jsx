@@ -3,6 +3,7 @@ import { ChevronDown, Search, X } from "lucide-react";
 function StatusBadge({ status }) {
   const map = {
     Active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    Approved: "bg-emerald-50 text-emerald-700 border border-emerald-200",
     Passed: "bg-emerald-50 text-emerald-700 border border-emerald-200",
     Paid: "bg-emerald-50 text-emerald-700 border border-emerald-200",
     Pending: "bg-amber-50 text-amber-700 border border-amber-200",
@@ -11,6 +12,7 @@ function StatusBadge({ status }) {
     Review: "bg-blue-50 text-blue-700 border border-blue-200",
     Expired: "bg-red-50 text-red-700 border border-red-200",
     Failed: "bg-red-50 text-red-700 border border-red-200",
+    Rejected: "bg-red-50 text-red-700 border border-red-200",
     Unpaid: "bg-red-50 text-red-700 border border-red-200",
     Blocked: "bg-red-50 text-red-700 border border-red-200",
     Inactive: "bg-gray-100 text-gray-600 border border-gray-200"

@@ -12,9 +12,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { colors, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
 import { medicalQuestions, allCourses } from "@/constants/data";
 import { useApp } from "@/context/AppContext";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { ProgressBar } from "@/components/ProgressBar";
 import { ScoreRing } from "@/components/ScoreRing";
 import { QuestionAiModal } from "@/components/QuestionAiModal";
@@ -68,6 +69,8 @@ const PROGRESS_KEY = (courseId: number, start: number, end: number) =>
   `exercise_progress_${courseId}_${start}_${end}`;
 
 export default function ExerciseScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { courseId, courseName, start, end } = useLocalSearchParams<{
     courseId: string;
     courseName?: string;
@@ -478,7 +481,7 @@ export default function ExerciseScreen() {
             style={[
               styles.ctaButton,
               (isLoadingQs || questionCount === null || questionCount === 0)
-                ? { backgroundColor: "#D1D5DB" }
+                ? { backgroundColor: colors.borderStrong }
                 : { backgroundColor: colors.primary, ...shadows.md },
             ]}
             onPress={fetchQuestions}
@@ -517,7 +520,7 @@ const pct = Math.round((score / totalQ) * 100);
         <View
           style={[
             styles.resultIconCircle,
-            { backgroundColor: passed ? "#F0FDF4" : "#FFF0F2" },
+            { backgroundColor: passed ? colors.successBg : colors.redLight },
           ]}
         >
           <Ionicons
@@ -714,7 +717,7 @@ const pct = Math.round((score / totalQ) * 100);
               <Ionicons
                 name={isTrial || !aiAllowed ? "lock-closed" : "sparkles"}
                 size={14}
-                color={isTrial || !aiAllowed ? "#6B7280" : "#B45309"}
+                color={isTrial || !aiAllowed ? colors.textSecondary : colors.brown}
               />
               <Text
                 style={[
@@ -746,29 +749,29 @@ const pct = Math.round((score / totalQ) * 100);
                 bg: colors.card,
                 border: colors.border,
                 text: colors.foreground,
-                badge: "#6B7280",
-                badgeBg: "#F3F4F6",
+                badge: colors.textSecondary,
+                badgeBg: colors.muted,
               },
               selected: {
-                bg: "#FFF0F2",
+                bg: colors.redLight,
                 border: colors.primary,
                 text: colors.foreground,
                 badge: colors.primary,
-                badgeBg: "#FFE4E8",
+                badgeBg: colors.pinkTint,
               },
               correct: {
-                bg: "#F0FDF4",
+                bg: colors.successBg,
                 border: "#22C55E",
-                text: "#166534",
+                text: colors.green,
                 badge: colors.green,
-                badgeBg: "#DCFCE7",
+                badgeBg: colors.successTint,
               },
               wrong: {
-                bg: "#FFF0F2",
+                bg: colors.redLight,
                 border: "#F87171",
-                text: "#B91C1C",
-                badge: "#DC2626",
-                badgeBg: "#FEE2E2",
+                text: colors.redDeepText,
+                badge: colors.red,
+                badgeBg: colors.redTint,
               },
             }[state];
 
@@ -816,9 +819,9 @@ const pct = Math.round((score / totalQ) * 100);
               styles.explanationBox,
               {
                 backgroundColor:
-                  selected === q.correct ? "#F0FDF4" : "#FFF7ED",
+                  selected === q.correct ? colors.successBg : colors.warningSoftBg,
                 borderColor:
-                  selected === q.correct ? "#BBF7D0" : "#FED7AA",
+                  selected === q.correct ? colors.successBorder : colors.warningSoftBorder,
               },
             ]}
           >
@@ -840,7 +843,7 @@ const pct = Math.round((score / totalQ) * 100);
                 styles.explanationText,
                 {
                   color:
-                    selected === q.correct ? colors.green : "#92400E",
+                    selected === q.correct ? colors.green : colors.warningText,
                 },
               ]}
             >
@@ -858,7 +861,7 @@ const pct = Math.round((score / totalQ) * 100);
               styles.ctaButton,
               {
                 backgroundColor:
-                  selected !== null ? colors.primary : "#D1D5DB",
+                  selected !== null ? colors.primary : colors.borderStrong,
                 ...(selected !== null ? shadows.md : {}),
               },
             ]}
@@ -886,7 +889,7 @@ const pct = Math.round((score / totalQ) * 100);
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
     backgroundColor: colors.background,
@@ -951,15 +954,15 @@ modalScreen: {
     borderWidth: 2,
   },
   sweepChipTodo: {
-    backgroundColor: "#F3F4F6",
-    borderColor: "#E5E7EB",
+    backgroundColor: colors.muted,
+    borderColor: colors.border,
   },
   sweepChipRight: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: colors.successTint,
     borderColor: "#22C55E",
   },
   sweepChipWrong: {
-    backgroundColor: "#FEE2E2",
+    backgroundColor: colors.redTint,
     borderColor: "#F87171",
   },
   sweepChipCurrent: {
@@ -970,13 +973,13 @@ modalScreen: {
     fontWeight: "700",
   },
   sweepChipTextTodo: {
-    color: "#4B5563",
+    color: colors.textMuted,
   },
   sweepChipTextRight: {
-    color: "#166534",
+    color: colors.green,
   },
   sweepChipTextWrong: {
-    color: "#991B1B",
+    color: colors.redDeeperText,
   },
   sweepChipTextCurrent: {
     color: colors.primary,
@@ -1035,7 +1038,7 @@ modalScreen: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: colors.muted,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
@@ -1114,7 +1117,7 @@ modalScreen: {
     flex: 1,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: colors.muted,
     overflow: "hidden",
   },
   readingBarFill: {
@@ -1142,18 +1145,18 @@ modalScreen: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: colors.warningSoftBg,
     borderRadius: radii.lg,
     padding: 16,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: "#FED7AA",
+    borderColor: colors.warningSoftBorder,
     width: "100%",
   },
   countErrorText: {
     flex: 1,
     fontSize: 13,
-    color: "#92400E",
+    color: colors.warningText,
     lineHeight: 18,
   },
   // ── Exercise styles ────────────────────────────────────────────────────
@@ -1185,9 +1188,9 @@ modalScreen: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: colors.warningSoftBg,
     borderWidth: 1,
-    borderColor: "#FED7AA",
+    borderColor: colors.warningSoftBorder,
     borderRadius: radii.round,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1198,11 +1201,11 @@ modalScreen: {
     color: colors.brown,
   },
   aiButtonLocked: {
-    backgroundColor: "#F3F4F6",
-    borderColor: "#E5E7EB",
+    backgroundColor: colors.muted,
+    borderColor: colors.border,
   },
   aiButtonTextLocked: {
-    color: "#6B7280",
+    color: colors.textSecondary,
   },
   questionLabel: {
     fontSize: 12,
@@ -1281,7 +1284,7 @@ modalScreen: {
     borderRadius: radii.lg,
   },
   nextButton: {
-    backgroundColor: colors.green,
+    backgroundColor: colors.greenSolid,
   },
   ctaButtonText: {
     color: colors.white,

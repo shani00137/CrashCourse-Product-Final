@@ -632,6 +632,67 @@ export async function changePlan(input: ChangePlanInput): Promise<ChangePlanResu
   };
 }
 
+export interface RequestProUpgradeResult {
+  succeeded: boolean;
+  emailSent: boolean;
+  status?: string;
+  message: string;
+}
+
+/**
+ * Sends the trial user's "upgrade to Pro" request to the owner for approval.
+ * The server only records the request + emails the owner — the plan is NOT
+ * changed here. The owner approves it in the admin panel, so the user stays
+ * on trial until then.
+ */
+export async function requestProUpgrade(
+  appUserId: number
+): Promise<RequestProUpgradeResult> {
+  const data = await request<unknown>(ENDPOINTS.requestProUpgrade, { appUserId });
+  const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+  return {
+    succeeded: r.succeeded === true,
+    emailSent: r.emailSent === true,
+    status: typeof r.status === "string" ? r.status : undefined,
+    message: typeof r.message === "string" ? r.message : "",
+  };
+}
+
+export type ProRequestStatus = "Pending" | "Approved" | "Rejected";
+
+export interface MyProRequestInfo {
+  status: ProRequestStatus | null;
+  requestedOn?: string;
+  resolvedOn?: string;
+}
+
+/**
+ * Latest Pro-upgrade request raised by this user, so the settings screen can
+ * show "pending approval" instead of letting them re-send it. Returns null
+ * when there is no request yet (or the endpoint is unavailable).
+ */
+export async function getMyProRequest(
+  appUserId: number
+): Promise<MyProRequestInfo | null> {
+  try {
+    const data = await get<unknown>(ENDPOINTS.myProRequest(appUserId));
+    if (!data || typeof data !== "object") return null;
+    const r = data as Record<string, unknown>;
+    const status =
+      r.status === "Pending" || r.status === "Approved" || r.status === "Rejected"
+        ? r.status
+        : null;
+    return {
+      status,
+      requestedOn: typeof r.requestedOn === "string" ? r.requestedOn : undefined,
+      resolvedOn: typeof r.resolvedOn === "string" ? r.resolvedOn : undefined,
+    };
+  } catch {
+    // Older backends don't have this endpoint — degrade to no status.
+    return null;
+  }
+}
+
 export interface ExerciseInfo {
   exerciseRecordId: number;
   exercise: string;

@@ -2,7 +2,8 @@ import React from "react";
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radii, shadows } from "@/constants/theme";
+import { radii, shadows, type ThemePalette } from "@/constants/theme";
+import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 
 export interface StylishDialogAction {
   label: string;
@@ -20,15 +21,6 @@ export interface StylishDialogProps {
   onRequestClose?: () => void;
 }
 
-const toneGradient: Record<
-  NonNullable<StylishDialogProps["tone"]>,
-  readonly [string, string]
-> = {
-  primary: [colors.primary, colors.primaryDark],
-  danger: ["#F43F5E", "#9F1239"],
-  success: [colors.green, "#166534"],
-};
-
 export default function StylishDialog({
   visible,
   title,
@@ -38,7 +30,17 @@ export default function StylishDialog({
   actions,
   onRequestClose,
 }: StylishDialogProps) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const single = actions.length <= 1;
+  const toneGradient: Record<
+    NonNullable<StylishDialogProps["tone"]>,
+    readonly [string, string]
+  > = {
+    primary: [colors.primary, colors.primaryDark],
+    danger: ["#F43F5E", "#9F1239"],
+    success: [colors.greenSolid, "#166534"],
+  };
 
   return (
     <Modal
@@ -99,7 +101,7 @@ export default function StylishDialog({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   overlay: {
     flex: 1,
     alignItems: "center",
@@ -164,7 +166,7 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   actionBtnDanger: {
-    backgroundColor: "#DC2626",
+    backgroundColor: colors.redSolid,
     ...shadows.md,
   },
   actionBtnGhost: {
