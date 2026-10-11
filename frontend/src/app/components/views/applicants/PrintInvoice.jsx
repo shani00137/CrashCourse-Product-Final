@@ -1,6 +1,8 @@
 import { X } from "lucide-react";
 import { Btn } from "../../shared/ui";
 import logoUrl from "../../../../assets/icon.png";
+import esignatureUrl from "../../../../assets/esignature.png";
+import stampUrl from "../../../../assets/stamp.jpeg";
 
 function PrintInvoice({ invoice, onClose }) {
   if (!invoice) return null;
@@ -37,6 +39,34 @@ function PrintInvoice({ invoice, onClose }) {
     const logoMarkup = logoDataUri
       ? `<img class="company-logo" src="${logoDataUri}" alt="Health Planning Consultancies" />`
       : "";
+
+    // Once any amount has been paid (fully or partially) the invoice is stamped
+    // and signed off. Both images are inlined the same way as the logo because
+    // the detached print window cannot resolve the app's asset URLs.
+    const isPaid = Number(invoice.paidAmount || 0) > 0;
+    let signatureMarkup = "";
+    if (isPaid) {
+      let esignatureDataUri = "";
+      let stampDataUri = "";
+      try {
+        const [signatureModule, stampModule] = await Promise.all([
+          import("../../../../assets/esignature.png?inline"),
+          import("../../../../assets/stamp.jpeg?inline")
+        ]);
+        esignatureDataUri = signatureModule.default;
+        stampDataUri = stampModule.default;
+      } catch {
+        esignatureDataUri = "";
+        stampDataUri = "";
+      }
+      if (esignatureDataUri || stampDataUri) {
+        signatureMarkup = `
+        <div class="signature-figures">
+          ${esignatureDataUri ? `<img class="authorized-signature" src="${esignatureDataUri}" alt="Authorized signature" />` : ""}
+          ${stampDataUri ? `<img class="company-stamp" src="${stampDataUri}" alt="Company stamp" />` : ""}
+        </div>`;
+      }
+    }
 
     let serviceRows = "";
     serviceList.forEach((item, i) => {
@@ -96,6 +126,9 @@ function PrintInvoice({ invoice, onClose }) {
     .signature-section { display: flex; justify-content: space-between; margin-top: 30px; }
     .signature-box { width: 200px; }
     .signature-line { border-top: 1px solid #1a1a1a; margin-top: 60px; padding-top: 8px; font-size: 11px; color: #334155; }
+    .signature-figures { display: flex; align-items: flex-end; justify-content: flex-end; gap: 6px; height: 72px; margin-bottom: 2px; }
+    .authorized-signature { height: 50px; object-fit: contain; }
+    .company-stamp { height: 72px; object-fit: contain; opacity: 0.92; }
     .notes { font-size: 11px; color: #334155; margin-top: 20px; line-height: 1.6; }
     @media print {
       body { padding: 20px; }
@@ -194,6 +227,7 @@ function PrintInvoice({ invoice, onClose }) {
           <div class="signature-line">Customer Signature</div>
         </div>
         <div class="signature-box" style="text-align:right">
+          ${signatureMarkup}
           <div class="signature-line" style="border-top:none;text-align:right">Authorized Signature</div>
         </div>
       </div>
@@ -274,6 +308,14 @@ function PrintInvoice({ invoice, onClose }) {
             <span>Total (after discount &amp; tax)</span>
             <span className="font-mono">{grandTotal.toFixed(2)} {invoice.currency || ""}</span>
           </div>
+          {Number(invoice.paidAmount || 0) > 0 && (
+            <div className="flex flex-col items-end pt-4 mt-3 border-t border-[rgba(0,0,0,0.06)]">
+              <div className="flex items-end gap-3">
+                <img src={esignatureUrl} alt="Authorized signature" className="h-11 object-contain" />
+              </div>
+              <p className="text-[10px] uppercase tracking-wide text-[#718096] mt-1">Authorized Signature</p>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 justify-end">
