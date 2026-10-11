@@ -16,6 +16,8 @@ import {
   File,
   Video,
   Mic,
+  Image as ImageIcon,
+  Smartphone,
   Loader2
 } from "lucide-react";
 import { Btn, BouncingDots, Card, Input, Modal, Select } from "../../shared/ui";
@@ -43,6 +45,10 @@ function CoursesScreen() {
   const [editing, setEditing] = useState(null);
   const [formCode, setFormCode] = useState("");
   const [formName, setFormName] = useState("");
+  const [formSaleRate, setFormSaleRate] = useState("0");
+  const [formIsForMobile, setFormIsForMobile] = useState(true);
+  const [formPhoto, setFormPhoto] = useState(null);
+  const [formPhotoPreview, setFormPhotoPreview] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
   const [materialCourse, setMaterialCourse] = useState(null);
@@ -91,10 +97,23 @@ function CoursesScreen() {
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * pageSize;
   const goToPage = (p) => setPage(Math.max(1, Math.min(p, totalPages)));
+  const coursePhotoUrl = (url) => !url ? null : /^https?:\/\//i.test(url) ? url : courseFileUrl(url);
+  const updatePhotoPreview = (next) => setFormPhotoPreview((prev) => {
+    if (prev && prev.startsWith("blob:") && prev !== next) URL.revokeObjectURL(prev);
+    return next;
+  });
+  const pickPhotoFile = (file) => {
+    setFormPhoto(file ?? null);
+    updatePhotoPreview(file ? URL.createObjectURL(file) : null);
+  };
   const openAdd = () => {
     setEditing(null);
     setFormCode("");
     setFormName("");
+    setFormSaleRate("0");
+    setFormIsForMobile(true);
+    setFormPhoto(null);
+    updatePhotoPreview(null);
     setFormError(null);
     setFormOpen(true);
   };
@@ -102,6 +121,10 @@ function CoursesScreen() {
     setEditing(c);
     setFormCode(c.courseCode);
     setFormName(c.courseName);
+    setFormSaleRate(String(c.saleRate ?? 0));
+    setFormIsForMobile(c.isForMobile !== false);
+    setFormPhoto(null);
+    updatePhotoPreview(coursePhotoUrl(c.coursePhotourl));
     setFormError(null);
     setFormOpen(true);
   };
@@ -109,8 +132,13 @@ function CoursesScreen() {
     e.preventDefault();
     const code = formCode.trim();
     const name = formName.trim();
+    const saleRate = Number(formSaleRate);
     if (!code || !name) {
       setFormError("Please enter both Course Code and Course Name.");
+      return;
+    }
+    if (formSaleRate.trim() === "" || Number.isNaN(saleRate) || saleRate < 0) {
+      setFormError("Please enter a valid Sale Rate (0 or greater).");
       return;
     }
     setSaving(true);
@@ -119,6 +147,9 @@ function CoursesScreen() {
       const fd = new FormData();
       fd.append("CourseCode", code);
       fd.append("CourseName", name);
+      fd.append("SaleRate", String(saleRate));
+      fd.append("IsForMobile", formIsForMobile ? "true" : "false");
+      if (formPhoto) fd.append("CoursePhoto", formPhoto);
       if (editing) {
         fd.append("CourseId", String(editing.courseId));
         const msg = await updateCourse(fd);
@@ -264,14 +295,29 @@ function CoursesScreen() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[rgba(0,0,0,0.06)] bg-[#F7FAFC]">
-                {["ID", "Course Code", "Course Name", "Attachment", "Status", "Actions"].map((h) => <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide whitespace-nowrap">{h}</th>)}
+                {["ID", "Photo", "Course Code", "Course Name", "Sale Rate", "Mobile", "Attachment", "Status", "Actions"].map((h) => <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide whitespace-nowrap">{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {rows.map((c) => <tr key={c.courseId} className="border-b border-[rgba(0,0,0,0.04)] hover:bg-[#F7FAFC] transition-colors">
                   <td className="px-4 py-3 font-mono text-xs text-[#718096] font-medium whitespace-nowrap" title="Course ID">{c.courseId}</td>
+                  <td className="px-4 py-3">
+                    {c.coursePhotourl ? <img
+    src={coursePhotoUrl(c.coursePhotourl)}
+    alt={c.courseName ?? "Course"}
+    className="w-10 h-10 rounded-lg object-cover border border-[rgba(0,0,0,0.08)] bg-white"
+  /> : <span title="No photo" className="inline-flex w-10 h-10 rounded-lg bg-[#F7FAFC] border border-dashed border-[rgba(0,0,0,0.12)] items-center justify-center text-gray-300">
+                        <ImageIcon size={14} />
+                      </span>}
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-[#C41E3A] font-medium whitespace-nowrap">{c.courseCode}</td>
                   <td className="px-4 py-3 font-medium text-[#1A202C]">{c.courseName}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[#1A202C] whitespace-nowrap">{Number(c.saleRate ?? 0).toFixed(2)}</td>
+                  <td className="px-4 py-3">
+                    {c.isForMobile ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <Smartphone size={11} /> Mobile
+                      </span> : <span className="text-xs text-gray-400">&mdash;</span>}
+                  </td>
                   <td className="px-4 py-3">
                     <button
     onClick={() => openAttachments(c)}
@@ -347,6 +393,45 @@ function CoursesScreen() {
           <form onSubmit={handleSaveCourse} className="flex flex-col gap-4">
             <Input label="Course Code" placeholder="e.g. MDS-101" value={formCode} onChange={(e) => setFormCode(e.target.value)} required />
             <Input label="Course Name" placeholder="Full course name" value={formName} onChange={(e) => setFormName(e.target.value)} required />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Sale Rate</label>
+                <input
+    type="number"
+    min="0"
+    step="0.01"
+    placeholder="0.00"
+    value={formSaleRate}
+    onChange={(e) => setFormSaleRate(e.target.value)}
+    className="h-10 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
+  />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Course Photo</label>
+                <input
+    type="file"
+    accept="image/*"
+    onChange={(e) => pickPhotoFile(e.target.files?.[0] ?? null)}
+    className="h-10 px-2 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#FFF0F2] file:text-[#C41E3A] file:text-xs file:font-medium"
+  />
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input
+    type="checkbox"
+    checked={formIsForMobile}
+    onChange={(e) => setFormIsForMobile(e.target.checked)}
+    className="w-4 h-4 rounded border-gray-300 accent-[#C41E3A]"
+  />
+                <span className="text-sm text-[#1A202C]">Show this course in the mobile app</span>
+              </label>
+              {formPhotoPreview && <img
+    src={formPhotoPreview}
+    alt="Course preview"
+    className="w-16 h-16 rounded-lg object-cover border border-[rgba(0,0,0,0.08)] bg-white"
+  />}
+            </div>
             {formError && <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
                 <AlertCircle size={14} /> {formError}
               </div>}

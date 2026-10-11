@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using StudentCertificateManagement.Models;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -38,7 +39,10 @@ namespace MdLabScience.Controllers
                                  CourseId = c.CourseId,
                                  CourseName = c.CourseName,
                                  CourseUrl = c.CourseUrl,
-                                 IsActive = c.IsActive
+                                 IsActive = c.IsActive,
+                                 SaleRate = c.SaleRate,
+                                 IsForMobile = c.IsForMobile,
+                                 CoursePhotourl = c.CoursePhotourl
                              }).OrderByDescending(x => x.CourseId).ToList();
 
                 var pagedData = Query
@@ -70,7 +74,7 @@ namespace MdLabScience.Controllers
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
                 var Query = db.CourseTbs
-                    .Where(x => x.IsActive == true)
+                    .Where(x => x.IsActive == true && x.IsForMobile == true)
                     .OrderBy(x => x.CourseName)
                     .Select(x => new CourseModel
                     {
@@ -78,7 +82,10 @@ namespace MdLabScience.Controllers
                         CourseId = x.CourseId,
                         CourseName = x.CourseName,
                         CourseUrl = x.CourseUrl,
-                        IsActive = x.IsActive
+                        IsActive = x.IsActive,
+                        SaleRate = x.SaleRate,
+                        IsForMobile = x.IsForMobile,
+                        CoursePhotourl = x.CoursePhotourl
                     })
                     .ToList();
                 return Ok(Query);
@@ -93,14 +100,15 @@ namespace MdLabScience.Controllers
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
                 CourseModel value = new CourseModel();
+                value.CourseName = Request.Form["CourseName"];
+                value.CourseCode = Request.Form["CourseCode"];
+                value.SaleRate = ParseDouble(Request.Form["SaleRate"]);
+                value.IsForMobile = ParseBool(Request.Form["IsForMobile"], true);
+
                 var CheckPresence = db.CourseTbs.Where(x => x.CourseCode == value.CourseCode).Any();
                 if (CheckPresence == false)
                 {
-                    value.CourseName = Request.Form["CourseName"];
-                    value.CourseCode = Request.Form["CourseCode"];
-                    var file = Request.Form.Files.Count > 0 ?
-                    Request.Form.Files[0] : null;
-
+                    var file = GetNamedFile("CourseFile");
                     if (file != null && file.Length > 0)
                     {
                         var fileName = Path.GetFileName(file.FileName);
@@ -116,10 +124,16 @@ namespace MdLabScience.Controllers
                             value.CourseUrl = "Uploads/" + fileName.ToString();
                         }
                     }
+
+                    value.CoursePhotourl = SaveCoursePhoto(Request.Form.Files["CoursePhoto"]);
+
                     CourseTb courseTb = new CourseTb();
                     courseTb.CourseCode = value.CourseCode;
                     courseTb.CourseName = value.CourseName;
                     courseTb.CourseUrl = value.CourseUrl;
+                    courseTb.SaleRate = value.SaleRate;
+                    courseTb.IsForMobile = value.IsForMobile;
+                    courseTb.CoursePhotourl = value.CoursePhotourl;
                     courseTb.IsActive = true;
                     db.CourseTbs.Add(courseTb);
                     db.SaveChanges();
@@ -261,22 +275,19 @@ namespace MdLabScience.Controllers
                 value.CourseName = Request.Form["CourseName"];
                 value.CourseCode = Request.Form["CourseCode"];
                 value.CourseId = int.Parse(Request.Form["CourseId"]);
+                value.SaleRate = ParseDouble(Request.Form["SaleRate"]);
+                value.IsForMobile = ParseBool(Request.Form["IsForMobile"], true);
+
                 var Query = db.CourseTbs.Where(x => x.CourseId == value.CourseId).FirstOrDefault();
                 if (Query != null)
                 {
-                    var file = Request.Form.Files.Count > 0 ?
-                    Request.Form.Files[0] : null;
-
+                    var file = GetNamedFile("CourseFile");
                     if (file != null && file.Length > 0)
                     {
                         var fileName = Path.GetFileName(file.FileName);
                         if (fileName.StartsWith("Course") == true)
                         {
-                            var oldPath = Path.Combine(_env.ContentRootPath, Query.CourseUrl);
-                            if (System.IO.File.Exists(oldPath))
-                            {
-                                System.IO.File.Delete(oldPath);
-                            }
+                            DeleteUploadedFile(Query.CourseUrl);
                             var path = Path.Combine(_env.ContentRootPath, "Uploads", fileName);
                             using (var stream = new FileStream(path, FileMode.Create))
                             {
@@ -285,8 +296,22 @@ namespace MdLabScience.Controllers
                             value.CourseUrl = "Uploads/" + fileName.ToString();
                         }
                     }
+
+                    var photo = Request.Form.Files["CoursePhoto"];
+                    if (photo != null && photo.Length > 0)
+                    {
+                        var savedPhoto = SaveCoursePhoto(photo);
+                        if (savedPhoto != null)
+                        {
+                            DeleteUploadedFile(Query.CoursePhotourl);
+                            Query.CoursePhotourl = savedPhoto;
+                        }
+                    }
+
                     Query.CourseCode = value.CourseCode;
                     Query.CourseName = value.CourseName;
+                    Query.SaleRate = value.SaleRate;
+                    Query.IsForMobile = value.IsForMobile;
                     if (value.CourseUrl != null)
                     {
                         Query.CourseUrl = value.CourseUrl;
@@ -426,6 +451,92 @@ namespace MdLabScience.Controllers
                     message = row.Message
                 });
             }
+        }
+
+        // Reads a course file posted under its own form key. Some older clients
+        // still post a single unnamed file, so fall back to the first file only
+        // when it is not the (separately keyed) course picture.
+        private IFormFile? GetNamedFile(string key)
+        {
+            var file = Request.Form.Files[key];
+            if (file == null && Request.Form.Files.Count > 0 && Request.Form.Files["CoursePhoto"] == null)
+            {
+                file = Request.Form.Files[0];
+            }
+            return file;
+        }
+
+        // Saves an uploaded course picture under Uploads/ and returns its
+        // relative path, or null when nothing (valid) was posted.
+        private string? SaveCoursePhoto(IFormFile? photo)
+        {
+            if (photo == null || photo.Length == 0)
+            {
+                return null;
+            }
+            var extension = Path.GetExtension(Path.GetFileName(photo.FileName));
+            var fileName = "CoursePhoto-" + Guid.NewGuid().ToString("N") + extension;
+            var dirPath = Path.Combine(_env.ContentRootPath, "Uploads");
+            Directory.CreateDirectory(dirPath);
+            var path = Path.Combine(dirPath, fileName);
+            using (var stream = new FileStream(path, FileMode.Create))
+            {
+                photo.CopyTo(stream);
+            }
+            return "Uploads/" + fileName;
+        }
+
+        // Best-effort removal of a previously uploaded file; never lets a
+        // missing/locked file block the save.
+        private void DeleteUploadedFile(string? relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath))
+            {
+                return;
+            }
+            try
+            {
+                var path = Path.Combine(_env.ContentRootPath, relativePath);
+                if (System.IO.File.Exists(path))
+                {
+                    System.IO.File.Delete(path);
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
+        private static double ParseDouble(string? raw)
+        {
+            if (double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out double value))
+            {
+                return value;
+            }
+            return 0;
+        }
+
+        private static bool ParseBool(string? raw, bool fallback)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return fallback;
+            }
+            var trimmed = raw.Trim();
+            if (trimmed == "1")
+            {
+                return true;
+            }
+            if (trimmed == "0")
+            {
+                return false;
+            }
+            if (bool.TryParse(trimmed, out bool value))
+            {
+                return value;
+            }
+            return fallback;
         }
     }
 }

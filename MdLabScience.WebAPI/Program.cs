@@ -197,6 +197,25 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
 
+        // Extra course fields surfaced in the admin panel and the mobile app:
+        // SaleRate (double), IsForMobile (bit) and CoursePhotourl (nvarchar).
+        // IsForMobile defaults to 1 so existing courses keep appearing on the
+        // mobile app until an administrator deliberately turns one off.
+        RunMigration("CourseTb SaleRate/IsForMobile/CoursePhotourl", @"
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('CourseTb') AND name = 'SaleRate')
+            BEGIN
+                ALTER TABLE CourseTb ADD SaleRate FLOAT NOT NULL DEFAULT 0;
+            END
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('CourseTb') AND name = 'IsForMobile')
+            BEGIN
+                ALTER TABLE CourseTb ADD IsForMobile BIT NOT NULL DEFAULT 1;
+            END
+            IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('CourseTb') AND name = 'CoursePhotourl')
+            BEGIN
+                ALTER TABLE CourseTb ADD CoursePhotourl NVARCHAR(500) NULL;
+            END
+        ");
+
     }
 }
 

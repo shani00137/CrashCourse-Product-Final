@@ -135,6 +135,9 @@ namespace MdLabScience.DbContext
             {
                 entity.HasKey(e => e.CourseId);
                 entity.ToTable("CourseTb");
+                entity.Property(e => e.SaleRate).HasColumnType("float");
+                entity.Property(e => e.IsForMobile).HasColumnType("bit");
+                entity.Property(e => e.CoursePhotourl).HasMaxLength(500);
             });
             modelBuilder.Entity<DataFlowTransferTB>(entity =>
             {
