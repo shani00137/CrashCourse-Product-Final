@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Search, X } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, Loader2, Minus, Search, X } from "lucide-react";
 function StatusBadge({ status }) {
   const map = {
     Active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
@@ -172,6 +172,73 @@ function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
         </div>}
     </div>;
 }
+function Checkbox({ checked = false, indeterminate = false, onChange, disabled = false, className = "", title }) {
+  const active = checked || indeterminate;
+  return <label
+    title={title}
+    className={`inline-flex items-center justify-center select-none ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${className}`}
+  >
+      <input
+    type="checkbox"
+    checked={checked}
+    disabled={disabled}
+    onChange={onChange}
+    ref={el => { if (el) el.indeterminate = !!indeterminate; }}
+    className="peer sr-only"
+  />
+      <span
+    className={`h-[18px] w-[18px] flex items-center justify-center rounded-[5px] border-[1.5px] transition-all duration-150 peer-focus-visible:ring-2 peer-focus-visible:ring-[#C41E3A]/30 ${active ? "bg-[#C41E3A] border-[#C41E3A] shadow-sm" : "bg-white border-[#CBD5E0] peer-hover:border-[#C41E3A] peer-hover:bg-[#FFF5F6]"}`}
+  >
+        {checked ? <Check size={12} strokeWidth={3.5} className="text-white" /> : indeterminate ? <Minus size={13} strokeWidth={3.5} className="text-white" /> : null}
+      </span>
+    </label>;
+}
+function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  onConfirm,
+  onCancel,
+  loading = false
+}) {
+  if (!open) return null;
+  return <div
+    role="dialog"
+    aria-modal="true"
+    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+  >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="px-6 pt-6 pb-2 flex flex-col items-center text-center">
+          <span className="h-12 w-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
+            <AlertTriangle size={22} className="text-[#C41E3A]" />
+          </span>
+          <h3 className="text-base font-semibold text-[#1A202C]">{title}</h3>
+          <p className="text-sm text-[#718096] mt-1.5 leading-relaxed whitespace-pre-line">{message}</p>
+        </div>
+        <div className="flex gap-2 px-6 py-5">
+          <button
+    type="button"
+    onClick={onCancel}
+    disabled={loading}
+    className="flex-1 h-10 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm font-medium text-[#1A202C] hover:bg-[#F7FAFC] transition disabled:opacity-60 disabled:cursor-not-allowed"
+  >
+            {cancelLabel}
+          </button>
+          <button
+    type="button"
+    onClick={onConfirm}
+    disabled={loading}
+    className="flex-1 h-10 rounded-lg bg-[#C41E3A] text-white text-sm font-semibold hover:bg-[#A0192F] shadow-sm transition inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+  >
+            {loading && <Loader2 size={15} className="animate-spin" />}
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>;
+}
 function Modal({ title, children, onClose, className = "max-w-lg" }) {
   return <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className={`bg-white rounded-2xl shadow-2xl w-full ${className}`}>
@@ -188,6 +255,8 @@ export {
   BouncingDots,
   Btn,
   Card,
+  Checkbox,
+  ConfirmDialog,
   Input,
   Modal,
   SearchableSelect,

@@ -18,9 +18,10 @@ import {
   FileUp,
   Download
 } from "lucide-react";
-import { Btn, BouncingDots, Card, Modal, SearchableSelect } from "../../shared/ui";
+import { Btn, BouncingDots, Card, Checkbox, ConfirmDialog, Modal, SearchableSelect } from "../../shared/ui";
 import {
   QUESTION_IMPORT_COLUMNS,
+  deleteMultipleQuestions,
   deleteQuestion,
   downloadQuestionModel,
   exportQuestions,
@@ -44,6 +45,10 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [deletingSelected, setDeletingSelected] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [verifyingId, setVerifyingId] = useState(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -79,6 +84,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
       if (cancelled) return;
       setRows(res.data ?? []);
       setTotalRecords(res.totalRecords ?? 0);
+      setSelectedIds(new Set());
     }).catch(err => {
       if (cancelled) return;
       setError(err instanceof Error ? err.message : "Failed to load questions.");
@@ -115,7 +121,6 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
   }, [totalPages, safePage]);
 
   const handleDelete = async (q) => {
-    if (!window.confirm("Are you sure you want to delete this question?")) return;
     setDeletingId(q.questionId);
     try {
       const msg = await deleteQuestion(q.questionId);
@@ -130,6 +135,92 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  /** Opens the confirmation dialog before deleting a single question. */
+  const requestDelete = (q) => {
+    setConfirmState({
+      title: "Delete question?",
+      message: "This question and all of its answer options will be permanently removed. This action cannot be undone.",
+      confirmLabel: "Delete",
+      action: () => handleDelete(q)
+    });
+  };
+
+  /** Runs the pending confirmation action, then closes the dialog. */
+  const confirmAction = async () => {
+    if (!confirmState) return;
+    setConfirmBusy(true);
+    try {
+      await confirmState.action();
+    } finally {
+      setConfirmBusy(false);
+      setConfirmState(null);
+    }
+  };
+
+  /** Question ids on the currently visible page. */
+  const pageIds = useMemo(() => rows.map(r => r.questionId), [rows]);
+  const allPageSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id));
+  const somePageSelected = pageIds.some(id => selectedIds.has(id));
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  /** Selects or deselects every question on the current page. */
+  const toggleSelectAllPage = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (pageIds.length > 0 && pageIds.every(id => next.has(id))) {
+        pageIds.forEach(id => next.delete(id));
+      } else {
+        pageIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleDeleteSelected = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    const label = `${ids.length} question${ids.length === 1 ? "" : "s"}`;
+    setDeletingSelected(true);
+    try {
+      const msg = await deleteMultipleQuestions(ids);
+      showToast("success", msg || `${label} deleted successfully`);
+      setSelectedIds(new Set());
+      // Step back a page when the current page was fully cleared.
+      if (rows.length > 0 && ids.length >= rows.length && page > 1) {
+        setPage(page - 1);
+      } else {
+        load();
+      }
+    } catch (err) {
+      showToast("error", err instanceof Error ? err.message : "Failed to delete questions.");
+    } finally {
+      setDeletingSelected(false);
+    }
+  };
+
+  /** Opens the confirmation dialog before deleting every selected question. */
+  const requestDeleteSelected = () => {
+    const count = selectedIds.size;
+    if (count === 0) return;
+    const label = `${count} question${count === 1 ? "" : "s"}`;
+    setConfirmState({
+      title: `Delete ${label}?`,
+      message: `The selected ${label} and all of their answer options will be permanently removed. This action cannot be undone.`,
+      confirmLabel: `Delete ${label}`,
+      action: handleDeleteSelected
+    });
   };
 
   const handleToggleVerified = async (q) => {
@@ -284,12 +375,45 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
       )}
 
       <div className="flex flex-col gap-4">
+        {!loading && !error && totalRecords > 0 && (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <label className="flex items-center gap-2.5 text-sm text-[#1A202C] cursor-pointer select-none">
+              <Checkbox
+                checked={allPageSelected}
+                indeterminate={!allPageSelected && somePageSelected}
+                onChange={toggleSelectAllPage}
+              />
+              Select all on this page
+            </label>
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-[#718096]">{selectedIds.size} selected</span>
+                <Btn
+                  variant="danger"
+                  icon={deletingSelected ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  onClick={requestDeleteSelected}
+                  disabled={deletingSelected}
+                >
+                  {deletingSelected ? "Deleting…" : `Delete Selected (${selectedIds.size})`}
+                </Btn>
+                <Btn variant="ghost" onClick={clearSelection} disabled={deletingSelected}>Clear</Btn>
+              </div>
+            )}
+          </div>
+        )}
         {rows.map((q, qi) => {
           const options = Array.isArray(q.questionOptions) ? q.questionOptions : [];
+          const selected = selectedIds.has(q.questionId);
           return (
-            <Card key={q.questionId} className="p-5">
+            <Card key={q.questionId} className={`p-5 ${selected ? "ring-1 ring-[#C41E3A]" : ""}`}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={selected}
+                    onChange={() => toggleSelect(q.questionId)}
+                    title="Select question"
+                    className="mr-0.5"
+                  />
                   <span className="text-xs font-semibold text-[#718096] bg-[#EDF2F7] px-2 py-0.5 rounded-md">Q{start + qi + 1}</span>
                   <span className="text-xs text-[#C41E3A] font-medium">{q.courseName}</span>
                   {q.dateTime && <span className="text-xs text-[#718096]">· {new Date(q.dateTime).toLocaleDateString()}</span>}
@@ -315,7 +439,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
                   </button>
                   <button onClick={() => onEdit(q)} className="p-1.5 text-[#718096] hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"><Edit2 size={13} /></button>
                   <button
-                    onClick={() => handleDelete(q)}
+                    onClick={() => requestDelete(q)}
                     disabled={deletingId === q.questionId}
                     className="p-1.5 text-[#718096] hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
                     title="Delete question"
@@ -434,6 +558,17 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
           </div>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title={confirmState?.title}
+        message={confirmState?.message}
+        confirmLabel={confirmState?.confirmLabel}
+        cancelLabel="Cancel"
+        loading={confirmBusy}
+        onConfirm={confirmAction}
+        onCancel={() => !confirmBusy && setConfirmState(null)}
+      />
 
       {toast && (
         <div className={`fixed top-5 right-5 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === "success" ? "bg-emerald-500" : "bg-red-500"}`}>

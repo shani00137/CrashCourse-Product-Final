@@ -21,6 +21,14 @@ async function editQuestion(payload) {
 async function deleteQuestion(questionId) {
   return apiFetch(`/api/Questions/api/Questions/DeleteQuestion/${questionId}`);
 }
+/** Deletes several questions in one request. `questionIds` is an array of numeric ids. */
+async function deleteMultipleQuestions(questionIds) {
+  const questionList = (questionIds ?? []).map((questionId) => ({ questionId }));
+  return apiFetch("/api/Questions/api/Questions/DeleteMultipleQuestions", {
+    method: "POST",
+    body: JSON.stringify({ questionList })
+  });
+}
 async function ocrPdf(payload) {
   return apiFetch("/api/Questions/api/Questions/OcrPdf", {
     method: "POST",
@@ -120,6 +128,7 @@ async function exportQuestions({ courseId = null, searchTerm = "" } = {}) {
 }
 export {
   bulkSaveQuestions,
+  deleteMultipleQuestions,
   deleteQuestion,
   downloadQuestionModel,
   editQuestion,
