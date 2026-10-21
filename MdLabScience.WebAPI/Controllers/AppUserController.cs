@@ -517,6 +517,197 @@ namespace MdLabScience.Controllers
             }
         }
 
+        // Mobile app: called after a Google Play subscription purchase so the
+        // server can verify the purchase token before granting Pro. When Play
+        // credentials are configured the token is validated against the Google
+        // Play Developer API and Pro is activated on success. When they aren't
+        // configured yet, the purchase is recorded as a manual owner-approval
+        // request instead, so the app degrades gracefully.
+        [HttpPost]
+        [Route("api/AppUser/VerifyGooglePlayPurchase")]
+        public async Task<IActionResult> VerifyGooglePlayPurchase([FromBody] VerifyPurchaseModel value)
+        {
+            try
+            {
+                // A logged-in user may only verify a purchase for their own account.
+                string? tokenUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!IsAdmin && (string.IsNullOrEmpty(tokenUserId) || tokenUserId != value.AppUserId.ToString()))
+                {
+                    return StatusCode(403, new
+                    {
+                        succeeded = false,
+                        verified = false,
+                        pending = false,
+                        message = "You can only verify a purchase for your own account."
+                    });
+                }
+
+                if (value.AppUserId <= 0
+                    || string.IsNullOrWhiteSpace(value.ProductId)
+                    || string.IsNullOrWhiteSpace(value.PurchaseToken))
+                {
+                    return Ok(new
+                    {
+                        succeeded = false,
+                        verified = false,
+                        pending = false,
+                        message = "Missing purchase details."
+                    });
+                }
+
+                using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+                {
+                    var appUser = db.AppUserTbs.Where(x => x.AppUserId == value.AppUserId).FirstOrDefault();
+                    if (appUser == null)
+                    {
+                        return Ok(new { succeeded = false, verified = false, pending = false, message = "User not found." });
+                    }
+
+                    var applicant = db.ApplicantsTbs.Where(x => x.ApplicantId == appUser.ApplicantId).FirstOrDefault();
+                    if (applicant == null)
+                    {
+                        return Ok(new { succeeded = false, verified = false, pending = false, message = "Applicant not found." });
+                    }
+
+                    var verifier = new GooglePlayVerifier(_config);
+                    GooglePlayVerificationResult result;
+                    try
+                    {
+                        result = await verifier.VerifySubscriptionAsync(value.ProductId, value.PurchaseToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        return Ok(new
+                        {
+                            succeeded = false,
+                            verified = false,
+                            pending = false,
+                            message = "We couldn't verify this purchase right now. Please try again. (" + ex.Message + ")"
+                        });
+                    }
+
+                    DateTime nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
+
+                    if (result.Configured)
+                    {
+                        if (!result.Active)
+                        {
+                            return Ok(new
+                            {
+                                succeeded = false,
+                                verified = false,
+                                pending = false,
+                                message = result.Message ?? "This subscription is not active."
+                            });
+                        }
+
+                        // Activate Pro. Prefer the store's real expiry so renewals
+                        // line up; fall back to one month when the store didn't
+                        // report one.
+                        DateTime expiryLocal = result.ExpiryUtc.HasValue
+                            ? TimeZoneInfo.ConvertTimeFromUtc(result.ExpiryUtc.Value, Pakistan_Standard_Time)
+                            : nowLocal.AddMonths(1);
+
+                        if (!applicant.RegistrationDate.HasValue)
+                        {
+                            applicant.RegistrationDate = nowLocal;
+                        }
+                        applicant.ExpiryDate = expiryLocal;
+                        applicant.IsActive = expiryLocal > nowLocal;
+
+                        // Close any open manual request so the admin panel stops
+                        // showing a stale "Pending" row.
+                        var openRequests = db.ProUpgradeRequestTbs
+                            .Where(x => x.AppUserId == value.AppUserId && x.Status == "Pending")
+                            .ToList();
+                        foreach (var request in openRequests)
+                        {
+                            request.Status = "Approved";
+                            request.ResolvedOn = nowLocal;
+                        }
+
+                        // Buying "more courses" from the app: enroll the user in
+                        // the selected course as part of the same purchase.
+                        EnsureApplicantCourse(db, applicant.ApplicantId ?? 0, value.CourseId ?? 0);
+
+                        db.SaveChanges();
+
+                        return Ok(new
+                        {
+                            succeeded = true,
+                            verified = true,
+                            pending = false,
+                            isActive = applicant.IsActive,
+                            expiryDate = applicant.ExpiryDate,
+                            message = "Subscription verified. Your Pro access is now active."
+                        });
+                    }
+
+                    // Play credentials aren't configured yet: record the purchase
+                    // as a manual request so the owner can approve it, rather than
+                    // granting Pro for an unverified token.
+                    var pending = db.ProUpgradeRequestTbs
+                        .Where(x => x.AppUserId == value.AppUserId && x.Status == "Pending")
+                        .OrderByDescending(x => x.ProUpgradeRequestId)
+                        .FirstOrDefault();
+                    if (pending == null)
+                    {
+                        pending = new ProUpgradeRequestTb
+                        {
+                            AppUserId = value.AppUserId,
+                            ApplicantId = applicant.ApplicantId ?? 0,
+                            RequestedOn = nowLocal,
+                            Status = "Pending"
+                        };
+                        db.ProUpgradeRequestTbs.Add(pending);
+                    }
+                    else
+                    {
+                        pending.RequestedOn = nowLocal;
+                    }
+
+                    // The purchase is recorded for owner approval; also enroll
+                    // the user in the extra course they selected so the request
+                    // carries the full intent.
+                    EnsureApplicantCourse(db, applicant.ApplicantId ?? 0, value.CourseId ?? 0);
+
+                    db.SaveChanges();
+
+                    return Ok(new
+                    {
+                        succeeded = true,
+                        verified = false,
+                        pending = true,
+                        message = "Purchase received. Your Pro access will be activated after a quick verification."
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { succeeded = false, verified = false, pending = false, message = ex.Message });
+            }
+        }
+
+        // Mobile app: enrolled the applicant in an extra course they bought from
+        // the "more courses" screen. Idempotent — re-buying the same course does
+        // not create a duplicate selection row.
+        [NonAction]
+        private void EnsureApplicantCourse(MdLabScienceDbEntities db, int applicantId, int courseId)
+        {
+            if (applicantId <= 0 || courseId <= 0) return;
+
+            bool alreadyEnrolled = db.ApplicantCourseSelectionTbs
+                .Any(x => x.ApplicantId == applicantId && x.CourseId == courseId);
+            if (alreadyEnrolled) return;
+
+            db.ApplicantCourseSelectionTbs.Add(new ApplicantCourseSelectionTb
+            {
+                ApplicantId = applicantId,
+                CourseId = courseId,
+                Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time)
+            });
+        }
+
         [AcceptVerbs("GET", "POST")]
         [Route("api/AppUser/ChangeAIAllowed")]
         public IActionResult ChangeAIAllowed([FromQuery] int appUserId, [FromQuery] bool isAIAllowed)
@@ -705,14 +896,20 @@ namespace MdLabScience.Controllers
                 {
                     int ApplicantId = Query.ApplicantId;
                     var ApplicantInformation = db.ApplicantsTbs.Where(x => x.ApplicantId == ApplicantId).FirstOrDefault();
+                    if (ApplicantInformation == null)
+                    {
+                        // No applicant row linked to this app user — nothing to
+                        // validate; treat the account as inactive rather than
+                        // throwing a NullReferenceException.
+                        return false;
+                    }
                     bool CheckCourseExpiry = AppUserValidation.CheckCourseExpire(ApplicantInformation.RegistrationDate ?? default, ApplicantInformation.ExpiryDate ?? DateTime.MaxValue, ApplicantInformation.IsActive ?? false);
                     if (CheckCourseExpiry == true)
                     {
-                        var UpdateUser = db.ApplicantsTbs.Where(x => x.ApplicantId == ApplicantId).FirstOrDefault();
-                        UpdateUser.IsActive = false;
-
-                        var UpdateAppUser = db.AppUserTbs.Where(x => x.ApplicantId == ApplicantId).FirstOrDefault();
-                        UpdateAppUser.Status = false;
+                        // Reuse the already-tracked rows instead of re-querying
+                        // the same tables (which could return null).
+                        ApplicantInformation.IsActive = false;
+                        Query.Status = false;
                         db.SaveChanges();
 
                         _response = false;

@@ -197,6 +197,29 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
 
+        // Latest released app version, read by the in-app "update available"
+        // prompt (Course/GetLatestAppVersion). Seeded with one row so the
+        // endpoint returns a sane default instead of an empty result.
+        RunMigration("AppVersionTb", @"
+            IF OBJECT_ID(N'dbo.AppVersionTb', N'U') IS NULL
+            BEGIN
+                CREATE TABLE AppVersionTb (
+                    Id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    LatestVersion NVARCHAR(50) NOT NULL CONSTRAINT DF_AppVersionTb_LatestVersion DEFAULT (N'1.0.0'),
+                    ForceUpdate BIT NOT NULL CONSTRAINT DF_AppVersionTb_ForceUpdate DEFAULT (0),
+                    StoreUrl NVARCHAR(500) NULL,
+                    Message NVARCHAR(500) NULL,
+                    UpdatedAt DATETIME NOT NULL CONSTRAINT DF_AppVersionTb_UpdatedAt DEFAULT (GETDATE())
+                );
+            END
+            IF NOT EXISTS (SELECT 1 FROM AppVersionTb)
+            BEGIN
+                INSERT INTO AppVersionTb (LatestVersion, ForceUpdate, StoreUrl, Message, UpdatedAt)
+                VALUES (N'1.0.0', 0, N'market://details?id=com.onlinecrashcourse.app',
+                        N'An updated version of Crash Course is available.', GETDATE());
+            END
+        ");
+
         // Extra course fields surfaced in the admin panel and the mobile app:
         // SaleRate (double), IsForMobile (bit) and CoursePhotourl (nvarchar).
         // IsForMobile defaults to 1 so existing courses keep appearing on the

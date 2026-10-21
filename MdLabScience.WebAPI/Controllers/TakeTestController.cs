@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MdLabScience.Controllers
@@ -666,16 +667,13 @@ ORDER BY o.TestQuestionOptionId";
             {
                 using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
                 {
-                    var QuestionCount = db.TestQuestionOptionTbs.Where(x => x.TestId == value.TestId && x.QuestionId == value.QuestionId).OrderBy(x => x.QuestionId).ToList();
-                    if (QuestionCount != null)
-                    {
-                        for (int i = 0; i < QuestionCount.Count; i++)
-                        {
-                            QuestionCount[i].isSelected = value.IsSelected;
-                            QuestionCount[i].Answer = value.Answer;
-                            db.SaveChanges();
-                        }
-                    }
+                    // Direct parameterized UPDATE instead of loading the rows:
+                    // materializing TestQuestionOptionTb throws
+                    // SqlNullValueException when Answer/Options hold NULL, and
+                    // it also avoids calling SaveChanges() once per row.
+                    db.Database.ExecuteSqlRaw(
+                        "UPDATE dbo.TestQuestionOptionTb SET isSelected = {0}, Answer = {1} WHERE TestId = {2} AND QuestionId = {3}",
+                        value.IsSelected, (object)value.Answer ?? DBNull.Value, value.TestId, value.QuestionId);
                 }
             }
         }
@@ -1007,8 +1005,27 @@ Return a JSON array with this exact structure:
 ]";
 
             ChatClient client = new ChatClient(model, apiKey);
-            ChatCompletion completion = await client.CompleteChatAsync(new UserChatMessage(prompt));
-            string responseText = string.Join("", completion.Content.Select(c => c.Text));
+            string responseText;
+            try
+            {
+                // Generation for many questions can be slow, but an unbounded
+                // await leaves the mobile app stuck on "Generating..." with no
+                // feedback. Cap it and surface a clear message instead.
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+                ChatCompletion completion = await client.CompleteChatAsync(
+                    new ChatMessage[] { new UserChatMessage(prompt) },
+                    options: null,
+                    cancellationToken: cts.Token);
+                responseText = string.Join("", completion.Content.Select(c => c.Text));
+            }
+            catch (OperationCanceledException)
+            {
+                return (false, "AI took too long to respond. Please try again with fewer questions.", new List<GenerateAiQuestionItem>());
+            }
+            catch (Exception ex)
+            {
+                return (false, "AI generation failed: " + ex.Message, new List<GenerateAiQuestionItem>());
+            }
 
             responseText = responseText.Trim();
             if (responseText.StartsWith("```"))
@@ -1021,10 +1038,23 @@ Return a JSON array with this exact structure:
                 responseText = responseText.Trim();
             }
 
-            var questions = JsonSerializer.Deserialize<List<GenerateAiQuestionItem>>(responseText,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            try
+            {
+                var questions = JsonSerializer.Deserialize<List<GenerateAiQuestionItem>>(responseText,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            return (true, "OK", questions ?? new List<GenerateAiQuestionItem>());
+                if (questions == null || questions.Count == 0)
+                {
+                    return (false, "AI returned no questions. Please try again.", new List<GenerateAiQuestionItem>());
+                }
+                return (true, "OK", questions);
+            }
+            catch (JsonException)
+            {
+                // The model sometimes wraps JSON in prose or returns an
+                // unexpected shape. Report it instead of a generic 500.
+                return (false, "AI returned an unreadable response. Please try again.", new List<GenerateAiQuestionItem>());
+            }
         }
 
         [NonAction]

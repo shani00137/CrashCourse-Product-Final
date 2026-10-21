@@ -19,6 +19,25 @@ const addYearsISO = (n) => {
   d.setFullYear(d.getFullYear() + n);
   return d.toISOString().slice(0, 10);
 };
+const fmtISO = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/** Today + n days (local, so it never shifts a day at UTC boundaries). */
+const addDaysISO = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return fmtISO(d);
+};
+/** base date + n years, falling back to today when base is invalid. */
+const addYearsFromISO = (base, n) => {
+  const d = parseDate(base) ?? new Date();
+  d.setFullYear(d.getFullYear() + n);
+  return fmtISO(d);
+};
+/** Trial ⇢ Pro presets: 5 free days vs. a full year. */
+const PLAN_PRESETS = {
+  trial: { label: "Trial", hint: "5 days free", color: "#F59E0B" },
+  pro: { label: "Pro", hint: "1 year", color: "#16A34A" },
+};
 const parseDate = (s) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((s || "").trim());
   if (!m) return null;
@@ -96,7 +115,7 @@ export function MobileUsersScreen() {
       !!from &&
       to.getTime() > Date.now() &&
       to.getTime() - from.getTime() <= 6 * 24 * 60 * 60 * 1000;
-    return trial ? "Trial (5 days)" : "Pro";
+    return trial ? "trial" : "pro";
   })();
 
   useEffect(() => {
@@ -381,6 +400,28 @@ export function MobileUsersScreen() {
     } catch {
       // detail lookup is best-effort; keep default dates
     }
+  }
+
+  /** Explicit Trial / Pro choice: presets the matching date window. */
+  function pickPlanType(type) {
+    setPlanError("");
+    setPlanSuccess("");
+    if (planCloseTimer.current) {
+      clearTimeout(planCloseTimer.current);
+      planCloseTimer.current = null;
+    }
+    if (type === "trial") {
+      // A trial is recognised by the app when the window is ≤ 6 days and has
+      // not expired yet, so it always starts today.
+      const from = todayISO();
+      setPlanFrom(from);
+      setPlanTo(addDaysISO(5));
+      return;
+    }
+    // Pro keeps the existing start date (registration date) and runs 1 year.
+    const from = parseDate(planFrom) ? planFrom : todayISO();
+    setPlanFrom(from);
+    setPlanTo(addYearsFromISO(from, 1));
   }
 
   async function handleApplyPlan() {
@@ -786,15 +827,53 @@ export function MobileUsersScreen() {
         <Modal title={`Change Plan — ${displayName(planTarget)}`} onClose={closePlan}>
           <div className="flex flex-col gap-4">
             <p className="text-xs text-[#718096] -mt-1">
-              {displayName(planTarget)} ({planTarget.userName}) {planTarget.status ? "is currently Active" : "is currently Inactive"}. Set the Pro-active window below.
+              {displayName(planTarget)} ({planTarget.userName}) {planTarget.status ? "is currently Active" : "is currently Inactive"}. Pick Trial or Pro below, then adjust the dates if needed.
             </p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Plan Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(PLAN_PRESETS).map(([key, preset]) => {
+                  const active = planPreview === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => pickPlanType(key)}
+                      aria-pressed={active}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left transition ${
+                        active ? "shadow-sm" : "bg-white hover:bg-[#F7FAFC]"
+                      }`}
+                      style={
+                        active
+                          ? { backgroundColor: `${preset.color}14`, borderColor: preset.color }
+                          : { borderColor: "rgba(0,0,0,0.12)" }
+                      }
+                    >
+                      {key === "trial" ? (
+                        <Timer size={16} style={{ color: active ? preset.color : "#718096" }} />
+                      ) : (
+                        <Zap size={16} style={{ color: active ? preset.color : "#718096" }} />
+                      )}
+                      <span className="flex flex-col leading-tight">
+                        <span className="text-sm font-semibold text-[#1A202C]">{preset.label}</span>
+                        <span className="text-[11px] text-[#718096]">{preset.hint}</span>
+                      </span>
+                      {active && <Check size={15} className="ml-auto" style={{ color: preset.color }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <Input label="Active From" type="date" value={planFrom} onChange={e => setPlanFrom(e.target.value)} />
             <Input label="Active Until" type="date" value={planTo} onChange={e => setPlanTo(e.target.value)} />
             {planPreview && (
               <div className="flex items-center gap-2 text-sm rounded-lg px-3 py-2.5 border bg-[#F7FAFC] border-[rgba(0,0,0,0.08)]">
-                <Zap size={14} className={planPreview === "Pro" ? "text-emerald-600" : "text-amber-500"} />
+                <Zap size={14} className={planPreview === "pro" ? "text-emerald-600" : "text-amber-500"} />
                 <span className="text-[#1A202C]">
-                  Resulting plan: <span className={`font-semibold ${planPreview === "Pro" ? "text-emerald-600" : "text-amber-600"}`}>{planPreview}</span>
+                  Resulting plan:{" "}
+                  <span className={`font-semibold ${planPreview === "pro" ? "text-emerald-600" : "text-amber-600"}`}>
+                    {planPreview === "trial" ? "Trial (5 days)" : "Pro"}
+                  </span>
                 </span>
               </div>
             )}

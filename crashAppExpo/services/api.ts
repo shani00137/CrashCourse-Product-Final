@@ -6,7 +6,10 @@ export interface CourseInfo {
   courseCode?: string;
   courseName?: string;
   isActive?: boolean;
+  isForMobile?: boolean;
+  saleRate?: number;
   courseUrl?: string;
+  coursePhotoUrl?: string;
 }
 
 export interface CourseMaterialInfo {
@@ -250,12 +253,25 @@ export async function getActiveCourses(): Promise<CourseInfo[]> {
     .filter((it) => it && typeof it === "object")
     .map((it) => {
       const c = it as Record<string, unknown>;
+      // The backend serializes its `CoursePhotourl` property as `coursePhotourl`
+      // (only the first letter is lower-cased); accept the explicitly-cased
+      // variant too in case a future model renames it to `CoursePhotoUrl`.
+      const photo =
+        typeof c.coursePhotourl === "string"
+          ? c.coursePhotourl
+          : typeof c.coursePhotoUrl === "string"
+            ? c.coursePhotoUrl
+            : "";
       return {
         courseId: Number(c.courseId) || 0,
         courseCode: typeof c.courseCode === "string" ? c.courseCode : "",
         courseName: typeof c.courseName === "string" ? c.courseName : "",
         isActive: typeof c.isActive === "boolean" ? c.isActive : true,
+        isForMobile:
+          typeof c.isForMobile === "boolean" ? c.isForMobile : undefined,
+        saleRate: Number(c.saleRate) || 0,
         courseUrl: typeof c.courseUrl === "string" ? c.courseUrl : "",
+        coursePhotoUrl: photo,
       };
     })
     .filter((c) => c.courseId > 0);
@@ -271,6 +287,15 @@ export function coursePdfUrl(courseUrl?: string): string | null {
   if (/^https?:\/\//i.test(courseUrl)) return courseUrl;
   const base = API_BASE_URL.replace(/\/api\/?$/, "");
   return `${base}/${courseUrl.replace(/^\/+/, "")}`;
+}
+
+/**
+ * Builds an absolute URL for a course thumbnail. The backend stores the photo
+ * as a relative "Uploads/CoursePhoto-…" path served from the site root, so it
+ * follows the same resolution rules as course materials.
+ */
+export function courseImageUrl(coursePhotoUrl?: string): string | null {
+  return coursePdfUrl(coursePhotoUrl);
 }
 
 /**
@@ -691,6 +716,151 @@ export async function getMyProRequest(
     // Older backends don't have this endpoint — degrade to no status.
     return null;
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Stripe payments (Pro subscription + course purchases)
+ * ------------------------------------------------------------------ */
+
+export interface StripePlanInfo {
+  /** True when the server has Stripe credentials configured. */
+  configured: boolean;
+  /** Publishable key (pk_...) the native SDK is initialized with. */
+  publishableKey: string;
+  /** Price of one Pro month, in the smallest currency unit. */
+  amountCents: number;
+  currency: string;
+  /** Months of Pro granted per payment (the app only sells 1). */
+  months: number;
+  /** True when the AI Assistant add-on can be offered at checkout. */
+  aiAssistantAvailable: boolean;
+  /** Price of the AI Assistant add-on, in the smallest currency unit. */
+  aiAssistantAmountCents: number;
+  /** USD base of the add-on (for "just $10" style copy). */
+  aiAssistantUsd: number;
+}
+
+/**
+ * Reads the Stripe publishable key / Pro price the server is configured with,
+ * so the paywall never hardcodes either. Falls back to a safe "not configured"
+ * shape when the endpoint is unreachable.
+ */
+export async function getStripePlan(): Promise<StripePlanInfo> {
+  try {
+    const data = await get<unknown>(ENDPOINTS.stripePlan);
+    const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+    return {
+      configured: r.configured === true,
+      publishableKey: typeof r.publishableKey === "string" ? r.publishableKey : "",
+      amountCents: typeof r.amountCents === "number" ? r.amountCents : 0,
+      currency: typeof r.currency === "string" ? r.currency : "PKR",
+      months: typeof r.months === "number" && r.months > 0 ? r.months : 1,
+      aiAssistantAvailable: r.aiAssistantAvailable === true,
+      aiAssistantAmountCents:
+        typeof r.aiAssistantAmountCents === "number" ? r.aiAssistantAmountCents : 0,
+      aiAssistantUsd: typeof r.aiAssistantUsd === "number" ? r.aiAssistantUsd : 10,
+    };
+  } catch {
+    return {
+      configured: false,
+      publishableKey: "",
+      amountCents: 0,
+      currency: "PKR",
+      months: 1,
+      aiAssistantAvailable: false,
+      aiAssistantAmountCents: 0,
+      aiAssistantUsd: 10,
+    };
+  }
+}
+
+export interface StripeIntentionInput {
+  appUserId: number;
+  /** Optional: the course bought from the course store. */
+  courseId?: number;
+  /** Optional: include the AI Assistant add-on in this payment. */
+  includeAIAssistant?: boolean;
+}
+
+export interface StripeIntentionResult {
+  succeeded: boolean;
+  configured: boolean;
+  /** Passed straight to the native Stripe SDK to open the PaymentSheet. */
+  clientSecret?: string;
+  publishableKey?: string;
+  paymentIntentId?: string;
+  amountCents?: number;
+  currency?: string;
+  months?: number;
+  includeAIAssistant?: boolean;
+  aiAssistantAmountCents?: number;
+  message: string;
+}
+
+/**
+ * Asks the backend to create a Stripe PaymentIntent. The server prices it from
+ * the course object (or the Pro price) and returns the `clientSecret` the
+ * native SDK needs to open the PaymentSheet.
+ */
+export async function createStripePaymentIntent(
+  input: StripeIntentionInput
+): Promise<StripeIntentionResult> {
+  const data = await request<unknown>(ENDPOINTS.stripeCreatePaymentIntent, input);
+  const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+  return {
+    succeeded: r.succeeded === true,
+    configured: r.configured === true,
+    clientSecret: typeof r.clientSecret === "string" ? r.clientSecret : undefined,
+    publishableKey: typeof r.publishableKey === "string" ? r.publishableKey : undefined,
+    paymentIntentId: typeof r.paymentIntentId === "string" ? r.paymentIntentId : undefined,
+    amountCents: typeof r.amountCents === "number" ? r.amountCents : undefined,
+    currency: typeof r.currency === "string" ? r.currency : undefined,
+    months: typeof r.months === "number" ? r.months : undefined,
+    includeAIAssistant: r.includeAIAssistant === true,
+    aiAssistantAmountCents:
+      typeof r.aiAssistantAmountCents === "number" ? r.aiAssistantAmountCents : undefined,
+    message: typeof r.message === "string" ? r.message : "",
+  };
+}
+
+export interface StripeConfirmInput {
+  appUserId: number;
+  /** Stripe PaymentIntent id reported by the native SDK, when available. */
+  paymentIntentId?: string;
+  courseId?: number;
+  /** Set when the AI Assistant add-on was part of this payment. */
+  includeAIAssistant?: boolean;
+}
+
+export interface StripeConfirmResult {
+  succeeded: boolean;
+  verified: boolean;
+  pending: boolean;
+  isActive?: boolean;
+  isAIAllowed?: boolean;
+  expiryDate?: string;
+  message: string;
+}
+
+/**
+ * Tells the backend a Stripe payment finished. The server re-checks the
+ * PaymentIntent with Stripe before granting access, so a spoofed client
+ * response can't unlock an account.
+ */
+export async function confirmStripePayment(
+  input: StripeConfirmInput
+): Promise<StripeConfirmResult> {
+  const data = await request<unknown>(ENDPOINTS.stripeConfirm, input);
+  const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+  return {
+    succeeded: r.succeeded === true,
+    verified: r.verified === true,
+    pending: r.pending === true,
+    isActive: typeof r.isActive === "boolean" ? r.isActive : undefined,
+    isAIAllowed: typeof r.isAIAllowed === "boolean" ? r.isAIAllowed : undefined,
+    expiryDate: typeof r.expiryDate === "string" ? r.expiryDate : undefined,
+    message: typeof r.message === "string" ? r.message : "",
+  };
 }
 
 export interface ExerciseInfo {

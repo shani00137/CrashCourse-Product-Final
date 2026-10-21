@@ -94,11 +94,12 @@ export default function SplashScreen() {
     });
   }, []);
 
-  // Route to the dashboard when a session was restored, otherwise to login.
+  // Route to the dashboard when a session was restored, otherwise to the
+  // public course home so guests can browse before signing in.
   useEffect(() => {
     if (!userLoaded) return;
     const timer = setTimeout(() => {
-      router.replace(user ? "/(tabs)/dashboard" : "/login");
+      router.replace(user ? "/(tabs)/dashboard" : "/home");
     }, 3200);
     return () => clearTimeout(timer);
   }, [user, userLoaded]);

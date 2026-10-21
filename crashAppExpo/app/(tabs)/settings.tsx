@@ -275,22 +275,34 @@ export default function SettingsScreen() {
               </View>
               <Text style={styles.planSubtitle}>
                 {user.isTrial
-                  ? "You're on the 5-day free trial. Request the Pro upgrade below — the owner approves it before your plan changes."
+                  ? "You're on the 5-day free trial. Subscribe to Pro with Google Pay or card, or ask the owner to approve an upgrade manually."
                   : `Premium plan active${
                       user.planExpiry ? ` until ${user.planExpiry}` : ""
                     }.`}
               </Text>
-              {user.isTrial && !pendingRequest && (
+              {user.isTrial && (
                 <TouchableOpacity
                   style={styles.planButton}
+                  onPress={() => router.push("/upgrade")}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="diamond-outline" size={16} color={colors.white} />
+                  <Text style={styles.planButtonText}>Subscribe to Pro</Text>
+                </TouchableOpacity>
+              )}
+              {user.isTrial && !pendingRequest && (
+                <TouchableOpacity
+                  style={[styles.planButton, styles.planButtonSecondary]}
                   onPress={() => {
                     setPlanMessage(null);
                     setPlanModalOpen(true);
                   }}
                   activeOpacity={0.85}
                 >
-                  <Ionicons name="send-outline" size={16} color={colors.white} />
-                  <Text style={styles.planButtonText}>Request Pro Upgrade</Text>
+                  <Ionicons name="send-outline" size={16} color={colors.primary} />
+                  <Text style={[styles.planButtonText, styles.planButtonSecondaryText]}>
+                    Request Manual Upgrade
+                  </Text>
                 </TouchableOpacity>
               )}
               {user.isTrial && pendingRequest && (
@@ -713,6 +725,15 @@ const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
     borderRadius: radii.lg,
     paddingVertical: 14,
     ...shadows.sm,
+  },
+  planButtonSecondary: {
+    marginTop: 10,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryBorder,
+  },
+  planButtonSecondaryText: {
+    color: colors.primary,
   },
   planButtonText: {
     color: colors.white,

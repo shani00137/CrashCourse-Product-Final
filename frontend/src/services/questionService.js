@@ -29,6 +29,13 @@ async function deleteMultipleQuestions(questionIds) {
     body: JSON.stringify({ questionList })
   });
 }
+/** Deletes every question (and its options) that belongs to a course. */
+async function deleteQuestionsByCourse(courseId) {
+  return apiFetch("/api/Questions/api/Questions/DeleteQuestionsByCourse", {
+    method: "POST",
+    body: JSON.stringify({ courseId })
+  });
+}
 async function ocrPdf(payload) {
   return apiFetch("/api/Questions/api/Questions/OcrPdf", {
     method: "POST",
@@ -130,6 +137,7 @@ export {
   bulkSaveQuestions,
   deleteMultipleQuestions,
   deleteQuestion,
+  deleteQuestionsByCourse,
   downloadQuestionModel,
   editQuestion,
   exportQuestions,

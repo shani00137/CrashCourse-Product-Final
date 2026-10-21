@@ -411,6 +411,41 @@ namespace MdLabScience.Controllers
             }
         }
 
+        // Deletes every question (and its options) that belongs to a course.
+        // Used by the admin "Delete All" action on the Question Bank when a
+        // course filter is active.
+        [HttpPost]
+        [Route("api/Questions/DeleteQuestionsByCourse")]
+        public String DeleteQuestionsByCourse([FromBody] QuestionDeleteMD value)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                if (value == null || value.CourseId <= 0)
+                {
+                    return "No course selected.";
+                }
+
+                var questions = db.QuestionsTBs.Where(x => x.CourseId == value.CourseId).ToList();
+                if (questions.Count == 0)
+                {
+                    return "No questions found for this course.";
+                }
+
+                foreach (var q in questions)
+                {
+                    var options = db.QuestionOptionsTbs.Where(x => x.QuestionId == q.QuestionId).ToList();
+                    if (options.Count > 0)
+                    {
+                        db.QuestionOptionsTbs.RemoveRange(options);
+                    }
+                    db.QuestionsTBs.Remove(q);
+                }
+                db.SaveChanges();
+
+                return questions.Count.ToString() + " Record deleted..!";
+            }
+        }
+
         [HttpDelete]
         [Route("api/Questions/DeleteQuestionOption/{id},{OpId}")]
         public String DeleteQuestionOption(int id, int OpId)

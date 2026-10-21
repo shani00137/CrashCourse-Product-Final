@@ -89,6 +89,13 @@ login(
     }
   };
 
+  // Return to the public course list. `dismissTo` pops back to /home when it
+  // is on the stack (the normal entry point) and replaces this screen with it
+  // otherwise (for example when login was opened via a deep link).
+  const goToCourses = () => {
+    router.dismissTo("/home");
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -109,6 +116,15 @@ login(
         >
           <View style={styles.heroTopGlow} />
           <View style={styles.heroBottomGlow} />
+
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={goToCourses}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={16} color={colors.white} />
+            <Text style={styles.backButtonText}>Courses</Text>
+          </TouchableOpacity>
 
           <View style={styles.brandRow}>
             <View style={styles.brandLogo}>
@@ -223,6 +239,24 @@ const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
     paddingBottom: 64,
     paddingHorizontal: 24,
     overflow: "hidden",
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radii.round,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    marginBottom: 18,
+  },
+  backButtonText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "600",
   },
   heroTopGlow: {
     position: "absolute",

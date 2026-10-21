@@ -23,6 +23,7 @@ import {
   QUESTION_IMPORT_COLUMNS,
   deleteMultipleQuestions,
   deleteQuestion,
+  deleteQuestionsByCourse,
   downloadQuestionModel,
   exportQuestions,
   getAllQuestions,
@@ -47,6 +48,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
   const [deletingId, setDeletingId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [deletingSelected, setDeletingSelected] = useState(false);
+  const [deletingCourse, setDeletingCourse] = useState(false);
   const [confirmState, setConfirmState] = useState(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [verifyingId, setVerifyingId] = useState(null);
@@ -223,6 +225,36 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
     });
   };
 
+  /** Deletes every question that belongs to the currently selected course. */
+  const handleDeleteCourse = async () => {
+    if (!courseId) return;
+    setDeletingCourse(true);
+    try {
+      const msg = await deleteQuestionsByCourse(courseId);
+      showToast("success", msg || "All questions for this course were deleted.");
+      setSelectedIds(new Set());
+      setPage(1);
+      load();
+    } catch (err) {
+      showToast("error", err instanceof Error ? err.message : "Failed to delete the course questions.");
+    } finally {
+      setDeletingCourse(false);
+    }
+  };
+
+  /** Opens the confirmation dialog before wiping every question of a course. */
+  const requestDeleteCourse = () => {
+    if (!courseId) return;
+    const course = courses.find(c => c.courseId === courseId);
+    const name = course ? `${course.courseCode} — ${course.courseName}` : "the selected course";
+    setConfirmState({
+      title: "Delete all questions of this course?",
+      message: `Every question and all of its answer options in "${name}" will be permanently removed. This action cannot be undone.`,
+      confirmLabel: "Delete all questions",
+      action: handleDeleteCourse
+    });
+  };
+
   const handleToggleVerified = async (q) => {
     const next = q.verifiedBy === "Human" ? "" : "Human";
     setVerifyingId(q.questionId);
@@ -314,6 +346,17 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
           <Btn variant="outline" icon={<FileUp size={14} />} onClick={() => setScreen("upload-from-pdf")}>Upload from PDF</Btn>
           <Btn variant="outline" icon={<Sparkles size={14} />} onClick={() => setScreen("generate-ai-question")}>Generate with AI</Btn>
           <Btn variant="outline" icon={<ShieldCheck size={14} />} onClick={() => setScreen("question-correction")}>Question Correction</Btn>
+          {courseId ? (
+            <Btn
+              variant="danger"
+              icon={deletingCourse ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              onClick={requestDeleteCourse}
+              disabled={deletingCourse || loading || totalRecords === 0}
+              title="Delete every question of the selected course"
+            >
+              {deletingCourse ? "Deleting…" : "Delete All"}
+            </Btn>
+          ) : null}
           <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setScreen("question-form")}>Add Question</Btn>
         </div>
       </div>

@@ -9,7 +9,8 @@
     "scheme": "crashcourse",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.crashcourse.app"
+      "bundleIdentifier": "com.crashcourse.app",
+      "deploymentTarget": "16.4"
     },
     "android": {
       "adaptiveIcon": {
@@ -58,7 +59,13 @@
       ],
       "./plugins/with-onnxruntime",
       "./plugins/with-android-16kb",
-      "expo-asset"
+      "expo-asset",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "enableGooglePay": true
+        }
+      ]
     ]
   }
 }

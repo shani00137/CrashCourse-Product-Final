@@ -13,7 +13,7 @@ import {
   FlatList,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { radii, shadows, type ThemePalette } from "@/constants/theme";
 import { useTheme, useThemedStyles } from "@/context/ThemeContext";
@@ -31,6 +31,10 @@ export default function RegisterScreen() {
   const { colors, gradients } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const { login } = useApp();
+  // When the user picks a course on the public home page we arrive here with
+  // ?courseId=…; pre-select it once the course list has loaded.
+  const params = useLocalSearchParams<{ courseId?: string }>();
+  const preselectedCourseId = Number(params.courseId) || 0;
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -42,6 +46,9 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [courseId, setCourseId] = useState<number | null>(null);
   const [courseName, setCourseName] = useState("");
+  // Trial vs Pro choice. Pro sends the user to the payment screen after the
+  // account is created; Trial goes straight to the dashboard.
+  const [plan, setPlan] = useState<"trial" | "pro">("trial");
 
   const [courses, setCourses] = useState<CourseInfo[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
@@ -117,6 +124,18 @@ const filteredCourses = courses.filter((c) => {
     return (c.coutryName ?? "").toLowerCase().includes(q);
   });
 
+  // Apply the ?courseId= preselection once courses have loaded. Only fills an
+  // empty selection so the user can still change it freely afterwards.
+  useEffect(() => {
+    if (preselectedCourseId <= 0) return;
+    if (courseId != null) return;
+    const match = courses.find((c) => c.courseId === preselectedCourseId);
+    if (match) {
+      setCourseId(match.courseId);
+      setCourseName(match.courseName ?? "");
+    }
+  }, [preselectedCourseId, courses, courseId]);
+
   const validate = (): string | null => {
     if (!firstName.trim() || !lastName.trim()) return "Please enter your full name";
     if (!mobile.trim() || mobile.trim().replace(/\D/g, "").length < 10)
@@ -168,7 +187,7 @@ const filteredCourses = courses.filter((c) => {
         // Registration succeeded; continue without a token on login failure.
       }
 
-login(
+      login(
         {
           name: `${firstName.trim()} ${lastName.trim()}`,
           isGuest: false,
@@ -184,7 +203,21 @@ login(
         },
         token
       );
-      router.replace("/(tabs)/dashboard");
+      if (plan === "pro") {
+        // Continue into the paywall for the single course the user selected at
+        // registration: pass its id/name/rate so checkout prices that course.
+        const selected = courses.find((c) => c.courseId === courseId);
+        router.replace({
+          pathname: "/upgrade",
+          params: {
+            courseId: String(courseId),
+            courseName,
+            coursePrice: String(selected?.saleRate ?? 0),
+          },
+        });
+      } else {
+        router.replace("/(tabs)/dashboard");
+      }
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Registration failed. Please try again."
@@ -262,14 +295,14 @@ login(
           <View style={styles.headerGlow} />
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => router.navigate("/login")}
             activeOpacity={0.8}
           >
             <Ionicons name="arrow-back" size={18} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.pageTitle}>Create Account</Text>
           <Text style={styles.pageSubtitle}>
-            Join as a trial user — 5 days free access
+            Create your account — start a free trial or go Pro
           </Text>
         </LinearGradient>
 
@@ -562,16 +595,67 @@ login(
             </View>
           </Modal>
 
-          {/* Trial note */}
-          <View style={styles.trialBox}>
-            <Ionicons name="gift-outline" size={18} color={colors.green} />
-            <View style={styles.trialTextBlock}>
-              <Text style={styles.trialTitle}>5-Day Free Trial</Text>
-              <Text style={styles.trialSubtitle}>
-                Your account will be active for 5 days starting today.
-              </Text>
-            </View>
+          {/* Plan selection */}
+          <Text style={[styles.formSectionTitle, styles.sectionSpacing]}>
+            Choose Your Plan
+          </Text>
+
+          <View style={styles.planRow}>
+            <TouchableOpacity
+              style={[styles.planOption, plan === "trial" && styles.planOptionSelected]}
+              onPress={() => setPlan("trial")}
+              activeOpacity={0.9}
+            >
+              <View style={styles.planOptionHeader}>
+                <Ionicons name="gift-outline" size={18} color={colors.green} />
+                {plan === "trial" ? (
+                  <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                ) : null}
+              </View>
+              <Text style={styles.planOptionTitle}>Trial</Text>
+              <Text style={styles.planOptionPrice}>Free</Text>
+              <Text style={styles.planOptionDesc}>5 days full access</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.planOption, plan === "pro" && styles.planOptionSelected]}
+              onPress={() => setPlan("pro")}
+              activeOpacity={0.9}
+            >
+              <View style={styles.planOptionHeader}>
+                <Ionicons name="diamond-outline" size={18} color={colors.amber} />
+                {plan === "pro" ? (
+                  <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                ) : null}
+              </View>
+              <Text style={styles.planOptionTitle}>Pro</Text>
+              <Text style={styles.planOptionPrice}>Subscribe</Text>
+              <Text style={styles.planOptionDesc}>Unlimited access</Text>
+            </TouchableOpacity>
           </View>
+
+          {plan === "trial" ? (
+            <View style={styles.trialBox}>
+              <Ionicons name="gift-outline" size={18} color={colors.green} />
+              <View style={styles.trialTextBlock}>
+                <Text style={styles.trialTitle}>5-Day Free Trial</Text>
+                <Text style={styles.trialSubtitle}>
+                  Your account will be active for 5 days starting today.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.trialBox}>
+              <Ionicons name="card-outline" size={18} color={colors.amber} />
+              <View style={styles.trialTextBlock}>
+                <Text style={styles.trialTitle}>Continue to payment</Text>
+                <Text style={styles.trialSubtitle}>
+                  After creating your account you'll pick a Pro plan and pay
+                  securely with Google Pay or card.
+                </Text>
+              </View>
+            </View>
+          )}
 
           {error ? (
             <View style={styles.errorBox}>
@@ -588,13 +672,18 @@ login(
             {loading ? (
               <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.submitButtonText}>Create My Account</Text>
+              <Text style={styles.submitButtonText}>
+                {plan === "pro" ? "Create Account & Continue" : "Create My Account"}
+              </Text>
             )}
           </TouchableOpacity>
 
           <Text style={styles.loginLink}>
             Already have an account?{" "}
-            <Text style={styles.loginLinkText} onPress={() => router.back()}>
+            <Text
+              style={styles.loginLinkText}
+              onPress={() => router.navigate("/login")}
+            >
               Sign In
             </Text>
           </Text>
@@ -853,6 +942,45 @@ const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   trialSubtitle: {
     fontSize: 12,
     color: colors.green,
+    marginTop: 2,
+  },
+  planRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  planOption: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    padding: 14,
+    ...shadows.sm,
+  },
+  planOptionSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+  },
+  planOptionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  planOptionTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: colors.foreground,
+  },
+  planOptionPrice: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.primary,
+    marginTop: 2,
+  },
+  planOptionDesc: {
+    fontSize: 12,
+    color: colors.mutedForeground,
     marginTop: 2,
   },
   errorBox: {

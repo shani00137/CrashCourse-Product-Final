@@ -339,6 +339,20 @@ namespace MdLabScience.Controllers
                     ApplicantCourseSelectionTb course = new ApplicantCourseSelectionTb();
                     course.ApplicantId = MaxId;
                     course.CourseId = value.CourseId;
+                    // Numeric CourseCode copied from CourseTb so the selection
+                    // matches the admin panel's course code convention.
+                    if (value.CourseId > 0)
+                    {
+                        var selectedCourse = db.CourseTbs
+                            .Where(x => x.CourseId == value.CourseId)
+                            .FirstOrDefault();
+                        if (selectedCourse != null
+                            && !String.IsNullOrWhiteSpace(selectedCourse.CourseCode)
+                            && int.TryParse(selectedCourse.CourseCode, out int parsedCode))
+                        {
+                            course.CourseCode = parsedCode;
+                        }
+                    }
                     course.Date = value.RegistrationDate;
                     db.ApplicantCourseSelectionTbs.Add(course);
 
@@ -411,6 +425,19 @@ namespace MdLabScience.Controllers
                         if (UpdateExtingCourses != null)
                         {
                             UpdateExtingCourses.CourseId = value.CourseId;
+                            // Keep CourseCode in sync with the newly selected course.
+                            if (value.CourseId > 0)
+                            {
+                                var selectedCourse = db.CourseTbs
+                                    .Where(x => x.CourseId == value.CourseId)
+                                    .FirstOrDefault();
+                                UpdateExtingCourses.CourseCode =
+                                    selectedCourse != null
+                                    && !String.IsNullOrWhiteSpace(selectedCourse.CourseCode)
+                                    && int.TryParse(selectedCourse.CourseCode, out int parsedCode)
+                                        ? parsedCode
+                                        : UpdateExtingCourses.CourseCode;
+                            }
                             db.SaveChanges();
                         }
 

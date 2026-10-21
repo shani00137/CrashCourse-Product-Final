@@ -276,6 +276,9 @@ export default function TestScreen() {
         difficulty: createMode === "ai" ? difficulty : "",
       });
       if (!res.succeeded || !res.testId) {
+        // Close the create dialog first — the error dialog is a Modal that
+        // would otherwise render behind it, leaving no visible feedback.
+        setCreateDialog(false);
         notify("Could not create test", res.message || "Unexpected response from server.", { icon: "alert-circle-outline", tone: "danger" });
         return;
       }
@@ -297,6 +300,7 @@ export default function TestScreen() {
       await loadTests();
       await openTest(created, false);
     } catch (e) {
+      setCreateDialog(false);
       notify("Error", e instanceof Error ? e.message : String(e), { icon: "alert-circle-outline", tone: "danger" });
     } finally {
       setCreating(false);

@@ -1,5 +1,5 @@
-// export const API_BASE_URL = "http://localhost:5006/api";
- export const API_BASE_URL = "https://crashcourseonlin.net/api";
+export const API_BASE_URL = "http://172.16.131.61:5006/api";
+//  export const API_BASE_URL = "https://crashcourseonlin.net/api";
 export const ENDPOINTS = {
   saveApplicants: "/Applicant/api/Applicant/SaveApplicants",
   saveAppUser: "/AppUser/api/AppUser/SaveAppUser",
@@ -18,6 +18,9 @@ export const ENDPOINTS = {
     `/AppUser/api/AppUser/GetDetailOfUserById/${appUserId}`,
   changePlan: "/AppUser/api/AppUser/ChangePlan",
   requestProUpgrade: "/AppUser/api/AppUser/RequestProUpgrade",
+  stripePlan: "/Stripe/api/Stripe/Plan",
+  stripeCreatePaymentIntent: "/Stripe/api/Stripe/CreatePaymentIntent",
+  stripeConfirm: "/Stripe/api/Stripe/Confirm",
   myProRequest: (appUserId: number) =>
     `/ProUpgradeRequest/api/ProUpgradeRequest/MyRequest/${appUserId}`,
   takeExercise: (start: number, end: number, courseId: number) =>
