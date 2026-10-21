@@ -618,6 +618,7 @@ const pct = Math.round((score / totalQ) * 100);
         <ProctorMonitor
           active={phase === "exercise" && !finished}
           onViolation={handleViolation}
+          questionNumber={current + 1}
         />
 
       {/* Question sweep */}

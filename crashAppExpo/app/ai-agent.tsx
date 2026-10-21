@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { radii, shadows, type ThemePalette } from "@/constants/theme";
 import { useTheme, useThemedStyles } from "@/context/ThemeContext";
@@ -119,6 +120,10 @@ export default function AIAgentScreen() {
   const { colors, gradients } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const { user } = useApp();
+  const insets = useSafeAreaInsets();
+  // Keep the input clear of the Android navigation bar (and the iOS home
+  // indicator): pad the input bar by the device's bottom safe-area inset.
+  const bottomInset = Math.max(insets.bottom, 12);
   const domain = resolveDomain(user?.courseName);
   const courseName = user?.courseName || "your course";
   const [messages, setMessages] = useState<Message[]>(() => [buildWelcomeMessage(domain, courseName)]);
@@ -254,8 +259,8 @@ export default function AIAgentScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior="padding"
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
     >
       {/* Header */}
       <LinearGradient
@@ -382,8 +387,12 @@ export default function AIAgentScreen() {
         )}
       </ScrollView>
 
+      <Text style={styles.disclaimer}>
+        AI Tutor · Crash Course · For study purposes only
+      </Text>
+
       {/* Input */}
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, { paddingBottom: bottomInset }]}>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -415,14 +424,9 @@ export default function AIAgentScreen() {
           />
         </TouchableOpacity>
       </View>
-
-      <Text style={styles.disclaimer}>
-        AI Tutor · Crash Course · For study purposes only
-      </Text>
     </KeyboardAvoidingView>
   );
 }
-
 const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
   flex: {
     flex: 1,
@@ -652,7 +656,7 @@ const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({
     textAlign: "center",
     fontSize: 10,
     color: colors.mutedForeground,
-    paddingBottom: 24,
+    paddingTop: 8,
     backgroundColor: colors.background,
   },
   lockedContent: {

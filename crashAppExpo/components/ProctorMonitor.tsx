@@ -10,15 +10,30 @@ import { analyzeProctorFrame } from "@/services/api";
 interface ProctorMonitorProps {
   active: boolean;
   onViolation: () => void;
+  /**
+   * 1-based number of the question currently on screen. A silent frame is
+   * taken once when this reaches each entry in `targets`.
+   */
+  questionNumber?: number;
+  /** Question numbers to capture at. Defaults to 5, 10 and 20. */
+  targets?: number[];
 }
 
+/** Question positions that are silently photographed in every exercise. */
+export const PROCTOR_CAPTURE_POINTS = [5, 10, 20];
+
 /**
- * Captures a single silent frame from the front camera right when an exercise
- * starts (first question) and uploads it to the backend, which saves the image
- * into the web root and runs the server-side YOLO phone detector. If a phone is
- * detected the session is terminated via `onViolation`.
+ * Silently captures frames from the front camera at fixed points in an exercise
+ * (questions 5, 10 and 20 by default) and uploads each to the backend, which
+ * saves the image into the web root and runs the server-side YOLO phone
+ * detector. If a phone is detected the session is terminated via `onViolation`.
  */
-export default function ProctorMonitor({ active, onViolation }: ProctorMonitorProps) {
+export default function ProctorMonitor({
+  active,
+  onViolation,
+  questionNumber = 1,
+  targets = PROCTOR_CAPTURE_POINTS,
+}: ProctorMonitorProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
   const [ready, setReady] = useState(false);
@@ -29,13 +44,15 @@ export default function ProctorMonitor({ active, onViolation }: ProctorMonitorPr
   const grantedRef = useRef(granted);
   const readyRef = useRef(ready);
   const lockedRef = useRef(false);
-  const capturedRef = useRef(false);
   const onViolationRef = useRef(onViolation);
 
   activeRef.current = active;
   grantedRef.current = granted;
   readyRef.current = ready;
   onViolationRef.current = onViolation;
+
+  // Question numbers already photographed this session (reset when inactive).
+  const capturedRef = useRef<Set<number>>(new Set());
 
   const capture = async () => {
     if (!activeRef.current || lockedRef.current) return;
@@ -50,17 +67,14 @@ export default function ProctorMonitor({ active, onViolation }: ProctorMonitorPr
       });
     } catch (e) {
       if (__DEV__) console.log("[proctor] capture failed:", String(e));
-      capturedRef.current = true;
       return;
     }
-
-    capturedRef.current = true;
 
     try {
       const result = await analyzeProctorFrame(photo.uri);
       if (__DEV__) {
         console.log(
-          `[proctor] backend analysis: phoneDetected=${result.phoneDetected} image=${result.imageUrl ?? ""} ${result.message ?? ""}`
+          `[proctor] backend analysis (Q${questionNumber}): phoneDetected=${result.phoneDetected} image=${result.imageUrl ?? ""} ${result.message ?? ""}`
         );
       }
       if (result.phoneDetected && !lockedRef.current) {
@@ -81,17 +95,20 @@ export default function ProctorMonitor({ active, onViolation }: ProctorMonitorPr
   const captureRef = useRef(capture);
   captureRef.current = capture;
 
+  // Take a frame once the camera is ready and the current question is one of
+  // the capture points (5, 10, 20). Each point is captured at most once.
   useEffect(() => {
-    if (active && granted && ready) {
-      if (!capturedRef.current) {
-        captureRef.current();
-      }
-    }
-  }, [active, granted, ready]);
+    if (!active || !granted || !ready) return;
+    if (!targets.includes(questionNumber)) return;
+    if (capturedRef.current.has(questionNumber)) return;
+
+    capturedRef.current.add(questionNumber);
+    captureRef.current();
+  }, [active, granted, ready, questionNumber, targets]);
 
   useEffect(() => {
     if (!active) {
-      capturedRef.current = false;
+      capturedRef.current = new Set();
       lockedRef.current = false;
     }
   }, [active]);
