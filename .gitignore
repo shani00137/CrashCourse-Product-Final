@@ -10,6 +10,8 @@ dist/
 MdLabScience.WebAPI/wwwroot/
 
 # Local secrets and configuration
-# appsettings.Development.json
-# appsettings.Local.json
-# appsettings.Production.json
+# Real secrets live in appsettings.Development.json / appsettings.Production.json
+# (gitignored). env var overrides also work, e.g. Stripe__SecretKey.
+appsettings.Development.json
+appsettings.Local.json
+appsettings.Production.json
