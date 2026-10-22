@@ -25,17 +25,17 @@ jobs:
     with:
       environment: development
       api_url: https://development.crashcourseonlin.net
+    secrets:
+      ftp_server: ${{ secrets.FTP_SERVER }}
+      ftp_username: ${{ secrets.FTP_USERNAME }}
+      ftp_password: ${{ secrets.FTP_PASSWORD }}
+      ftp_server_dir: ${{ secrets.FTP_SERVER_DIR }}
       db_connection_string: ${{ secrets.DB_CONNECTION_STRING }}
       openai_api_key: ${{ secrets.OPENAI_API_KEY }}
       stripe_secret_key: ${{ secrets.STRIPE_SECRET_KEY }}
       stripe_publishable_key: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
       stripe_webhook_secret: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       smtp_password: ${{ secrets.SMTP_PASSWORD }}
-    secrets:
-      ftp_server: ${{ secrets.FTP_SERVER }}
-      ftp_username: ${{ secrets.FTP_USERNAME }}
-      ftp_password: ${{ secrets.FTP_PASSWORD }}
-      ftp_server_dir: ${{ secrets.FTP_SERVER_DIR }}
 
   deploy-production:
     name: Deploy to Production
@@ -44,14 +44,14 @@ jobs:
     with:
       environment: production
       api_url: https://crashcourseonlin.net
+    secrets:
+      ftp_server: ${{ secrets.FTP_SERVER_PRODUCTION }}
+      ftp_username: ${{ secrets.FTP_USERNAME_PRODUCTION }}
+      ftp_password: ${{ secrets.FTP_PASSWORD_PRODUCTION }}
+      ftp_server_dir: ${{ secrets.FTP_SERVER_DIR_PRODUCTION }}
       db_connection_string: ${{ secrets.DB_CONNECTION_STRING_PRODUCTION }}
       openai_api_key: ${{ secrets.OPENAI_API_KEY_PRODUCTION }}
       stripe_secret_key: ${{ secrets.STRIPE_SECRET_KEY_PRODUCTION }}
       stripe_publishable_key: ${{ secrets.STRIPE_PUBLISHABLE_KEY_PRODUCTION }}
       stripe_webhook_secret: ${{ secrets.STRIPE_WEBHOOK_SECRET_PRODUCTION }}
       smtp_password: ${{ secrets.SMTP_PASSWORD_PRODUCTION }}
-    secrets:
-      ftp_server: ${{ secrets.FTP_SERVER_PRODUCTION }}
-      ftp_username: ${{ secrets.FTP_USERNAME_PRODUCTION }}
-      ftp_password: ${{ secrets.FTP_PASSWORD_PRODUCTION }}
-      ftp_server_dir: ${{ secrets.FTP_SERVER_DIR_PRODUCTION }}

@@ -11,30 +11,24 @@ on:
         type: string
         required: true
         description: Base API URL baked into the frontend build
+    secrets:
       # Runtime secrets for the API. These are NOT stored in the repo: the
       # workflow writes them into appsettings.Production.json at publish time.
       # When a value is empty the placeholder from the committed file is kept,
       # so a missing secret degrades gracefully (the app stays up but may lack
       # that feature) instead of crashing with a bad connection string.
       db_connection_string:
-        type: string
         required: false
       openai_api_key:
-        type: string
         required: false
       stripe_secret_key:
-        type: string
         required: false
       stripe_publishable_key:
-        type: string
         required: false
       stripe_webhook_secret:
-        type: string
         required: false
       smtp_password:
-        type: string
         required: false
-    secrets:
       ftp_server:
         required: true
       ftp_username:
@@ -85,12 +79,12 @@ jobs:
 
       - name: Write runtime configuration (appsettings.Production.json)
         env:
-          DB_CONNECTION_STRING: ${{ inputs.db_connection_string }}
-          OPENAI_API_KEY: ${{ inputs.openai_api_key }}
-          STRIPE_SECRET_KEY: ${{ inputs.stripe_secret_key }}
-          STRIPE_PUBLISHABLE_KEY: ${{ inputs.stripe_publishable_key }}
-          STRIPE_WEBHOOK_SECRET: ${{ inputs.stripe_webhook_secret }}
-          SMTP_PASSWORD: ${{ inputs.smtp_password }}
+          DB_CONNECTION_STRING: ${{ secrets.db_connection_string }}
+          OPENAI_API_KEY: ${{ secrets.openai_api_key }}
+          STRIPE_SECRET_KEY: ${{ secrets.stripe_secret_key }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.stripe_publishable_key }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.stripe_webhook_secret }}
+          SMTP_PASSWORD: ${{ secrets.smtp_password }}
         run: |
           python3 - <<'PY'
           import json, os, pathlib, sys
