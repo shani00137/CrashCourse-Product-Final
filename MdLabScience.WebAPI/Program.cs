@@ -70,6 +70,21 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddOpenApi();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Treat an unconfigured placeholder as "no connection string" so a deploy that
+// forgot to inject the real secret fails loudly at startup instead of throwing
+// a confusing SQL error on every request (SqlException 53).
+if (!string.IsNullOrWhiteSpace(connectionString)
+    && connectionString.Contains("REPLACE_ME", StringComparison.OrdinalIgnoreCase))
+{
+    Console.WriteLine(
+        "[Config] WARNING: ConnectionStrings:DefaultConnection is still the " +
+        "placeholder value. Set it via the deploy secret (DB_CONNECTION_STRING) " +
+        "or the host's app settings (ConnectionStrings__DefaultConnection). " +
+        "The API will start but database-backed endpoints will be unavailable.");
+    connectionString = null;
+}
+
 if (!string.IsNullOrEmpty(connectionString))
 {
     var optionsBuilder = new DbContextOptionsBuilder<MdLabScienceDbEntities>();

@@ -11,6 +11,23 @@ on:
         type: string
         required: true
         description: Base API URL baked into the frontend build
+      # Runtime secrets for the API. These are NOT stored in the repo: the
+      # workflow writes them into appsettings.Production.json at publish time.
+      # When a value is empty the placeholder from the committed file is kept,
+      # so a missing secret degrades gracefully (the app stays up but may lack
+      # that feature) instead of crashing with a bad connection string.
+      db_connection_string:
+        required: false
+      openai_api_key:
+        required: false
+      stripe_secret_key:
+        required: false
+      stripe_publishable_key:
+        required: false
+      stripe_webhook_secret:
+        required: false
+      smtp_password:
+        required: false
     secrets:
       ftp_server:
         required: true
@@ -59,6 +76,51 @@ jobs:
         run: |
           mkdir -p MdLabScience.WebAPI/wwwroot
           cp -R frontend/dist/. MdLabScience.WebAPI/wwwroot/
+
+      - name: Write runtime configuration (appsettings.Production.json)
+        env:
+          DB_CONNECTION_STRING: ${{ inputs.db_connection_string }}
+          OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+          STRIPE_SECRET_KEY: ${{ inputs.stripe_secret_key }}
+          STRIPE_PUBLISHABLE_KEY: ${{ inputs.stripe_publishable_key }}
+          STRIPE_WEBHOOK_SECRET: ${{ inputs.stripe_webhook_secret }}
+          SMTP_PASSWORD: ${{ inputs.smtp_password }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, sys
+
+          path = pathlib.Path("MdLabScience.WebAPI/appsettings.Production.json")
+          data = json.loads(path.read_text())
+
+          def set_if(d, keys, value):
+              # Only overwrite when the secret is present; otherwise keep the
+              # committed placeholder so the app still boots.
+              if value:
+                  cur = d
+                  for k in keys[:-1]:
+                      cur = cur.setdefault(k, {})
+                  cur[keys[-1]] = value
+
+          db = os.environ.get("DB_CONNECTION_STRING", "").strip()
+          set_if(data, ["ConnectionStrings", "DefaultConnection"], db)
+          set_if(data, ["OpenAI", "ApiKey1"], os.environ.get("OPENAI_API_KEY", "").strip())
+          set_if(data, ["Stripe", "SecretKey"], os.environ.get("STRIPE_SECRET_KEY", "").strip())
+          set_if(data, ["Stripe", "PublishableKey"], os.environ.get("STRIPE_PUBLISHABLE_KEY", "").strip())
+          set_if(data, ["Stripe", "WebhookSecret"], os.environ.get("STRIPE_WEBHOOK_SECRET", "").strip())
+          set_if(data, ["Smtp", "Password"], os.environ.get("SMTP_PASSWORD", "").strip())
+
+          path.write_text(json.dumps(data, indent=2) + "\n")
+          print("Configured sections:", [k for k in ("ConnectionStrings", "OpenAI", "Stripe", "Smtp") if k in data])
+
+          # Never deploy a placeholder database connection to a live environment:
+          # that is exactly what caused the SqlException 53 outage.
+          if not db:
+              sys.exit(
+                  "ERROR: DB_CONNECTION_STRING secret is not set. Add it in "
+                  "GitHub > Settings > Secrets and variables > Actions, then re-run "
+                  "the deploy. Refusing to publish a placeholder database connection."
+              )
+          PY
 
       - name: Restore dependencies
         run: dotnet restore MdLabScience.WebAPI/MdLabScience.WebAPI.csproj
