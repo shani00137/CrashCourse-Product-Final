@@ -1,5 +1,6 @@
 using MdLabScience.DbContext;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -260,6 +261,48 @@ if (!string.IsNullOrEmpty(connectionString))
 app.UseSwagger();
 app.UseSwaggerUI();
 app.MapOpenApi();
+
+// Global exception handler: catches anything thrown further down the pipeline,
+// logs the full exception to stdout (visible in the host's log) and returns the
+// details as JSON so an opaque "500 Internal Server Error" becomes diagnosable.
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var feature = context.Features.Get<IExceptionHandlerFeature>();
+        var ex = feature?.Error;
+
+        Console.WriteLine("==================== UNHANDLED EXCEPTION ====================");
+        Console.WriteLine($"[{DateTime.UtcNow:O}] {context.Request.Method} {context.Request.Path}{context.Request.QueryString}");
+        Console.WriteLine(ex?.ToString() ?? "No exception details available.");
+        if (ex?.InnerException != null)
+        {
+            Console.WriteLine("--- Inner exception ---");
+            Console.WriteLine(ex.InnerException.ToString());
+        }
+        Console.WriteLine("============================================================");
+
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json; charset=utf-8";
+
+        // The handler is also used for API clients, so return the message rather
+        // than the default empty body. Stack traces are included so problems can
+        // be diagnosed remotely; nothing sensitive should be thrown by design.
+        var payload = new
+        {
+            succeeded = false,
+            message = ex?.Message ?? "An unexpected error occurred.",
+            type = ex?.GetType().FullName,
+            detail = ex?.ToString(),
+            innerException = ex?.InnerException?.Message,
+            path = context.Request.Path.Value,
+            timestampUtc = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(payload);
+    });
+});
+
 app.UseCors("Frontend");
 //swagger UI finalzed
 app.UseDefaultFiles();
