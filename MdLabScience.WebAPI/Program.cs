@@ -25,16 +25,29 @@ builder.Services.AddCors(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Read the signing key but never pass null to Encoding.GetBytes: a
+        // missing/stale appsettings.json on the host previously turned every
+        // authenticated request into an opaque 500 (ArgumentNullException 's').
+        var jwtKey = builder.Configuration["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(jwtKey))
+        {
+            Console.WriteLine(
+                "[Config] WARNING: Jwt:Key is missing from configuration. " +
+                "Falling back to the built-in default key so the API stays " +
+                "reachable. Set Jwt:Key (or Jwt__Key) on the host.");
+            jwtKey = "MdLabScience-Super-Secret-Signing-Key-ChangeMe-In-Production-2026";
+        }
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "MdLabScience.WebAPI",
+            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "MdLabScience.Clients",
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+                Encoding.UTF8.GetBytes(jwtKey))
         };
         options.Events = new JwtBearerEvents
         {

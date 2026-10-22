@@ -37,4 +37,18 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Never ship local/development configuration or secrets to a published
+         output. Only the base appsettings.json and the target environment's
+         file should be deployed. -->
+    <Content Update="appsettings.Development.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </Content>
+    <Content Update="appsettings.Local.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
