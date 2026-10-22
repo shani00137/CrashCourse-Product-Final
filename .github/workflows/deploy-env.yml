@@ -17,16 +17,22 @@ on:
       # so a missing secret degrades gracefully (the app stays up but may lack
       # that feature) instead of crashing with a bad connection string.
       db_connection_string:
+        type: string
         required: false
       openai_api_key:
+        type: string
         required: false
       stripe_secret_key:
+        type: string
         required: false
       stripe_publishable_key:
+        type: string
         required: false
       stripe_webhook_secret:
+        type: string
         required: false
       smtp_password:
+        type: string
         required: false
     secrets:
       ftp_server:
