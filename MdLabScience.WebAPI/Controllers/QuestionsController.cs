@@ -590,7 +590,7 @@ namespace MdLabScience.Controllers
         /// <summary>Header columns ImportQuestion requires, in workbook order.</summary>
         private static readonly string[] QuestionImportColumns =
         {
-            "CourseId", "QuestionContent", "Option1", "Option2", "Option3", "Option4", "RightOption"
+            "CourseId", "QuestionContent", "Option1", "RightOption"
         };
 
         /// <summary>Reads a cell as trimmed text, tolerating header-name casing.</summary>
@@ -688,20 +688,29 @@ namespace MdLabScience.Controllers
                         if (!hasContent ||
                             !ValidateIdentity(courseText, rightText) ||
                             !int.TryParse(rightText, out int rightOption) ||
-                            rightOption < 1 || rightOption > 4)
+                            rightOption < 1 || rightOption > 8)
                         {
                             skipped++;
                             continue;
                         }
 
-                        var optionTexts = new string[4];
+                        var optionTexts = new List<string>(8);
                         for (int k = 1; k <= 8; k++)
                         {
-                            optionTexts[k - 1] = Cell(row, "Option" + k);
+                            string opt = Cell(row, "Option" + k);
+                            if (!string.IsNullOrWhiteSpace(opt))
+                            {
+                                optionTexts.Add(opt);
+                            }
                         }
-                        if (optionTexts.Any(string.IsNullOrWhiteSpace))
+                        if (optionTexts.Count < 1)
                         {
-                            skipped++; // all four options are required by the importer
+                            skipped++; // at least one option is required by the importer
+                            continue;
+                        }
+                        if (rightOption > optionTexts.Count)
+                        {
+                            skipped++; // right option must refer to a provided option
                             continue;
                         }
 
@@ -712,12 +721,12 @@ namespace MdLabScience.Controllers
                         question.DateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
                         db.QuestionsTBs.Add(question);
 
-                        for (int k = 1; k <= 4; k++)
+                        for (int k = 0; k < optionTexts.Count; k++)
                         {
                             QuestionOptionsTb option = new QuestionOptionsTb();
                             option.QuestionId = nextQuestionId;
-                            option.Options = optionTexts[k - 1];
-                            option.IsRightAns = rightOption == k;
+                            option.Options = optionTexts[k];
+                            option.IsRightAns = rightOption == k + 1;
                             db.QuestionOptionsTbs.Add(option);
                         }
 
@@ -733,7 +742,7 @@ namespace MdLabScience.Controllers
 
                 string message = imported > 0
                     ? imported + (imported == 1 ? " question imported successfully." : " questions imported successfully.")
-                    : "No questions were imported. Check that CourseId is a valid course and RightOption is 1-4.";
+                    : "No questions were imported. Check that CourseId is a valid course and RightOption is 1-8.";
                 if (skipped > 0)
                 {
                     message += " " + skipped + (skipped == 1 ? " row was skipped" : " rows were skipped") + " because the data was invalid.";
