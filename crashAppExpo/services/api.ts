@@ -753,7 +753,7 @@ export async function getStripePlan(): Promise<StripePlanInfo> {
       configured: r.configured === true,
       publishableKey: typeof r.publishableKey === "string" ? r.publishableKey : "",
       amountCents: typeof r.amountCents === "number" ? r.amountCents : 0,
-      currency: typeof r.currency === "string" ? r.currency : "PKR",
+      currency: typeof r.currency === "string" ? r.currency : "USD",
       months: typeof r.months === "number" && r.months > 0 ? r.months : 1,
       aiAssistantAvailable: r.aiAssistantAvailable === true,
       aiAssistantAmountCents:
@@ -765,7 +765,7 @@ export async function getStripePlan(): Promise<StripePlanInfo> {
       configured: false,
       publishableKey: "",
       amountCents: 0,
-      currency: "PKR",
+      currency: "USD",
       months: 1,
       aiAssistantAvailable: false,
       aiAssistantAmountCents: 0,

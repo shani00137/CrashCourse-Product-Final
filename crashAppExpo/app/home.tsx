@@ -20,14 +20,14 @@ import { getActiveCourses, courseImageUrl, type CourseInfo } from "@/services/ap
 
 const logoSource = require("@/assets/logo/logo.jpg");
 
-/** Formats a sale rate as "PKR 12,500" (or "Free" when unset). */
+/** Formats a sale rate as "$12,500" (or "Free" when unset). */
 function formatPrice(value?: number): string {
   const amount = Number(value) || 0;
   if (amount <= 0) return "Free";
   const hasDecimals = Math.round(amount * 100) % 100 !== 0;
   const [whole, decimal] = amount.toFixed(hasDecimals ? 2 : 0).split(".");
   const withSeparators = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `PKR ${withSeparators}${decimal ? `.${decimal}` : ""}`;
+  return `$${withSeparators}${decimal ? `.${decimal}` : ""}`;
 }
 
 /**

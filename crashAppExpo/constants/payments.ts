@@ -16,8 +16,7 @@ import { Platform } from "react-native";
  * `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`. When the backend returns a key from
  * `/Stripe/Plan` that one takes precedence.
  */
-export const STRIPE_PUBLISHABLE_KEY =
-  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+export const STRIPE_PUBLISHABLE_KEY ="pk_live_51USZYi7kdKcBFKmJO0MCtXBrrT5l9HMpYEKglEhm2cCSC3nkKlKcGUOnmNQL3jrSP80OXbwK3MZlRaem1BIVniVK001GbINtSl"
 
 /** Languages Stripe's PaymentSheet should support, most preferred first. */
 export const STRIPE_MERCHANT_COUNTRY = "PK";

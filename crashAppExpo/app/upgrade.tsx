@@ -83,7 +83,7 @@ export default function UpgradeScreen() {
   const signedIn = !!user && !user.isGuest;
   const configured = !!publishableKey && (!plan || plan.configured);
   const aiAvailable = !!plan?.aiAssistantAvailable;
-  const currency = plan?.currency ?? "PKR";
+  const currency = plan?.currency ?? "USD";
 
   useEffect(() => {
     let mounted = true;
@@ -97,6 +97,7 @@ export default function UpgradeScreen() {
       // If the backend owns the publishable key (and it differs from the env
       // fallback), re-initialize the native SDK with it so checkout works even
       // when the env value is unset.
+      console.log("[stripe] publishable key:", info.publishableKey);
       if (info.publishableKey && info.publishableKey !== STRIPE_PUBLISHABLE_KEY) {
         try {
           await initStripe({
