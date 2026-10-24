@@ -695,7 +695,7 @@ namespace MdLabScience.Controllers
                         }
 
                         var optionTexts = new string[4];
-                        for (int k = 1; k <= 4; k++)
+                        for (int k = 1; k <= 8; k++)
                         {
                             optionTexts[k - 1] = Cell(row, "Option" + k);
                         }
