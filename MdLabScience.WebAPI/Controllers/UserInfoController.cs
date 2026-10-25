@@ -29,35 +29,35 @@ namespace MdLabScience.Controllers
                              select new
                              {
                                  c.UserNo,
-                                 c.UserName,
+                                 UserName = c.UserName ?? string.Empty,
                                  c.CreatedDate,
                                  c.ExpireDate,
-                                 r.RoleName,
+                                 RoleName = r.RoleName ?? string.Empty,
                                  c.Status,
                                  c.RoleId,
-                                 c.Email,
-                                 c.UserToken
+                                 Email = c.Email ?? string.Empty,
+                                 UserToken = c.UserToken ?? string.Empty
                              }).ToList();
 
                 foreach (var q in query)
                 {
-                    String Saleman = "";
+                    string Saleman = string.Empty;
                     int AreaId = 0;
-                    String AreaType = "";
+                    string AreaType = string.Empty;
                     int SalemanId = 0;
 
                     list.Add(new UserInofMD
                     {
                         UserNo = q.UserNo,
-                        UserName = q.UserName,
+                        UserName = q.UserName ?? string.Empty,
                         CreatedDate = q.CreatedDate,
                         SalemanId = SalemanId,
-                        RoleName = q.RoleName,
+                        RoleName = q.RoleName ?? string.Empty,
                         Status = q.Status,
                         RoleId = q.RoleId,
-                        Email = q.Email,
+                        Email = q.Email ?? string.Empty,
                         Saleman = Saleman,
-                        UserToken = q.UserToken,
+                        UserToken = q.UserToken ?? string.Empty,
                         AreaType = AreaType,
                         AreaId = AreaId
                     });
