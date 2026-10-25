@@ -1,7 +1,6 @@
 import { X } from "lucide-react";
 import { Btn } from "../../shared/ui";
 import logoUrl from "../../../../assets/icon.png";
-import esignatureUrl from "../../../../assets/esignature.png";
 import stampUrl from "../../../../assets/stamp.jpeg";
 
 function PrintInvoice({ invoice, onClose }) {
@@ -46,24 +45,17 @@ function PrintInvoice({ invoice, onClose }) {
     const isPaid = Number(invoice.paidAmount || 0) > 0;
     let signatureMarkup = "";
     if (isPaid) {
-      let esignatureDataUri = "";
       let stampDataUri = "";
       try {
-        const [signatureModule, stampModule] = await Promise.all([
-          import("../../../../assets/esignature.png?inline"),
-          import("../../../../assets/stamp.jpeg?inline")
-        ]);
-        esignatureDataUri = signatureModule.default;
+        const stampModule = await import("../../../../assets/stamp.jpeg?inline");
         stampDataUri = stampModule.default;
       } catch {
-        esignatureDataUri = "";
         stampDataUri = "";
       }
-      if (esignatureDataUri || stampDataUri) {
+      if (stampDataUri) {
         signatureMarkup = `
         <div class="signature-figures">
-          ${esignatureDataUri ? `<img class="authorized-signature" src="${esignatureDataUri}" alt="Authorized signature" />` : ""}
-          ${stampDataUri ? `<img class="company-stamp" src="${stampDataUri}" alt="Company stamp" />` : ""}
+          <img class="company-stamp" src="${stampDataUri}" alt="Company stamp" />
         </div>`;
       }
     }
@@ -311,7 +303,7 @@ function PrintInvoice({ invoice, onClose }) {
           {Number(invoice.paidAmount || 0) > 0 && (
             <div className="flex flex-col items-end pt-4 mt-3 border-t border-[rgba(0,0,0,0.06)]">
               <div className="flex items-end gap-3">
-                <img src={esignatureUrl} alt="Authorized signature" className="h-11 object-contain" />
+                <img src={stampUrl} alt="Company stamp" className="h-14 object-contain" />
               </div>
               <p className="text-[10px] uppercase tracking-wide text-[#718096] mt-1">Authorized Signature</p>
             </div>

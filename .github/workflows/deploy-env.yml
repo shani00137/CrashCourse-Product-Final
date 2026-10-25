@@ -158,7 +158,7 @@ jobs:
             app_offline.htm
             **/Images/**
             **/Uploads/**
-          dangerous-clean-slate: false
+          dangerous-clean-slate: true
 
       - name: Bring API back online (remove app_offline.htm)
         continue-on-error: true

@@ -10,10 +10,10 @@ namespace MdLabScience.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class UserRoleController : ControllerBase
     {
         [HttpGet]
+        [Route("Get")]
         [Route("api/UserRole/Get")]
         public IEnumerable<UserRoleMD> Get()
         {
@@ -34,6 +34,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpPost]
+        [Route("SaveUserRole")]
         [Route("api/UserRole/SaveUserRole")]
         public void SaveUserRole([FromBody] UserRoleMD userRoleMD)
         {
@@ -47,6 +48,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpGet]
+        [Route("Details/{id}")]
         [Route("api/UserRole/Details/{id}")]
         public IEnumerable<UserRoleMD> Details(int id)
         {
@@ -67,6 +69,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpPut]
+        [Route("Edit")]
         [Route("api/UserRole/Edit")]
         public void Edit([FromBody] UserRoleMD value)
         {
