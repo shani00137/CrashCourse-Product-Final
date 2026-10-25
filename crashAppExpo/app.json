@@ -2,7 +2,7 @@
   "expo": {
     "name": "Crash Course",
     "slug": "crash-course",
-    "version": "1.36.1",
+    "version": "1.39.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,7 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.onlinecrashcourse.app",
-      "versionCode": 37,
+      "versionCode": 39,
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_MEDIA_IMAGES",
@@ -59,6 +59,7 @@
       ],
       "./plugins/with-onnxruntime",
       "./plugins/with-android-16kb",
+      "./plugins/with-android-release-signing",
       "expo-asset",
       [
         "@stripe/stripe-react-native",

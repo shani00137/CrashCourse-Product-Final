@@ -998,7 +998,7 @@ export async function explainQuestion(
 /**
  * Fetches the questions of an exercise range for a course via
  * TakeExercise/{start},{end},{courseId}. The backend returns flat rows with
- * columns Option1..Option4 and a RightOption (1-based) index.
+ * columns Option1..Option8 and a RightOption (1-based) index.
  */
 export async function takeExercise(
   start: number,
@@ -1011,9 +1011,18 @@ export async function takeExercise(
     .filter((it) => it && typeof it === "object")
     .map((it) => {
       const r = it as Record<string, unknown>;
-      const options = ["option1", "option2", "option3", "option4"]
-        .map((key) => (typeof r[key] === "string" ? (r[key] as string) : ""))
-        .filter((o) => o.trim().length > 0);
+      const options: string[] = [];
+      for (let i = 1; i <= 8; i++) {
+        const key = `option${i}`;
+        const val = typeof r[key] === "string" ? (r[key] as string).trim() : "";
+        if (val) options.push(val);
+      }
+      if (options.length === 0) {
+        const legacy = ["option1", "option2", "option3", "option4"]
+          .map((key) => (typeof r[key] === "string" ? (r[key] as string) : ""))
+          .filter((o) => o.trim().length > 0);
+        options.push(...legacy);
+      }
       return {
         questionId: Number(r.questionId) || 0,
         questionContent:
@@ -1287,6 +1296,10 @@ export interface TestQuestion {
   option2: string;
   option3: string;
   option4: string;
+  option5?: string;
+  option6?: string;
+  option7?: string;
+  option8?: string;
   isSelected: number;
   answer: string;
   durationMinutes: number;
@@ -1325,6 +1338,10 @@ export async function conductTestByUser(testId: number): Promise<ConductTestResu
         option2: typeof q.option2 === "string" ? (q.option2 as string) : "",
         option3: typeof q.option3 === "string" ? (q.option3 as string) : "",
         option4: typeof q.option4 === "string" ? (q.option4 as string) : "",
+        option5: typeof q.option5 === "string" ? (q.option5 as string) : "",
+        option6: typeof q.option6 === "string" ? (q.option6 as string) : "",
+        option7: typeof q.option7 === "string" ? (q.option7 as string) : "",
+        option8: typeof q.option8 === "string" ? (q.option8 as string) : "",
         isSelected: Number(q.isSelected) || 0,
         answer: typeof q.answer === "string" ? (q.answer as string) : "",
         durationMinutes: Number(q.durationMinutes) || 0,

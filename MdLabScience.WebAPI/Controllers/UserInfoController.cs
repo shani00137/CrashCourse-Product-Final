@@ -18,6 +18,7 @@ namespace MdLabScience.Controllers
     {
         [HttpGet]
         [Route("api/UserInfo/Get")]
+        [Route("Get")]
         public IActionResult Get()
         {
             List<UserInofMD> list = new List<UserInofMD>();
@@ -67,6 +68,7 @@ namespace MdLabScience.Controllers
 
         [HttpGet]
         [Route("api/UserInfo/GetUsersInfoWithEMP")]
+        [Route("GetUsersInfoWithEMP")]
         public IActionResult GetUsersInfoWithEMP()
         {
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
@@ -88,6 +90,7 @@ namespace MdLabScience.Controllers
 
         [HttpPost]
         [Route("api/UserInfo/SaveUsers")]
+        [Route("SaveUsers")]
         public string SaveUsers([FromBody] UserInofMD userInfoMD)
         {
             string Message;

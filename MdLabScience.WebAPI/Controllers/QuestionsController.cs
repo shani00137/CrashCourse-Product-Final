@@ -1366,6 +1366,10 @@ Question to review (JSON):
                         Option2 = GetOption(options, "Option2"),
                         Option3 = GetOption(options, "Option3"),
                         Option4 = GetOption(options, "Option4"),
+                        Option5 = GetOption(options, "Option5"),
+                        Option6 = GetOption(options, "Option6"),
+                        Option7 = GetOption(options, "Option7"),
+                        Option8 = GetOption(options, "Option8"),
                         isSelected = false
                     });
                 }

@@ -37,7 +37,7 @@ import {
   READING_TARGET_SECONDS,
 } from "@/constants/readingTime";
 
-const optionLabels = ["A", "B", "C", "D"];
+const optionLabels = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 interface ExerciseQuestion {
   question: string;

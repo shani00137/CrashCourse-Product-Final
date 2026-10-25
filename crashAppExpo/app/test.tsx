@@ -32,7 +32,7 @@ import StylishDialog, {
   type StylishDialogProps,
 } from "@/components/StylishDialog";
 
-const optionLabels = ["A", "B", "C", "D"];
+const optionLabels = ["A", "B", "C", "D", "E", "F", "G", "H"];
 const TEST_QUESTION_COUNT = 10;
 const TEST_DURATION_MINUTES = 15;
 const MAX_TEST_QUESTIONS = 50;
@@ -322,7 +322,7 @@ export default function TestScreen() {
           item.questionId === q.questionId ? { ...item, isSelected: next } : item
         )
       );
-      const optionText = [q.option1, q.option2, q.option3, q.option4][idx] || "";
+      const optionText = [q.option1, q.option2, q.option3, q.option4, q.option5, q.option6, q.option7, q.option8][idx] || "";
       userTestUpdate({ testId: q.testId, questionId: q.questionId, isSelected: next, answer: optionText }).catch(
         () => {}
       );
@@ -786,7 +786,7 @@ export default function TestScreen() {
           const pickedIdx = question.isSelected - 1;
           const isCorrect = pickedIdx === correctIdx;
           const unattempted = pickedIdx < 0;
-          const opts = [question.option1, question.option2, question.option3, question.option4];
+          const opts = [question.option1, question.option2, question.option3, question.option4, question.option5, question.option6, question.option7, question.option8];
           return (
             <View key={question.questionId} style={styles.reviewCard}>
               <View style={styles.reviewCardTop}>
@@ -897,7 +897,7 @@ export default function TestScreen() {
 
   // ── RUNNING PHASE ────────────────────────────────────────────────────────────
   const q = questions[current];
-  const opts = [q?.option1, q?.option2, q?.option3, q?.option4] as string[];
+  const opts = [q?.option1, q?.option2, q?.option3, q?.option4, q?.option5, q?.option6, q?.option7, q?.option8] as string[];
   const progress = questions.length > 0 ? (current / questions.length) * 100 : 0;
 
   if (!q) {
