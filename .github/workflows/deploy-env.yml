@@ -129,13 +129,18 @@ jobs:
         run: dotnet publish MdLabScience.WebAPI/MdLabScience.WebAPI.csproj -c Release -o published --no-restore
 
       - name: Take API offline (upload app_offline.htm)
+        continue-on-error: true
         run: |
           SERVER="${{ secrets.ftp_server }}"
           DIR="${{ secrets.ftp_server_dir }}"
-          [[ -z "$DIR" ]] && DIR="./"
-          [[ "$DIR" != */ ]] && DIR="$DIR/"
           printf '<html><body><h1>Deployment in progress...</h1><p>Please wait.</p></body></html>' > app_offline.htm
-          curl -sS --fail --ftp-pasv -T app_offline.htm "ftp://$SERVER/$DIRapp_offline.htm" --user "${{ secrets.ftp_username }}:${{ secrets.ftp_password }}"
+          if [ -z "$DIR" ] || [ "$DIR" = "/" ] || [ "$DIR" = "." ]; then
+            curl -sS --ftp-pasv -T app_offline.htm "ftp://$SERVER/app_offline.htm" --user "${{ secrets.ftp_username }}:${{ secrets.ftp_password }}" || true
+          else
+            DIR_CLEAN="${DIR#/}"
+            DIR_CLEAN="${DIR_CLEAN%/}"
+            curl -sS --ftp-pasv --ftp-create-dirs -T app_offline.htm "ftp://$SERVER/$DIR_CLEAN/app_offline.htm" --user "${{ secrets.ftp_username }}:${{ secrets.ftp_password }}" || curl -sS --ftp-pasv -T app_offline.htm "ftp://$SERVER/$DIR_CLEAN/app_offline.htm" --user "${{ secrets.ftp_username }}:${{ secrets.ftp_password }}" || true
+          fi
           sleep 10
 
       - name: FTP Deploy to SmarterASP
@@ -156,9 +161,14 @@ jobs:
           dangerous-clean-slate: false
 
       - name: Bring API back online (remove app_offline.htm)
+        continue-on-error: true
         run: |
           SERVER="${{ secrets.ftp_server }}"
           DIR="${{ secrets.ftp_server_dir }}"
-          [[ -z "$DIR" ]] && DIR="./"
-          [[ "$DIR" != */ ]] && DIR="$DIR/"
-          curl -sS --fail --user "${{ secrets.ftp_username }}:${{ secrets.ftp_password }}" -Q "DELE app_offline.htm" "ftp://$SERVER/$DIR" || true
+          if [ -z "$DIR" ] || [ "$DIR" = "/" ] || [ "$DIR" = "." ]; then
+            curl -sS --user "${{ secrets.ftp_username }}:${{ secrets.ftp_password }}" -Q "DELE app_offline.htm" "ftp://$SERVER/" || true
+          else
+            DIR_CLEAN="${DIR#/}"
+            DIR_CLEAN="${DIR_CLEAN%/}"
+            curl -sS --user "${{ secrets.ftp_username }}:${{ secrets.ftp_password }}" -Q "DELE $DIR_CLEAN/app_offline.htm" "ftp://$SERVER/" || curl -sS --user "${{ secrets.ftp_username }}:${{ secrets.ftp_password }}" -Q "DELE app_offline.htm" "ftp://$SERVER/$DIR_CLEAN/" || true
+          fi
