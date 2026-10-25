@@ -1,17 +1,44 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Btn, Card } from "../../shared/ui";
+import { getRoles } from "../../../../services/userService";
 
 export function RolesScreen() {
-  const roles = ["Super Admin", "Admin Staff", "Exam Manager", "Finance", "Viewer"];
   const pages = ["Dashboard", "Applicants", "Courses", "Exams", "Invoices", "Users", "Reports", "Settings"];
-  const matrix = {
-    "Super Admin": Object.fromEntries(pages.map(p => [p, true])),
-    "Admin Staff": Object.fromEntries(pages.map(p => [p, !["Users", "Settings"].includes(p)])),
-    "Exam Manager": Object.fromEntries(pages.map(p => [p, ["Dashboard", "Courses", "Exams"].includes(p)])),
-    "Finance": Object.fromEntries(pages.map(p => [p, ["Dashboard", "Invoices", "Reports"].includes(p)])),
-    "Viewer": Object.fromEntries(pages.map(p => [p, ["Dashboard"].includes(p)])),
-  };
-  const [perms, setPerms] = useState(matrix);
+  const [roles, setRoles] = useState([]);
+  const [perms, setPerms] = useState({});
+
+  useEffect(() => {
+    const loadRoles = async () => {
+      try {
+        const res = await getRoles();
+        const roleList = Array.isArray(res) ? res : [];
+        const roleNames = roleList.map((r) => r.roleName || r.RoleName).filter(Boolean);
+        setRoles(roleNames);
+
+        const matrix = {};
+        roleNames.forEach((role) => {
+          const lower = role.toLowerCase();
+          if (lower.includes("super")) {
+            matrix[role] = Object.fromEntries(pages.map((p) => [p, true]));
+          } else if (lower.includes("official")) {
+            matrix[role] = Object.fromEntries(
+              pages.map((p) => [p, ["Dashboard", "Applicants", "Courses", "Exams", "Invoices", "Reports"].includes(p)])
+            );
+          } else {
+            matrix[role] = Object.fromEntries(pages.map((p) => [p, ["Dashboard"].includes(p)]));
+          }
+        });
+        setPerms(matrix);
+      } catch (error) {
+        console.error("Failed to load roles", error);
+        setRoles([]);
+        setPerms({});
+      }
+    };
+
+    loadRoles();
+  }, []);
+
   return (
     <div className="flex flex-col gap-5">
       <h1 className="text-xl font-semibold text-[#1A202C]">Roles & Permissions</h1>
