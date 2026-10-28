@@ -36,6 +36,11 @@ jobs:
       stripe_publishable_key: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
       stripe_webhook_secret: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       smtp_password: ${{ secrets.SMTP_PASSWORD }}
+      r2_account_id: ${{ secrets.R2_ACCOUNT_ID }}
+      r2_access_key_id: ${{ secrets.R2_ACCESS_KEY_ID }}
+      r2_secret_access_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      r2_bucket_name: ${{ secrets.R2_BUCKET_NAME }}
+      r2_public_url: ${{ secrets.R2_PUBLIC_URL }}
 
   deploy-production:
     name: Deploy to Production
@@ -55,3 +60,8 @@ jobs:
       stripe_publishable_key: ${{ secrets.STRIPE_PUBLISHABLE_KEY_PRODUCTION }}
       stripe_webhook_secret: ${{ secrets.STRIPE_WEBHOOK_SECRET_PRODUCTION }}
       smtp_password: ${{ secrets.SMTP_PASSWORD_PRODUCTION }}
+      r2_account_id: ${{ secrets.R2_ACCOUNT_ID }}
+      r2_access_key_id: ${{ secrets.R2_ACCESS_KEY_ID }}
+      r2_secret_access_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      r2_bucket_name: ${{ secrets.R2_BUCKET_NAME }}
+      r2_public_url: ${{ secrets.R2_PUBLIC_URL }}

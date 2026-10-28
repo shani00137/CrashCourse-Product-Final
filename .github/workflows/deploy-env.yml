@@ -29,6 +29,16 @@ on:
         required: false
       smtp_password:
         required: false
+      r2_account_id:
+        required: false
+      r2_access_key_id:
+        required: false
+      r2_secret_access_key:
+        required: false
+      r2_bucket_name:
+        required: false
+      r2_public_url:
+        required: false
       ftp_server:
         required: true
       ftp_username:
@@ -85,6 +95,11 @@ jobs:
           STRIPE_PUBLISHABLE_KEY: ${{ secrets.stripe_publishable_key }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.stripe_webhook_secret }}
           SMTP_PASSWORD: ${{ secrets.smtp_password }}
+          R2_ACCOUNT_ID: ${{ secrets.r2_account_id }}
+          R2_ACCESS_KEY_ID: ${{ secrets.r2_access_key_id }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.r2_secret_access_key }}
+          R2_BUCKET_NAME: ${{ secrets.r2_bucket_name }}
+          R2_PUBLIC_URL: ${{ secrets.r2_public_url }}
         run: |
           python3 - <<'PY'
           import json, os, pathlib, sys
@@ -109,8 +124,15 @@ jobs:
           set_if(data, ["Stripe", "WebhookSecret"], os.environ.get("STRIPE_WEBHOOK_SECRET", "").strip())
           set_if(data, ["Smtp", "Password"], os.environ.get("SMTP_PASSWORD", "").strip())
 
+          # Cloudflare R2 object storage for course uploads
+          set_if(data, ["Cloudflare", "R2", "AccountId"], os.environ.get("R2_ACCOUNT_ID", "").strip())
+          set_if(data, ["Cloudflare", "R2", "AccessKeyId"], os.environ.get("R2_ACCESS_KEY_ID", "").strip())
+          set_if(data, ["Cloudflare", "R2", "SecretAccessKey"], os.environ.get("R2_SECRET_ACCESS_KEY", "").strip())
+          set_if(data, ["Cloudflare", "R2", "BucketName"], os.environ.get("R2_BUCKET_NAME", "").strip())
+          set_if(data, ["Cloudflare", "R2", "PublicUrl"], os.environ.get("R2_PUBLIC_URL", "").strip())
+
           path.write_text(json.dumps(data, indent=2) + "\n")
-          print("Configured sections:", [k for k in ("ConnectionStrings", "OpenAI", "Stripe", "Smtp") if k in data])
+          print("Configured sections:", [k for k in ("ConnectionStrings", "OpenAI", "Stripe", "Smtp", "Cloudflare") if k in data])
 
           # Never deploy a placeholder database connection to a live environment:
           # that is exactly what caused the SqlException 53 outage.
@@ -156,9 +178,11 @@ jobs:
             **/.git*/**
             **/node_modules/**
             app_offline.htm
-            **/Images/**
-            **/Uploads/**
-          dangerous-clean-slate: true
+            Images/
+            Images/**
+            Uploads/
+            Uploads/**
+          dangerous-clean-slate: false
 
       - name: Bring API back online (remove app_offline.htm)
         continue-on-error: true

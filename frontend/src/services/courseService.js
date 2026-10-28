@@ -46,12 +46,32 @@ function uploadCourseMaterial(form, onProgress) {
   });
 }
 function courseFileUrl(url) {
-  return `${API_BASE_URL}/${url}`;
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${API_BASE_URL}/${url.replace(/^\//, "")}`;
+}
+
+// Downloads through the API instead of the storage URL so the browser never
+// performs a cross-origin request to Cloudflare R2 (which has no CORS headers).
+async function downloadCourseMaterial(courseMaterialId) {
+  const token = getToken();
+  const response = await fetch(
+    `${API_BASE_URL}/api/Course/api/Course/GetCourseMaterialPdf/${courseMaterialId}`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+  );
+  if (response.status === 401) {
+    throw new ApiError("Your session has expired. Please sign in again.", 401);
+  }
+  if (!response.ok) {
+    throw new ApiError(`Request failed with status ${response.status}.`, response.status);
+  }
+  return await response.blob();
 }
 export {
   changeCourseStatus,
   courseFileUrl,
   deleteCourseMaterial,
+  downloadCourseMaterial,
   getAllCourses,
   getCourseMaterials,
   saveCourse,

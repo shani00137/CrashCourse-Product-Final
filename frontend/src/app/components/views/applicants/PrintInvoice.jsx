@@ -1,6 +1,5 @@
 import { X } from "lucide-react";
 import { Btn } from "../../shared/ui";
-import logoUrl from "../../../../assets/icon.png";
 import stampUrl from "../../../../assets/stamp.jpeg";
 
 function PrintInvoice({ invoice, onClose }) {
@@ -26,7 +25,6 @@ function PrintInvoice({ invoice, onClose }) {
 
     // The print document is written into a blank window with no access to the
     // app's asset URLs, so the logo has to be inlined as a base64 data URI.
-    // Imported lazily with ?inline to keep the ~170KB image out of the main bundle.
     let logoDataUri = "";
     try {
       const { default: inlineLogo } = await import("../../../../assets/icon.png?inline");

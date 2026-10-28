@@ -29,6 +29,7 @@ import {
   getCourseMaterials,
   deleteCourseMaterial,
   uploadCourseMaterial,
+  downloadCourseMaterial,
   courseFileUrl
 } from "../../../../services/courseService";
 function CoursesScreen() {
@@ -57,6 +58,7 @@ function CoursesScreen() {
   const [materialsError, setMaterialsError] = useState(null);
   const [materialType, setMaterialType] = useState("PDF");
   const [materialFile, setMaterialFile] = useState(null);
+  const [downloadingIds, setDownloadingIds] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   useEffect(() => {
@@ -198,10 +200,11 @@ function CoursesScreen() {
     }
   };
   const downloadMaterial = async (m) => {
-    if (!m.courseUrl) return;
+    const id = m.courseMaterialId;
+    if (!id || downloadingIds.includes(id)) return;
+    setDownloadingIds((prev) => [...prev, id]);
     try {
-      const res = await fetch(courseFileUrl(m.courseUrl));
-      const blob = await res.blob();
+      const blob = await downloadCourseMaterial(id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -212,6 +215,8 @@ function CoursesScreen() {
       URL.revokeObjectURL(url);
     } catch {
       showToast("error", "Could not download the file.");
+    } finally {
+      setDownloadingIds((prev) => prev.filter((x) => x !== id));
     }
   };
   const handleDeleteMaterial = async (m) => {
@@ -467,7 +472,16 @@ function CoursesScreen() {
                       </td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-1">
-                          <button title="Download" onClick={() => downloadMaterial(m)} className="p-1.5 rounded-lg text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 transition"><Download size={14} /></button>
+                          <button
+                            title={downloadingIds.includes(m.courseMaterialId) ? "Downloading…" : "Download"}
+                            onClick={() => downloadMaterial(m)}
+                            disabled={downloadingIds.includes(m.courseMaterialId)}
+                            className="p-1.5 rounded-lg text-[#718096] hover:text-[#C41E3A] hover:bg-red-50 transition disabled:opacity-60 disabled:cursor-wait"
+                          >
+                            {downloadingIds.includes(m.courseMaterialId)
+                              ? <Loader2 size={14} className="animate-spin" />
+                              : <Download size={14} />}
+                          </button>
                           <button title="Delete attachment" onClick={() => handleDeleteMaterial(m)} className="p-1.5 rounded-lg text-[#718096] hover:text-red-600 hover:bg-red-50 transition"><Trash2 size={14} /></button>
                         </div>
                       </td>

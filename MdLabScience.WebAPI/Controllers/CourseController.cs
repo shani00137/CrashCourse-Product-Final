@@ -1,5 +1,6 @@
 using MdLabScience.DbContext;
 using MdLabScience.Models;
+using MdLabScience.Services;
 using MdLabScience.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace MdLabScience.Controllers
 {
@@ -19,10 +21,16 @@ namespace MdLabScience.Controllers
     public class CourseController : ControllerBase
     {
         private readonly IWebHostEnvironment _env;
+        private readonly R2StorageService _r2Storage;
 
-        public CourseController(IWebHostEnvironment env)
+        // Used to stream remote (R2) files through the API so the browser never
+        // hits the storage host directly and therefore never trips CORS.
+        private static readonly HttpClient _httpClient = new HttpClient();
+
+        public CourseController(IWebHostEnvironment env, R2StorageService r2Storage)
         {
             _env = env;
+            _r2Storage = r2Storage;
         }
 
         [HttpPost]
@@ -94,7 +102,7 @@ namespace MdLabScience.Controllers
 
         [HttpPost]
         [Route("api/Course/SaveCourse")]
-        public IActionResult SaveCourse()
+        public async Task<IActionResult> SaveCourse()
         {
             String ResponseMessage = "";
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
@@ -114,18 +122,32 @@ namespace MdLabScience.Controllers
                         var fileName = Path.GetFileName(file.FileName);
                         if (fileName.StartsWith("Course") == true)
                         {
-                            var dirPath = Path.Combine(_env.ContentRootPath, "Uploads");
-                            Directory.CreateDirectory(dirPath);
-                            var path = Path.Combine(dirPath, fileName);
-                            using (var stream = new FileStream(path, FileMode.Create))
+                            string? courseUrl = await _r2Storage.UploadAsync(file, "courses");
+                            if (string.IsNullOrEmpty(courseUrl))
                             {
-                                file.CopyTo(stream);
+                                var dirPath = Path.Combine(_env.ContentRootPath, "Uploads");
+                                Directory.CreateDirectory(dirPath);
+                                var path = Path.Combine(dirPath, fileName);
+                                using (var stream = new FileStream(path, FileMode.Create))
+                                {
+                                    file.CopyTo(stream);
+                                }
+                                courseUrl = "Uploads/" + fileName.ToString();
                             }
-                            value.CourseUrl = "Uploads/" + fileName.ToString();
+                            value.CourseUrl = courseUrl;
                         }
                     }
 
-                    value.CoursePhotourl = SaveCoursePhoto(Request.Form.Files["CoursePhoto"]);
+                    var photoFile = Request.Form.Files["CoursePhoto"];
+                    if (photoFile != null && photoFile.Length > 0)
+                    {
+                        var uploaded = await _r2Storage.UploadAsync(photoFile, "courses/photos");
+                        value.CoursePhotourl = !string.IsNullOrEmpty(uploaded) ? uploaded : SaveCoursePhoto(photoFile);
+                    }
+                    else
+                    {
+                        value.CoursePhotourl = SaveCoursePhoto(photoFile);
+                    }
 
                     CourseTb courseTb = new CourseTb();
                     courseTb.CourseCode = value.CourseCode;
@@ -149,7 +171,7 @@ namespace MdLabScience.Controllers
 
         [HttpPost]
         [Route("api/Course/SaveCourseMaterial")]
-        public IActionResult SaveCourseMaterial()
+        public async Task<IActionResult> SaveCourseMaterial()
         {
             String ResponseMessage = "";
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
@@ -163,16 +185,31 @@ namespace MdLabScience.Controllers
 
                 if (file != null && file.Length > 0)
                 {
-                    Guid id = Guid.NewGuid();
-                    var fileName = id.ToString() + "-" + Path.GetFileName(file.FileName);
-                    var dirPath = Path.Combine(_env.ContentRootPath, "Uploads");
-                    Directory.CreateDirectory(dirPath);
-                    var path = Path.Combine(dirPath, fileName);
-                    using (var stream = new FileStream(path, FileMode.Create))
+                    string? courseUrl = null;
+                    try
                     {
-                        file.CopyTo(stream);
+                        courseUrl = await _r2Storage.UploadAsync(file, "courses/materials");
                     }
-                    value.CourseUrl = "Uploads/" + fileName.ToString();
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"R2 upload error: {ex.Message}");
+                    }
+
+                    if (string.IsNullOrEmpty(courseUrl))
+                    {
+                        Guid id = Guid.NewGuid();
+                        var fileName = id.ToString() + "-" + Path.GetFileName(file.FileName);
+                        var dirPath = Path.Combine(_env.ContentRootPath, "Uploads");
+                        Directory.CreateDirectory(dirPath);
+                        var path = Path.Combine(dirPath, fileName);
+                        using (var stream = new FileStream(path, FileMode.Create))
+                        {
+                            file.CopyTo(stream);
+                        }
+                        courseUrl = "Uploads/" + fileName.ToString();
+                    }
+
+                    value.CourseUrl = courseUrl;
                     CourseMaterialTb courseTb = new CourseMaterialTb();
                     courseTb.CourseId = value.CourseId;
                     courseTb.MaterialType = value.MaterialType;
@@ -216,7 +253,7 @@ namespace MdLabScience.Controllers
 
         [HttpGet]
         [Route("api/Course/GetCourseMaterialPdf/{CourseMaterialId}")]
-        public IActionResult GetCourseMaterialPdf(int CourseMaterialId)
+        public async Task<IActionResult> GetCourseMaterialPdf(int CourseMaterialId)
         {
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
@@ -227,19 +264,53 @@ namespace MdLabScience.Controllers
                 {
                     return NotFound(new { succeeded = false, message = "Course material not found." });
                 }
+
+                var fileName = string.IsNullOrWhiteSpace(material.FileName)
+                    ? Path.GetFileName(material.CourseUrl)
+                    : material.FileName;
+
+                if (material.CourseUrl.StartsWith("http://") || material.CourseUrl.StartsWith("https://"))
+                {
+                    try
+                    {
+                        var response = await _httpClient.GetAsync(
+                            material.CourseUrl,
+                            HttpCompletionOption.ResponseHeadersRead,
+                            HttpContext.RequestAborted);
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            response.Dispose();
+                            return NotFound(new { succeeded = false, message = "The file could not be retrieved from storage." });
+                        }
+
+                        // Keep the HttpResponseMessage alive until MVC has finished
+                        // copying the content stream to the client.
+                        Response.RegisterForDispose(response);
+
+                        var stream = await response.Content.ReadAsStreamAsync(HttpContext.RequestAborted);
+                        var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+                        return File(stream, contentType, fileName, enableRangeProcessing: true);
+                    }
+                    catch
+                    {
+                        return NotFound(new { succeeded = false, message = "The file could not be retrieved from storage." });
+                    }
+                }
+
                 var path = Path.Combine(_env.ContentRootPath, material.CourseUrl);
                 if (!System.IO.File.Exists(path))
                 {
                     return NotFound(new { succeeded = false, message = "The PDF file is missing on the server." });
                 }
-                var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
-                return File(stream, "application/pdf", Path.GetFileName(path));
+                var localStream = new FileStream(path, FileMode.Open, FileAccess.Read);
+                return File(localStream, "application/pdf", fileName, enableRangeProcessing: true);
             }
         }
 
         [HttpGet]
         [Route("api/Course/DeleteCourseMaterial/{CourseMaterialId}")]
-        public IActionResult DeleteCourseMaterial(int CourseMaterialId)
+        public async Task<IActionResult> DeleteCourseMaterial(int CourseMaterialId)
         {
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
@@ -250,11 +321,7 @@ namespace MdLabScience.Controllers
                 {
                     db.CourseMaterialTbs.Remove(Query);
                     db.SaveChanges();
-                    var path = Path.Combine(_env.ContentRootPath, Query.CourseUrl);
-                    if (System.IO.File.Exists(path))
-                    {
-                        System.IO.File.Delete(path);
-                    }
+                    await DeleteStoredFileAsync(Query.CourseUrl);
                     return Ok("Deleted Successfully");
                 }
                 else
@@ -266,7 +333,7 @@ namespace MdLabScience.Controllers
 
         [HttpPost]
         [Route("api/Course/UpdateCourse")]
-        public IActionResult UpdateCourse()
+        public async Task<IActionResult> UpdateCourse()
         {
             String ResponseMessage = "";
             CourseModel value = new CourseModel();
@@ -287,23 +354,32 @@ namespace MdLabScience.Controllers
                         var fileName = Path.GetFileName(file.FileName);
                         if (fileName.StartsWith("Course") == true)
                         {
-                            DeleteUploadedFile(Query.CourseUrl);
-                            var path = Path.Combine(_env.ContentRootPath, "Uploads", fileName);
-                            using (var stream = new FileStream(path, FileMode.Create))
+                            await DeleteStoredFileAsync(Query.CourseUrl);
+                            string? courseUrl = await _r2Storage.UploadAsync(file, "courses");
+                            if (string.IsNullOrEmpty(courseUrl))
                             {
-                                file.CopyTo(stream);
+                                var path = Path.Combine(_env.ContentRootPath, "Uploads", fileName);
+                                using (var stream = new FileStream(path, FileMode.Create))
+                                {
+                                    file.CopyTo(stream);
+                                }
+                                courseUrl = "Uploads/" + fileName.ToString();
                             }
-                            value.CourseUrl = "Uploads/" + fileName.ToString();
+                            value.CourseUrl = courseUrl;
                         }
                     }
 
                     var photo = Request.Form.Files["CoursePhoto"];
                     if (photo != null && photo.Length > 0)
                     {
-                        var savedPhoto = SaveCoursePhoto(photo);
+                        await DeleteStoredFileAsync(Query.CoursePhotourl);
+                        string? savedPhoto = await _r2Storage.UploadAsync(photo, "courses/photos");
+                        if (string.IsNullOrEmpty(savedPhoto))
+                        {
+                            savedPhoto = SaveCoursePhoto(photo);
+                        }
                         if (savedPhoto != null)
                         {
-                            DeleteUploadedFile(Query.CoursePhotourl);
                             Query.CoursePhotourl = savedPhoto;
                         }
                     }
@@ -488,6 +564,35 @@ namespace MdLabScience.Controllers
 
         // Best-effort removal of a previously uploaded file; never lets a
         // missing/locked file block the save.
+        private async Task DeleteStoredFileAsync(string? storedPath)
+        {
+            if (string.IsNullOrWhiteSpace(storedPath))
+            {
+                return;
+            }
+
+            if (storedPath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                storedPath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var uri = new Uri(storedPath);
+                    var key = uri.AbsolutePath.TrimStart('/');
+                    if (!string.IsNullOrEmpty(key))
+                    {
+                        await _r2Storage.DeleteAsync(key);
+                    }
+                }
+                catch
+                {
+                    // ignored
+                }
+                return;
+            }
+
+            DeleteUploadedFile(storedPath);
+        }
+
         private void DeleteUploadedFile(string? relativePath)
         {
             if (string.IsNullOrWhiteSpace(relativePath))

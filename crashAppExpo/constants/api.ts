@@ -1,4 +1,4 @@
-// export const API_BASE_URL = "http://192.168.26.3:5006/api";
+// export const API_BASE_URL = "http://localhost:5006/api";
 export const API_BASE_URL = "https://crashcourseonlin.net/api";
 export const ENDPOINTS = {
   saveApplicants: "/Applicant/api/Applicant/SaveApplicants",

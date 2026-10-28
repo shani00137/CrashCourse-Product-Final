@@ -11,7 +11,6 @@ namespace MdLabScience.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class UserPermissionController : ControllerBase
     {
         [HttpGet]
@@ -21,6 +20,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpGet]
+        [Route("Get")]
         [Route("api/UserPermission/Get")]
         public IActionResult Get()
         {
@@ -44,6 +44,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpPost]
+        [Route("SaveUserPermission")]
         [Route("api/UserPermission/SaveUserPermission")]
         public string SaveUserPermission([FromBody] UserPermissionMD userInfoMD)
         {
@@ -53,17 +54,17 @@ namespace MdLabScience.Controllers
                 var CheckInfo = db.UserPermissions.Where(x => x.PageId == userInfoMD.PageId && x.RoleId == userInfoMD.RoleId).ToList();
                 if (CheckInfo.Count == 0)
                 {
+                    UserPermission userPermssion = new UserPermission();
+                    userPermssion.RoleId = userInfoMD.RoleId;
+                    userPermssion.PageId = userInfoMD.PageId;
                     var GetPageMenueInfo = db.UserPages.Where(x => x.PageId == userInfoMD.PageId).ToList();
                     if (GetPageMenueInfo.Count > 0)
                     {
-                        UserPermission userPermssion = new UserPermission();
-                        userPermssion.RoleId = userInfoMD.RoleId;
-                        userPermssion.PageId = userInfoMD.PageId;
                         userPermssion.MenuId = GetPageMenueInfo[0].MenuId;
-                        db.UserPermissions.Add(userPermssion);
-                        db.SaveChanges();
-                        Message = "Permission Added..";
                     }
+                    db.UserPermissions.Add(userPermssion);
+                    db.SaveChanges();
+                    Message = "Permission Added..";
                 }
                 else
                 {
@@ -74,6 +75,7 @@ namespace MdLabScience.Controllers
         }
 
         [HttpGet]
+        [Route("Details/{id}")]
         [Route("api/UserPermission/Details/{id}")]
         public IActionResult Details(int id)
         {
@@ -97,8 +99,9 @@ namespace MdLabScience.Controllers
         }
 
         [HttpGet]
+        [Route("Delete/{id}")]
         [Route("api/UserPermission/Delete/{id}")]
-        public void DeletePermissionPage(int id)
+        public IActionResult DeletePermissionPage(int id)
         {
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
@@ -106,10 +109,14 @@ namespace MdLabScience.Controllers
                 if (query.Count > 0)
                 {
                     var DeleteRecord = (from c in db.UserPermissions where c.PermissionId == id select c).FirstOrDefault();
-                    db.UserPermissions.Remove(DeleteRecord);
-                    db.SaveChanges();
+                    if (DeleteRecord != null)
+                    {
+                        db.UserPermissions.Remove(DeleteRecord);
+                        db.SaveChanges();
+                    }
                 }
             }
+            return Ok("Deleted");
         }
 
         [HttpGet]

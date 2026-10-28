@@ -366,7 +366,7 @@ namespace MdLabScience.Utility
             {
                 new("amount", amount.ToString(CultureInfo.InvariantCulture)),
                 new("currency", Currency.ToLowerInvariant()),
-                new("automatic_payment_methods[enabled]", "true"),
+                new("payment_method_types[]", "card"),
                 new("description", string.IsNullOrWhiteSpace(context.ItemName)
                     ? "Crash Course payment"
                     : context.ItemName),
