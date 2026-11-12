@@ -13,6 +13,31 @@ function fmtMoney(v) {
   return toNumber(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function startOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function endOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+}
+
+/** Parses a yyyy-mm-dd input value as a local date. */
+function parseDateInput(value) {
+  if (!value) return null;
+  const d = new Date(`${value}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+const DATE_PRESETS = [
+  { value: "all", label: "All Time" },
+  { value: "today", label: "Today" },
+  { value: "7d", label: "Last 7 Days" },
+  { value: "month", label: "This Month" },
+  { value: "lastMonth", label: "Last Month" },
+  { value: "year", label: "This Year" },
+  { value: "custom", label: "Custom Range" }
+];
+
 function ProfitLossScreen() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +45,9 @@ function ProfitLossScreen() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [datePreset, setDatePreset] = useState("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [detailInv, setDetailInv] = useState(null);
   const pageSize = 15;
 
@@ -53,7 +81,51 @@ function ProfitLossScreen() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const enriched = rows.map((inv) => {
+  useEffect(() => setPage(1), [datePreset, customFrom, customTo]);
+
+  /** Invoices limited to the selected date preset or custom range. */
+  const dateFilteredRows = useMemo(() => {
+    if (datePreset === "all") return rows;
+
+    const now = new Date();
+    let from = null;
+    let to = null;
+
+    if (datePreset === "today") {
+      from = startOfDay(now);
+      to = endOfDay(now);
+    } else if (datePreset === "7d") {
+      const start = new Date(now);
+      start.setDate(start.getDate() - 6);
+      from = startOfDay(start);
+      to = endOfDay(now);
+    } else if (datePreset === "month") {
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
+      to = endOfDay(now);
+    } else if (datePreset === "lastMonth") {
+      from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      to = endOfDay(new Date(now.getFullYear(), now.getMonth(), 0));
+    } else if (datePreset === "year") {
+      from = new Date(now.getFullYear(), 0, 1);
+      to = endOfDay(now);
+    } else if (datePreset === "custom") {
+      const fromDate = parseDateInput(customFrom);
+      const toDate = parseDateInput(customTo);
+      from = fromDate ? startOfDay(fromDate) : null;
+      to = toDate ? endOfDay(toDate) : null;
+    }
+
+    return rows.filter((inv) => {
+      if (!inv.dateTime) return false;
+      const d = new Date(inv.dateTime);
+      if (Number.isNaN(d.getTime())) return false;
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+  }, [rows, datePreset, customFrom, customTo]);
+
+  const enriched = dateFilteredRows.map((inv) => {
     const list = inv.serviceList ?? [];
     const totalSale = list.reduce((s, i) => s + toNumber(i.amount), 0);
     const totalPurchase = list.reduce((s, i) => s + toNumber(i.purchaseAmount), 0);
@@ -96,6 +168,12 @@ function ProfitLossScreen() {
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * pageSize;
   const paged = filtered.slice(start, start + pageSize);
+
+  const rangeLabel = datePreset === "all"
+    ? "All Time"
+    : datePreset === "custom"
+      ? `${customFrom || "Beginning"} – ${customTo || "Today"}`
+      : DATE_PRESETS.find((p) => p.value === datePreset)?.label ?? "All Time";
 
   const handlePrint = () => {
     const printWindow = window.open("", "_blank", "width=1000,height=700");
@@ -165,7 +243,7 @@ function ProfitLossScreen() {
       <body>
         <div class="header">
           <h1>Profit & Loss Report</h1>
-          <p>Generated on ${dateStr}</p>
+          <p>Generated on ${dateStr} · Range: ${rangeLabel}</p>
         </div>
 
         <div class="summary">
@@ -223,11 +301,58 @@ function ProfitLossScreen() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-xl font-semibold text-[#1A202C]">Profit & Loss</h1>
-        <Btn variant="primary" onClick={handlePrint} disabled={enriched.length === 0} className="flex items-center gap-2">
-          <Printer size={14} /> Print Report
-        </Btn>
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="flex items-center gap-1.5 text-xs text-[#718096]">
+            Date
+            <select
+              value={datePreset}
+              onChange={(e) => setDatePreset(e.target.value)}
+              className="h-9 px-3 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
+            >
+              {DATE_PRESETS.map((preset) => (
+                <option key={preset.value} value={preset.value}>{preset.label}</option>
+              ))}
+            </select>
+          </label>
+          {datePreset === "custom" && (
+            <>
+              <label className="flex items-center gap-1.5 text-xs text-[#718096]">
+                From
+                <input
+                  type="date"
+                  value={customFrom}
+                  max={customTo || undefined}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="h-9 px-2 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
+                />
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-[#718096]">
+                To
+                <input
+                  type="date"
+                  value={customTo}
+                  min={customFrom || undefined}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="h-9 px-2 rounded-lg border border-[rgba(0,0,0,0.12)] bg-white text-sm text-[#1A202C] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition"
+                />
+              </label>
+              {(customFrom || customTo) && (
+                <button
+                  type="button"
+                  onClick={() => { setCustomFrom(""); setCustomTo(""); }}
+                  className="h-9 px-2 text-xs font-medium text-[#718096] hover:text-[#C41E3A] transition"
+                >
+                  Clear
+                </button>
+              )}
+            </>
+          )}
+          <Btn variant="primary" onClick={handlePrint} disabled={enriched.length === 0} className="flex items-center gap-2">
+            <Printer size={14} /> Print Report
+          </Btn>
+        </div>
       </div>
 
       {/* Summary Cards */}

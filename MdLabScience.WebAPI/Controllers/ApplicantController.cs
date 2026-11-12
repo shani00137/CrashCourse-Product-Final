@@ -1042,6 +1042,7 @@ IF NOT EXISTS (
                                    c.Service,
                                    d.FirstName,
                                    d.LastName,
+                                   d.Mobile,
                                    c.Remarks,
                                    c.DateTime,
                                    c.DiscountType,
@@ -1050,6 +1051,7 @@ IF NOT EXISTS (
                                    c.TaxType,
                                    c.TaxValue,
                                    c.TaxAmount,
+                                   c.InvoiceType,
                                    ServiceList = db.CertificateInvoiceTbs.Where(x => x.InvoiceId == c.InvoiceId).ToList()
                                }).OrderByDescending(x => x.InvoiceId).ToList();
                 return Ok(Courses);
@@ -1076,6 +1078,7 @@ IF NOT EXISTS (
                                    c.Service,
                                    d.FirstName,
                                    d.LastName,
+                                   d.Mobile,
                                    c.Remarks,
                                    c.DateTime,
                                    c.DiscountType,
@@ -1084,6 +1087,7 @@ IF NOT EXISTS (
                                    c.TaxType,
                                    c.TaxValue,
                                    c.TaxAmount,
+                                   c.InvoiceType,
                                    ServiceList = db.CertificateInvoiceTbs.Where(x => x.InvoiceId == c.InvoiceId).ToList()
                                }).OrderByDescending(x => x.InvoiceId).ToList();
                 return Ok(Courses);
@@ -1186,6 +1190,7 @@ IF NOT EXISTS (
                         UpdateQuery.TaxType = value.TaxType;
                         UpdateQuery.TaxValue = string.IsNullOrEmpty(value.TaxType) ? null : value.TaxValue;
                         UpdateQuery.TaxAmount = taxAmount;
+                        UpdateQuery.InvoiceType = value.InvoiceType;
                         db.SaveChanges();
 
                         var Query = originalLedgerEntry;
@@ -1242,6 +1247,7 @@ IF NOT EXISTS (
                         appliantTransactionsTb.TaxType = value.TaxType;
                         appliantTransactionsTb.TaxValue = string.IsNullOrEmpty(value.TaxType) ? null : value.TaxValue;
                         appliantTransactionsTb.TaxAmount = taxAmount;
+                        appliantTransactionsTb.InvoiceType = value.InvoiceType;
                         db.ApplicantInvoiceTBs.Add(appliantTransactionsTb);
                         db.SaveChanges();
 

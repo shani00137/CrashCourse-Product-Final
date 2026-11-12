@@ -395,6 +395,7 @@ export function UploadFromPdfScreen({ onBack }) {
       const questionsPayload = parsedQuestions.map(q => ({
         courseId: Number(courseId),
         questionContent: q.questionContent,
+        explanation: q.explanation || null,
         questionOptionsList: q.options.map((opt, i) => ({
           options: typeof opt === "string" ? opt : opt.text || "",
           isRightAns: i === q.correctIndex

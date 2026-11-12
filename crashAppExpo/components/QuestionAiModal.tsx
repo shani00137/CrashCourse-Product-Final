@@ -7,8 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
   ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -48,8 +47,20 @@ export function QuestionAiModal({
   const [answer, setAnswer] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (event) =>
+      setKeyboardHeight(event.endCoordinates?.height ?? 0)
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -101,10 +112,7 @@ export function QuestionAiModal({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <View style={[styles.overlay, { paddingBottom: keyboardHeight }]}>
         <TouchableOpacity
           style={styles.backdrop}
           activeOpacity={1}
@@ -280,7 +288,7 @@ export function QuestionAiModal({
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

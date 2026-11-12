@@ -38,7 +38,16 @@ function uploadCourseMaterial(form, onProgress) {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(xhr.responseText || "");
       } else {
-        reject(new ApiError(`Request failed with status ${xhr.status}.`, xhr.status));
+        let message = `Request failed with status ${xhr.status}.`;
+        try {
+          const body = JSON.parse(xhr.responseText);
+          if (body && typeof body.message === "string" && body.message) {
+            message = body.message;
+          }
+        } catch {
+          // non-JSON error body; keep the generic message
+        }
+        reject(new ApiError(message, xhr.status));
       }
     };
     xhr.onerror = () => reject(new ApiError(`Cannot reach the server. Make sure the API is running at ${API_BASE_URL}.`, 0));

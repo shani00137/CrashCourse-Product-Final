@@ -108,7 +108,7 @@ function SearchableSelect({ options, value, onSelect, allLabel, placeholder }) {
   const selected = options.find((o) => o.id === value);
   const searching = query.trim() !== debouncedQuery;
   const q = debouncedQuery.toLowerCase();
-  const filtered = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
+  const filtered = q ? options.filter((o) => (o.search || o.label).toLowerCase().includes(q)) : options;
   const pick = (id) => {
     onSelect(id);
     setOpen(false);

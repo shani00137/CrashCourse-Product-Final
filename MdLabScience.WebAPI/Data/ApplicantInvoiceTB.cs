@@ -19,5 +19,7 @@ namespace MdLabScience.DbContext
         public string? TaxType { get; set; }
         public Nullable<double> TaxValue { get; set; }
         public Nullable<double> TaxAmount { get; set; }
+
+        public string? InvoiceType { get; set; }
     }
 }

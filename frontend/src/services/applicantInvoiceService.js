@@ -16,6 +16,7 @@ import { apiFetch } from "./apiClient";
  * @property {number} applicantId
  * @property {number} amount
  * @property {string} service
+ * @property {string} [invoiceType]       - "Buy Course" or "For Procedure".
  * @property {string} remarks
  * @property {string} dateTime
  * @property {number} paidAmount
@@ -40,6 +41,7 @@ import { apiFetch } from "./apiClient";
  * @property {number} applicantId
  * @property {number} amount             - Grand total: subtotal - discount + tax.
  * @property {string} service
+ * @property {string} [invoiceType]      - "Buy Course" or "For Procedure".
  * @property {string} [discountType]     - "Percentage" or "Amount", null for no discount.
  * @property {number} [discountValue]
  * @property {number} [discountAmount]

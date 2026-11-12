@@ -68,6 +68,7 @@ namespace MdLabScience.Controllers
                                 select new
                                 {
                                     c.QuestionContent,
+                                    c.Explanation,
                                     c.QuestionId,
                                     c.DateTime,
                                     c.CourseId,
@@ -82,6 +83,7 @@ namespace MdLabScience.Controllers
                     var Query = rows.Select(r => new
                     {
                         r.QuestionContent,
+                        r.Explanation,
                         r.QuestionId,
                         r.DateTime,
                         r.CourseId,
@@ -124,6 +126,7 @@ namespace MdLabScience.Controllers
                              select new
                              {
                                  c.QuestionContent,
+                                 c.Explanation,
                                  c.QuestionId,
                                  c.DateTime,
                                  c.CourseId,
@@ -162,6 +165,7 @@ namespace MdLabScience.Controllers
                              select new
                              {
                                  c.QuestionContent,
+                                 c.Explanation,
                                  c.QuestionId,
                                  c.DateTime,
                                  c.CourseId,
@@ -195,6 +199,7 @@ namespace MdLabScience.Controllers
                              select new
                              {
                                  c.QuestionContent,
+                                 c.Explanation,
                                  c.QuestionId,
                                  c.DateTime,
                                  c.CourseId,
@@ -228,6 +233,7 @@ namespace MdLabScience.Controllers
                              select new
                              {
                                  c.QuestionContent,
+                                 c.Explanation,
                                  c.QuestionId,
                                  c.DateTime,
                                  c.CourseId,
@@ -268,6 +274,7 @@ namespace MdLabScience.Controllers
                 }
                 QuestionsTB Qt = new QuestionsTB();
                 Qt.QuestionContent = value.QuestionContent;
+                Qt.Explanation = value.Explanation;
                 Qt.QuestionId = QuestionId;
                 Qt.CourseId = value.CourseId;
                 Qt.DateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
@@ -300,6 +307,7 @@ namespace MdLabScience.Controllers
                 if (UpdateQuery.Count > 0)
                 {
                     UpdateQuery[0].QuestionContent = value.QuestionContent;
+                    UpdateQuery[0].Explanation = value.Explanation;
                     UpdateQuery[0].CourseId = value.CourseId;
                     if (!string.IsNullOrEmpty(value.VerifiedBy))
                     {
@@ -507,6 +515,7 @@ namespace MdLabScience.Controllers
                              select new
                              {
                                  c.QuestionContent,
+                                 c.Explanation,
                                  c.QuestionId,
                                  c.DateTime,
                                  q.CourseName,
@@ -974,6 +983,7 @@ OCR Text:
 
                         QuestionsTB Qt = new QuestionsTB();
                         Qt.QuestionContent = q.QuestionContent;
+                        Qt.Explanation = q.Explanation;
                         Qt.QuestionId = QuestionId;
                         Qt.CourseId = request.CourseId;
                         Qt.DateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
@@ -1340,7 +1350,8 @@ Question to review (JSON):
                                      {
                                          QuestionId = c.QuestionId,
                                          QuestionOptions = db.QuestionOptionsTbs.Where(x => x.QuestionId == c.QuestionId).ToList(),
-                                         QuestionContent = c.QuestionContent
+                                         QuestionContent = c.QuestionContent,
+                                         Explanation = c.Explanation
                                      }).OrderBy(x => x.QuestionId).Take(end).Skip(start).ToList();
 
                 foreach (var q in QuestionQuery)
@@ -1370,6 +1381,7 @@ Question to review (JSON):
                         Option6 = GetOption(options, "Option6"),
                         Option7 = GetOption(options, "Option7"),
                         Option8 = GetOption(options, "Option8"),
+                        Explanation = string.IsNullOrWhiteSpace(q.Explanation) ? "" : StripHTML(q.Explanation),
                         isSelected = false
                     });
                 }

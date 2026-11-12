@@ -28,6 +28,7 @@ const CURRENCIES = ["AED", "SAR", "USD", "GBP", "EUR"];
 const STATUS_CHANGE_CATEGORIES = ["Payment Issue", "Docs Pending", "Manual Review", "Other"];
 
 const emptyForm = () => ({
+  invoiceType: "",
   service: "",
   amount: "",
   paidAmount: "",
@@ -102,6 +103,16 @@ function formatDate(value) {
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
 }
 
+/** Applicant option for SearchableSelect; `search` adds mobile/email matching. */
+function toApplicantOption(a) {
+  const name = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim();
+  return {
+    id: a.applicantId,
+    label: name + (a.registrationNo ? ` · ${a.registrationNo}` : ""),
+    search: [name, a.registrationNo, a.mobile, a.otherMobile, a.email].filter(Boolean).join(" ")
+  };
+}
+
 function invoiceStatus(inv) {
   const amount = toNumber(inv.amount);
   const paid = toNumber(inv.paidAmount);
@@ -114,6 +125,7 @@ function validateForm(form) {
   const errors = {};
   const amount = toNumber(form.amount);
   const paidAmount = toNumber(form.paidAmount || 0);
+  if (!form.invoiceType) errors.invoiceType = "Select an invoice type.";
   if (!form.service.trim()) errors.service = "Service is required.";
   if (form.amount === "" || form.amount === null || amount <= 0) {
     errors.amount = "Enter an amount greater than 0.";
@@ -463,6 +475,7 @@ export function InvoiceScreen({ applicant }) {
   const openEdit = (inv) => {
     setEditing(inv);
     setForm({
+      invoiceType: inv.invoiceType ?? "",
       service: inv.service ?? "",
       amount: inv.amount ?? "",
       paidAmount: inv.paidAmount ?? "",
@@ -615,6 +628,7 @@ export function InvoiceScreen({ applicant }) {
         invoiceId: editing ? editing.invoiceId : 0,
         invoiceNo: editing ? editing.invoiceNo : null,
         applicantId: modalApplicant.applicantId,
+        invoiceType: form.invoiceType || null,
         service: form.service.trim(),
         amount,
         discountType: form.discountType || null,
@@ -1134,10 +1148,7 @@ export function InvoiceScreen({ applicant }) {
         </div>
         <div className="flex items-center gap-3">
           <SearchableSelect
-            options={applicants.map((a) => ({
-              id: a.applicantId,
-              label: `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim() + (a.registrationNo ? ` · ${a.registrationNo}` : "")
-            }))}
+            options={applicants.map(toApplicantOption)}
             value={selectedApplicant?.applicantId ?? null}
             onSelect={(id) => {
               const found = applicants.find((a) => a.applicantId === id);
@@ -1146,7 +1157,7 @@ export function InvoiceScreen({ applicant }) {
                 : null);
             }}
             allLabel="Select an applicant"
-            placeholder="Search applicant…"
+            placeholder="Search name or mobile…"
           />
           <Btn variant="primary" icon={<Plus size={14} />} onClick={openAdd}>
             Create Invoice
@@ -1159,7 +1170,7 @@ export function InvoiceScreen({ applicant }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[rgba(0,0,0,0.06)] bg-[#F7FAFC]">
-                {["Invoice No", "Applicant", "Date", "Service", "Amount", "Tax", "Paid", "Balance", "Currency", "Status", "Actions"].map((h) => (
+                {["Invoice No", "Applicant", "Date", "Type", "Service", "Amount", "Tax", "Paid", "Balance", "Currency", "Status", "Actions"].map((h) => (
                   <th key={h} className={`px-4 py-3 text-[11px] font-semibold text-[#718096] uppercase tracking-wide ${["Amount", "Tax", "Paid", "Balance"].includes(h) ? "text-right" : "text-left"}`}>{h}</th>
                 ))}
               </tr>
@@ -1170,16 +1181,20 @@ export function InvoiceScreen({ applicant }) {
                   <td className="px-4 py-3 font-mono text-xs text-[#718096]">{inv.invoiceNo}</td>
                   <td className="px-4 py-3 text-[#1A202C] font-medium">
                     {inv.firstName || inv.lastName ? (
-                      <button
-                        onClick={() => openDrawer(inv)}
-                        title="View applicant details"
-                        className="text-left hover:text-[#C41E3A] hover:underline transition"
-                      >
-                        {`${inv.firstName ?? ""} ${inv.lastName ?? ""}`.trim()}
-                      </button>
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          onClick={() => openDrawer(inv)}
+                          title="View applicant details"
+                          className="text-left hover:text-[#C41E3A] hover:underline transition"
+                        >
+                          {`${inv.firstName ?? ""} ${inv.lastName ?? ""}`.trim()}
+                        </button>
+                        {inv.mobile && <span className="text-[11px] font-normal text-[#718096]">{inv.mobile}</span>}
+                      </div>
                     ) : "—"}
                   </td>
                   <td className="px-4 py-3 text-[#718096] whitespace-nowrap">{formatDate(inv.dateTime)}</td>
+                  <td className="px-4 py-3 text-[#1A202C] whitespace-nowrap">{inv.invoiceType || "—"}</td>
                   <td className="px-4 py-3 text-[#1A202C] max-w-64 truncate" title={inv.service}>
                     {inv.service || "—"}
                     {(inv.serviceList?.length ?? 0) > 0 && (
@@ -1298,10 +1313,7 @@ export function InvoiceScreen({ applicant }) {
                   <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <SearchableSelect
-                        options={applicants.map((a) => ({
-                          id: a.applicantId,
-                          label: `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim() + (a.registrationNo ? ` · ${a.registrationNo}` : "")
-                        }))}
+                        options={applicants.map(toApplicantOption)}
                         value={modalApplicant?.applicantId ?? null}
                         onSelect={(id) => {
                           const found = applicants.find((a) => a.applicantId === id);
@@ -1316,7 +1328,7 @@ export function InvoiceScreen({ applicant }) {
                           });
                         }}
                         allLabel="Select an applicant"
-                        placeholder="Search applicant…"
+                        placeholder="Search name or mobile…"
                       />
                     </div>
                     <Btn variant="ghost" onClick={openReg} disabled={!!editing} className="whitespace-nowrap">
@@ -1326,6 +1338,21 @@ export function InvoiceScreen({ applicant }) {
                   {formErrors.applicant && <p className="text-xs text-red-600">{formErrors.applicant}</p>}
                 </>
               )}
+            </div>
+
+            {/* Invoice type */}
+            <div className="mt-4 flex flex-col gap-1">
+              <label className="text-[12px] font-semibold text-[#1A202C] uppercase tracking-wide">Invoice Type <span className="text-red-500">*</span></label>
+              <select
+                value={form.invoiceType}
+                onChange={setField("invoiceType")}
+                className={`h-10 px-3 rounded-lg border bg-white text-sm text-[#1A202C] appearance-none focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition ${formErrors.invoiceType ? "border-red-400" : "border-[rgba(0,0,0,0.12)]"}`}
+              >
+                <option value="">Select invoice type</option>
+                <option value="Buy Course">Buy Course</option>
+                <option value="For Procedure">For Procedure</option>
+              </select>
+              {formErrors.invoiceType && <p className="text-xs text-red-600">{formErrors.invoiceType}</p>}
             </div>
 
             {/* Services */}

@@ -562,7 +562,8 @@ namespace MdLabScience.Controllers
                     Remarks = reference,
                     Currency = currency,
                     DiscountAmount = 0,
-                    TaxAmount = 0
+                    TaxAmount = 0,
+                    InvoiceType = "Buy Course"
                 };
                 db.ApplicantInvoiceTBs.Add(invoice);
                 db.SaveChanges();

@@ -60,6 +60,7 @@ function mapRows(rows: TakeQuestion[]): ExerciseQuestion[] {
     options: r.options,
     correct: r.rightOption > 0 ? r.rightOption - 1 : 0,
     explanation:
+      r.explanation ||
       "Check the course material and references for this topic to confirm the correct answer.",
   }));
 }
@@ -213,6 +214,7 @@ export default function ExerciseScreen() {
           questionContent: q.question,
           rightOption: q.correct,
           options: q.options,
+          explanation: q.explanation,
         }));
       }
 
@@ -836,7 +838,7 @@ const pct = Math.round((score / totalQ) * 100);
               ]}
             >
               {selected === q.correct
-                ? "✓ Correct!"
+                ? "✓ Correct — Explanation"
                 : "✗ Incorrect — Explanation"}
             </Text>
             <Text

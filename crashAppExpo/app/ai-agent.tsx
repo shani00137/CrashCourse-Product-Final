@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Animated,
 } from "react-native";
@@ -129,11 +130,25 @@ export default function AIAgentScreen() {
   const [messages, setMessages] = useState<Message[]>(() => [buildWelcomeMessage(domain, courseName)]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSub = Keyboard.addListener(showEvent, (event) =>
+      setKeyboardHeight(event.endCoordinates?.height ?? 0)
+    );
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
-  }, [messages, typing]);
+  }, [messages, typing, keyboardHeight]);
 
   const send = async (text?: string) => {
     const query = (text ?? input).trim();
@@ -257,11 +272,7 @@ export default function AIAgentScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={0}
-    >
+    <View style={styles.flex}>
       {/* Header */}
       <LinearGradient
         colors={gradients.darkRedGrad}
@@ -304,6 +315,7 @@ export default function AIAgentScreen() {
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       >
         {/* Suggested questions — visible only at start */}
         {messages.length === 1 && (
@@ -392,7 +404,15 @@ export default function AIAgentScreen() {
       </Text>
 
       {/* Input */}
-      <View style={[styles.inputBar, { paddingBottom: bottomInset }]}>
+      <View
+        style={[
+          styles.inputBar,
+          {
+            paddingBottom:
+              keyboardHeight > 0 ? keyboardHeight + bottomInset : bottomInset,
+          },
+        ]}
+      >
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -424,7 +444,7 @@ export default function AIAgentScreen() {
           />
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 const makeStyles = ({ colors }: ThemePalette) => StyleSheet.create({

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Plus,
   Search,
@@ -23,7 +23,6 @@ import {
 function ServicesScreen() {
   const pageSize = 10;
   const [rows, setRows] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
@@ -62,12 +61,10 @@ function ServicesScreen() {
       if (cancelled) return;
       const data = Array.isArray(res) ? res : (res?.data ?? []);
       setRows(data);
-      setTotalRecords(data.length);
     }).catch((err) => {
       if (cancelled) return;
       setError(err instanceof Error ? err.message : "Failed to load services.");
       setRows([]);
-      setTotalRecords(0);
     }).finally(() => {
       if (!cancelled) setLoading(false);
     });
@@ -76,10 +73,16 @@ function ServicesScreen() {
 
   useEffect(() => load(), [load]);
 
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  const filteredRows = useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
+    if (!q) return rows;
+    return rows.filter((s) => (s.serviceName ?? "").toLowerCase().includes(q));
+  }, [rows, debouncedSearch]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * pageSize;
-  const pagedRows = rows.slice(start, start + pageSize);
+  const pagedRows = filteredRows.slice(start, start + pageSize);
   const goToPage = (p) => setPage(Math.max(1, Math.min(p, totalPages)));
 
   const openAdd = () => {
@@ -210,7 +213,7 @@ function ServicesScreen() {
               <p className="text-sm text-red-600 font-medium">{error}</p>
               <p className="text-xs text-gray-400 mt-1">Make sure you are logged in and the API is running.</p>
             </div>}
-          {!loading && !error && totalRecords === 0 && <div className="py-16 text-center">
+          {!loading && !error && filteredRows.length === 0 && <div className="py-16 text-center">
               <FileText size={36} className="mx-auto text-gray-300 mb-3" />
               <p className="text-[#718096] font-medium">No services found</p>
               <p className="text-xs text-gray-400 mt-1">{search.trim() ? "Try clearing your search" : "Add a service to get started"}</p>
@@ -219,7 +222,7 @@ function ServicesScreen() {
         {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-[rgba(0,0,0,0.06)]">
           <span className="text-xs text-[#718096]">
-            {loading ? "Loading…" : totalRecords === 0 ? "No results" : `Showing ${start + 1}–${Math.min(start + pageSize, totalRecords)} of ${totalRecords} service${totalRecords === 1 ? "" : "s"}`}
+            {loading ? "Loading…" : filteredRows.length === 0 ? "No results" : `Showing ${start + 1}–${Math.min(start + pageSize, filteredRows.length)} of ${filteredRows.length} service${filteredRows.length === 1 ? "" : "s"}`}
           </span>
           <div className="flex items-center gap-1">
             <button

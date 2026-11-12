@@ -125,14 +125,11 @@ namespace MdLabScience.Controllers
                             string? courseUrl = await _r2Storage.UploadAsync(file, "courses");
                             if (string.IsNullOrEmpty(courseUrl))
                             {
-                                var dirPath = Path.Combine(_env.ContentRootPath, "Uploads");
-                                Directory.CreateDirectory(dirPath);
-                                var path = Path.Combine(dirPath, fileName);
-                                using (var stream = new FileStream(path, FileMode.Create))
+                                return BadRequest(new
                                 {
-                                    file.CopyTo(stream);
-                                }
-                                courseUrl = "Uploads/" + fileName.ToString();
+                                    succeeded = false,
+                                    message = "Course file upload to Cloudflare failed. Please try again."
+                                });
                             }
                             value.CourseUrl = courseUrl;
                         }
@@ -142,11 +139,16 @@ namespace MdLabScience.Controllers
                     if (photoFile != null && photoFile.Length > 0)
                     {
                         var uploaded = await _r2Storage.UploadAsync(photoFile, "courses/photos");
-                        value.CoursePhotourl = !string.IsNullOrEmpty(uploaded) ? uploaded : SaveCoursePhoto(photoFile);
-                    }
-                    else
-                    {
-                        value.CoursePhotourl = SaveCoursePhoto(photoFile);
+                        if (string.IsNullOrEmpty(uploaded))
+                        {
+                            await DeleteStoredFileAsync(value.CourseUrl);
+                            return BadRequest(new
+                            {
+                                succeeded = false,
+                                message = "Course photo upload to Cloudflare failed. Please try again."
+                            });
+                        }
+                        value.CoursePhotourl = uploaded;
                     }
 
                     CourseTb courseTb = new CourseTb();
@@ -197,16 +199,11 @@ namespace MdLabScience.Controllers
 
                     if (string.IsNullOrEmpty(courseUrl))
                     {
-                        Guid id = Guid.NewGuid();
-                        var fileName = id.ToString() + "-" + Path.GetFileName(file.FileName);
-                        var dirPath = Path.Combine(_env.ContentRootPath, "Uploads");
-                        Directory.CreateDirectory(dirPath);
-                        var path = Path.Combine(dirPath, fileName);
-                        using (var stream = new FileStream(path, FileMode.Create))
+                        return BadRequest(new
                         {
-                            file.CopyTo(stream);
-                        }
-                        courseUrl = "Uploads/" + fileName.ToString();
+                            succeeded = false,
+                            message = "Attachment upload to Cloudflare failed. Please try again."
+                        });
                     }
 
                     value.CourseUrl = courseUrl;
@@ -348,50 +345,57 @@ namespace MdLabScience.Controllers
                 var Query = db.CourseTbs.Where(x => x.CourseId == value.CourseId).FirstOrDefault();
                 if (Query != null)
                 {
+                    string? newCourseUrl = null;
                     var file = GetNamedFile("CourseFile");
                     if (file != null && file.Length > 0)
                     {
                         var fileName = Path.GetFileName(file.FileName);
                         if (fileName.StartsWith("Course") == true)
                         {
-                            await DeleteStoredFileAsync(Query.CourseUrl);
-                            string? courseUrl = await _r2Storage.UploadAsync(file, "courses");
-                            if (string.IsNullOrEmpty(courseUrl))
+                            newCourseUrl = await _r2Storage.UploadAsync(file, "courses");
+                            if (string.IsNullOrEmpty(newCourseUrl))
                             {
-                                var path = Path.Combine(_env.ContentRootPath, "Uploads", fileName);
-                                using (var stream = new FileStream(path, FileMode.Create))
+                                return BadRequest(new
                                 {
-                                    file.CopyTo(stream);
-                                }
-                                courseUrl = "Uploads/" + fileName.ToString();
+                                    succeeded = false,
+                                    message = "Course file upload to Cloudflare failed. Please try again."
+                                });
                             }
-                            value.CourseUrl = courseUrl;
                         }
                     }
 
+                    string? newPhotoUrl = null;
                     var photo = Request.Form.Files["CoursePhoto"];
                     if (photo != null && photo.Length > 0)
                     {
+                        newPhotoUrl = await _r2Storage.UploadAsync(photo, "courses/photos");
+                        if (string.IsNullOrEmpty(newPhotoUrl))
+                        {
+                            await DeleteStoredFileAsync(newCourseUrl);
+                            return BadRequest(new
+                            {
+                                succeeded = false,
+                                message = "Course photo upload to Cloudflare failed. Please try again."
+                            });
+                        }
+                    }
+
+                    if (newCourseUrl != null)
+                    {
+                        await DeleteStoredFileAsync(Query.CourseUrl);
+                        Query.CourseUrl = newCourseUrl;
+                    }
+
+                    if (newPhotoUrl != null)
+                    {
                         await DeleteStoredFileAsync(Query.CoursePhotourl);
-                        string? savedPhoto = await _r2Storage.UploadAsync(photo, "courses/photos");
-                        if (string.IsNullOrEmpty(savedPhoto))
-                        {
-                            savedPhoto = SaveCoursePhoto(photo);
-                        }
-                        if (savedPhoto != null)
-                        {
-                            Query.CoursePhotourl = savedPhoto;
-                        }
+                        Query.CoursePhotourl = newPhotoUrl;
                     }
 
                     Query.CourseCode = value.CourseCode;
                     Query.CourseName = value.CourseName;
                     Query.SaleRate = value.SaleRate;
                     Query.IsForMobile = value.IsForMobile;
-                    if (value.CourseUrl != null)
-                    {
-                        Query.CourseUrl = value.CourseUrl;
-                    }
                     db.SaveChanges();
                     ResponseMessage = "Update Succesfuly";
                 }
@@ -540,26 +544,6 @@ namespace MdLabScience.Controllers
                 file = Request.Form.Files[0];
             }
             return file;
-        }
-
-        // Saves an uploaded course picture under Uploads/ and returns its
-        // relative path, or null when nothing (valid) was posted.
-        private string? SaveCoursePhoto(IFormFile? photo)
-        {
-            if (photo == null || photo.Length == 0)
-            {
-                return null;
-            }
-            var extension = Path.GetExtension(Path.GetFileName(photo.FileName));
-            var fileName = "CoursePhoto-" + Guid.NewGuid().ToString("N") + extension;
-            var dirPath = Path.Combine(_env.ContentRootPath, "Uploads");
-            Directory.CreateDirectory(dirPath);
-            var path = Path.Combine(dirPath, fileName);
-            using (var stream = new FileStream(path, FileMode.Create))
-            {
-                photo.CopyTo(stream);
-            }
-            return "Uploads/" + fileName;
         }
 
         // Best-effort removal of a previously uploaded file; never lets a

@@ -27,7 +27,7 @@ namespace MdLabScience.Services
             if (!_isConfigured || string.IsNullOrWhiteSpace(_accountId))
             {
                 _s3Client = null;
-                Console.WriteLine("[R2] Not configured - uploads will be stored locally in Uploads/. Set Cloudflare:R2:* in appsettings.json.");
+                Console.WriteLine("[R2] Not configured - uploads will fail. Set Cloudflare:R2:* in appsettings.json.");
                 return;
             }
 

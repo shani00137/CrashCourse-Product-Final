@@ -17,6 +17,10 @@ export function QuestionFormScreen({ question, onBack }) {
     if (!editing) return "";
     return question.questionContent ?? "";
   });
+  const [explanation, setExplanation] = useState(() => {
+    if (!editing) return "";
+    return question.explanation ?? "";
+  });
   const [options, setOptions] = useState(() => {
     if (!editing) return [...BLANK_OPTIONS];
     const opts = Array.isArray(question.questionOptions) ? question.questionOptions : [];
@@ -52,6 +56,7 @@ export function QuestionFormScreen({ question, onBack }) {
       // Reset back to the originally loaded question
       setCourseId(String(question.courseId));
       setContent(question.questionContent ?? "");
+      setExplanation(question.explanation ?? "");
       const opts = Array.isArray(question.questionOptions) ? question.questionOptions : [];
       const mapped = opts.map(o => o.options ?? "");
       while (mapped.length < 4) mapped.push("");
@@ -62,6 +67,7 @@ export function QuestionFormScreen({ question, onBack }) {
       // Blank fresh form
       setCourseId("");
       setContent("");
+      setExplanation("");
       setOptions([...BLANK_OPTIONS]);
       setCorrect(0);
     }
@@ -107,6 +113,7 @@ export function QuestionFormScreen({ question, onBack }) {
     const payload = {
       courseId: courseIdNum,
       questionContent: questionHtml,
+      explanation: explanation.trim() ? explanation : null,
       questionOptionsList: nonEmptyOptions.map((opt, i) => ({ options: htmlToText(opt), isRightAns: i === finalCorrect }))
     };
     setSaving(true);
@@ -251,6 +258,23 @@ export function QuestionFormScreen({ question, onBack }) {
               Add More Options ({options.length}/{MAX_OPTIONS})
             </button>
           )}
+        </Card>
+
+        {/* Explanation */}
+        <Card className="p-5 flex flex-col gap-1">
+          <label className="text-[11px] font-bold text-[#718096] uppercase tracking-widest mb-1">
+            Explanation <span className="text-[#A0AEC0] normal-case tracking-normal font-medium">(optional)</span>
+          </label>
+          <RichTextEditor
+            value={explanation}
+            onChange={setExplanation}
+            placeholder="Explain why the correct answer is right... (supports rich text, images, lists, maths & medical symbols)"
+            className="min-h-[80px]"
+            minHeight="min-h-[80px]"
+          />
+          <p className="text-[10px] text-[#A0AEC0] mt-1">
+            Shown with the answer to help students understand the reasoning.
+          </p>
         </Card>
 
         {/* Error */}

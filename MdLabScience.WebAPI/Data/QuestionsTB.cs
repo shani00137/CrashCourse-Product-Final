@@ -10,5 +10,6 @@ namespace MdLabScience.DbContext
         public string QuestionContent { get; set; }
         public Nullable<System.DateTime> StartDateTime { get; set; }
         public string? VerifiedBy { get; set; }
+         public string? Explanation { get; set; }
     }
 }

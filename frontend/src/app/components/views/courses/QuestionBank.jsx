@@ -44,6 +44,7 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
   const [toast, setToast] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -106,6 +107,21 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * pageSize;
   const goToPage = (p) => setPage(Math.max(1, Math.min(p, totalPages)));
+
+  /** Jumps to the page typed in the input, clamped to the valid range. */
+  const jumpToPage = () => {
+    const n = Number.parseInt(pageInput, 10);
+    if (Number.isNaN(n)) {
+      setPageInput(String(safePage));
+      return;
+    }
+    const target = Math.max(1, Math.min(n, totalPages));
+    setPageInput(String(target));
+    goToPage(target);
+  };
+
+  // Keep the typed value in sync whenever the active page changes.
+  useEffect(() => setPageInput(String(safePage)), [safePage]);
 
   /** Page numbers to render, with null marking an elided range. */
   const pageNumbers = useMemo(() => {
@@ -502,6 +518,12 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
                   </div>
                 ))}
               </div>
+              {q.explanation && (
+                <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Explanation</span>
+                  <p className="mt-1 text-xs text-[#4A5568] leading-relaxed whitespace-pre-line">{htmlToText(q.explanation)}</p>
+                </div>
+              )}
             </Card>
           );
         })}
@@ -513,32 +535,56 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
             <span className="text-xs text-[#718096]">
               {`Showing ${start + 1}\u2013${Math.min(start + pageSize, totalRecords)} of ${totalRecords} question${totalRecords === 1 ? "" : "s"}`}
             </span>
-            <div className="flex items-center gap-1">
-              <button onClick={() => goToPage(safePage - 1)} disabled={safePage <= 1} className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed" title="Previous page">
-                <ChevronLeft size={14} className="mx-auto" />
-              </button>
-              {pageNumbers.map((p, i) =>
-                p === null ? (
-                  <span key={`gap-${i}`} className="px-1 text-xs text-[#A0AEC0]">…</span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => goToPage(p)}
-                    title={`Page ${p}`}
-                    aria-current={p === safePage ? "page" : undefined}
-                    className={`w-7 h-7 rounded-md text-xs font-medium transition ${
-                      p === safePage
-                        ? "bg-[#C41E3A] text-white"
-                        : "text-[#718096] hover:bg-gray-100"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-              <button onClick={() => goToPage(safePage + 1)} disabled={safePage >= totalPages} className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed" title="Next page">
-                <ChevronRight size={14} className="mx-auto" />
-              </button>
+            <div className="flex items-center gap-3 flex-wrap">
+              <form
+                onSubmit={(e) => { e.preventDefault(); jumpToPage(); }}
+                className="flex items-center gap-1.5"
+              >
+                <span className="text-xs text-[#718096]">Go to</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={totalPages}
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  aria-label="Page number"
+                  className="h-7 w-12 px-1.5 rounded-md border border-[rgba(0,0,0,0.12)] bg-white text-xs text-center text-[#1A202C] focus:outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A] transition [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <button
+                  type="submit"
+                  className="h-7 px-2.5 rounded-md text-xs font-medium bg-[#C41E3A] text-white hover:bg-[#A31830] transition"
+                >
+                  Go
+                </button>
+              </form>
+              <div className="flex items-center gap-1">
+                <button onClick={() => goToPage(safePage - 1)} disabled={safePage <= 1} className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed" title="Previous page">
+                  <ChevronLeft size={14} className="mx-auto" />
+                </button>
+                {pageNumbers.map((p, i) =>
+                  p === null ? (
+                    <span key={`gap-${i}`} className="px-1 text-xs text-[#A0AEC0]">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => goToPage(p)}
+                      title={`Page ${p}`}
+                      aria-current={p === safePage ? "page" : undefined}
+                      className={`w-7 h-7 rounded-md text-xs font-medium transition ${
+                        p === safePage
+                          ? "bg-[#C41E3A] text-white"
+                          : "text-[#718096] hover:bg-gray-100"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+                <button onClick={() => goToPage(safePage + 1)} disabled={safePage >= totalPages} className="w-7 h-7 rounded-md text-xs font-medium text-[#718096] hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed" title="Next page">
+                  <ChevronRight size={14} className="mx-auto" />
+                </button>
+              </div>
             </div>
           </div>
         </Card>

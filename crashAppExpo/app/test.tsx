@@ -35,13 +35,32 @@ import StylishDialog, {
 const optionLabels = ["A", "B", "C", "D", "E", "F", "G", "H"];
 const TEST_QUESTION_COUNT = 10;
 const TEST_DURATION_MINUTES = 15;
-const MAX_TEST_QUESTIONS = 50;
+const MAX_AI_TEST_QUESTIONS = 20;
+const MAX_BANK_TEST_QUESTIONS = 150;
 
 type TestPhase = "select" | "running" | "result";
 type CreateMode = "random" | "ai";
 type DifficultyLevel = "Easy" | "Medium" | "Hard";
 
 const DIFFICULTY_LEVELS: DifficultyLevel[] = ["Easy", "Medium", "Hard"];
+
+/** Returns only options that actually contain text, keeping their original
+ * 1-based index so the saved answer still matches `rightOption`. */
+function visibleOptions(question?: TestQuestion | null) {
+  const raw = [
+    question?.option1,
+    question?.option2,
+    question?.option3,
+    question?.option4,
+    question?.option5,
+    question?.option6,
+    question?.option7,
+    question?.option8,
+  ];
+  return raw
+    .map((text, index) => ({ text: text ?? "", index }))
+    .filter((option) => option.text.trim().length > 0);
+}
 
 export default function TestScreen() {
   const { colors, gradients } = useTheme();
@@ -246,9 +265,30 @@ export default function TestScreen() {
     setCreateDialog(true);
   }, [courseId, isTrial]);
 
+  const selectMode = useCallback((mode: CreateMode) => {
+    setCreateMode(mode);
+    const max = mode === "ai" ? MAX_AI_TEST_QUESTIONS : MAX_BANK_TEST_QUESTIONS;
+    setQuestionCount((prev) => {
+      const parsed = parseInt(prev, 10);
+      if (!Number.isFinite(parsed) || parsed < 1) return prev;
+      return String(Math.min(parsed, max));
+    });
+  }, []);
+
+  const handleQuestionCountChange = useCallback(
+    (text: string) => {
+      const digits = text.replace(/[^0-9]/g, "");
+      if (!digits) {
+        setQuestionCount("");
+        return;
+      }
+      const max = createMode === "ai" ? MAX_AI_TEST_QUESTIONS : MAX_BANK_TEST_QUESTIONS;
+      setQuestionCount(String(Math.min(parseInt(digits, 10), max)));
+    },
+    [createMode]
+  );
+
   const handleGenerate = useCallback(async () => {
-    const parsed = parseInt(questionCount, 10);
-    const count = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), MAX_TEST_QUESTIONS) : 20;
     if (!courseId) {
       notify("Missing details", "Log in with a registered course to create a test.", { icon: "person-circle-outline" });
       return;
@@ -265,6 +305,9 @@ export default function TestScreen() {
       notify("Choose a mode", "Pick Question Bank or AI Generated below.", { icon: "albums-outline" });
       return;
     }
+    const maxQuestions = createMode === "ai" ? MAX_AI_TEST_QUESTIONS : MAX_BANK_TEST_QUESTIONS;
+    const parsed = parseInt(questionCount, 10);
+    const count = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), maxQuestions) : Math.min(20, maxQuestions);
     setCreating(true);
     try {
       const res = await generateTest({
@@ -580,14 +623,18 @@ export default function TestScreen() {
               <TextInput
                 style={styles.dialogInput}
                 value={questionCount}
-                onChangeText={setQuestionCount}
+                onChangeText={handleQuestionCountChange}
                 keyboardType="number-pad"
-                maxLength={2}
+                maxLength={3}
                 placeholder="e.g. 20"
                 placeholderTextColor={colors.mutedForeground}
               />
               <Text style={styles.dialogHint}>
-                Between 1 and {MAX_TEST_QUESTIONS}. AI generation takes a few seconds.
+                {createMode === "ai"
+                  ? `Between 1 and ${MAX_AI_TEST_QUESTIONS}. AI generation takes a few seconds.`
+                  : createMode === "random"
+                    ? `Between 1 and ${MAX_BANK_TEST_QUESTIONS}. Questions are picked from your course's bank.`
+                    : `Up to ${MAX_AI_TEST_QUESTIONS} for AI, up to ${MAX_BANK_TEST_QUESTIONS} for Question Bank.`}
               </Text>
 
               <Text style={styles.dialogLabel}>Generate with</Text>
@@ -597,7 +644,7 @@ export default function TestScreen() {
                     styles.modeCard,
                     createMode === "random" && styles.modeCardActive,
                   ]}
-                  onPress={() => setCreateMode("random")}
+                  onPress={() => selectMode("random")}
                   disabled={creating}
                   activeOpacity={0.85}
                 >
@@ -622,7 +669,7 @@ export default function TestScreen() {
                     styles.modeCard,
                     createMode === "ai" && styles.modeCardActive,
                   ]}
-                  onPress={() => setCreateMode("ai")}
+                  onPress={() => selectMode("ai")}
                   disabled={creating}
                   activeOpacity={0.85}
                 >
@@ -786,7 +833,7 @@ export default function TestScreen() {
           const pickedIdx = question.isSelected - 1;
           const isCorrect = pickedIdx === correctIdx;
           const unattempted = pickedIdx < 0;
-          const opts = [question.option1, question.option2, question.option3, question.option4, question.option5, question.option6, question.option7, question.option8];
+          const opts = visibleOptions(question);
           return (
             <View key={question.questionId} style={styles.reviewCard}>
               <View style={styles.reviewCardTop}>
@@ -824,14 +871,14 @@ export default function TestScreen() {
               <Text style={styles.reviewQuestionText}>{question.questionContent}</Text>
 
               <View style={styles.optionsContainer}>
-                {opts.map((opt, oi) => {
-                  const isCorrectOption = oi === correctIdx;
-                  const isPicked = oi === pickedIdx;
+                {opts.map((opt, idx) => {
+                  const isCorrectOption = opt.index === correctIdx;
+                  const isPicked = opt.index === pickedIdx;
                   let bg = colors.card;
                   let border = colors.border;
                   let badgeBg = colors.muted;
                   let badgeColor = colors.textSecondary;
-                  let badge = optionLabels[oi];
+                  let badge = optionLabels[idx];
                   if (isCorrectOption) {
                     bg = colors.successBg;
                     border = "#22C55E";
@@ -847,7 +894,7 @@ export default function TestScreen() {
                   }
                   return (
                     <View
-                      key={oi}
+                      key={opt.index}
                       style={[styles.optionRow, { backgroundColor: bg, borderColor: border }]}
                     >
                       <View style={[styles.optionBadge, { backgroundColor: badgeBg }]}>
@@ -856,7 +903,7 @@ export default function TestScreen() {
                         </Text>
                       </View>
                       <Text style={[styles.optionText, { color: colors.foreground }]}>
-                        {opt}
+                        {opt.text}
                       </Text>
                       {isPicked && (
                         <Text style={styles.pickedTag}>Your answer</Text>
@@ -897,7 +944,7 @@ export default function TestScreen() {
 
   // ── RUNNING PHASE ────────────────────────────────────────────────────────────
   const q = questions[current];
-  const opts = [q?.option1, q?.option2, q?.option3, q?.option4, q?.option5, q?.option6, q?.option7, q?.option8] as string[];
+  const opts = visibleOptions(q);
   const progress = questions.length > 0 ? (current / questions.length) * 100 : 0;
 
   if (!q) {
@@ -989,17 +1036,17 @@ export default function TestScreen() {
 
         <View style={styles.optionsContainer}>
           {opts.map((opt, idx) => {
-            const isSelected = selected === idx + 1;
+            const isSelected = selected === opt.index + 1;
             return (
               <TouchableOpacity
-                key={idx}
+                key={opt.index}
                 style={[
                   styles.optionRow,
                   isSelected
                     ? { backgroundColor: colors.redLight, borderColor: colors.primary }
                     : { backgroundColor: colors.card, borderColor: colors.border },
                 ]}
-                onPress={() => pickOption(idx)}
+                onPress={() => pickOption(opt.index)}
                 activeOpacity={0.9}
               >
                 <View
@@ -1020,7 +1067,7 @@ export default function TestScreen() {
                 <Text
                   style={[styles.optionText, { color: colors.foreground }]}
                 >
-                  {opt}
+                  {opt.text}
                 </Text>
               </TouchableOpacity>
             );

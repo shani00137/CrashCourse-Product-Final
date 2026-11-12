@@ -21,6 +21,7 @@ namespace MdLabScience.Models
         public string TaxType { get; set; }
         public Nullable<double> TaxValue { get; set; }
         public Nullable<double> TaxAmount { get; set; }
+        public string InvoiceType { get; set; }
         public List<CertificateInvoiceMD> ServiceList { get; set; }
     }
 }

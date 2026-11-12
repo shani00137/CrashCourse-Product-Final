@@ -753,8 +753,9 @@ ORDER BY o.TestQuestionOptionId";
                     return BadRequest(new { succeeded = false, message = "Course is required.", testId = 0 });
                 }
 
-                int count = Math.Clamp(value.Questions < 1 ? 20 : value.Questions, 1, 50);
                 string mode = string.IsNullOrWhiteSpace(value.Mode) ? "random" : value.Mode.ToLowerInvariant();
+                int maxQuestions = mode == "ai" ? 20 : 150;
+                int count = Math.Clamp(value.Questions < 1 ? 20 : value.Questions, 1, maxQuestions);
                 string difficulty = string.IsNullOrWhiteSpace(value.Difficulty) ? "Medium" : value.Difficulty;
 
                 using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())

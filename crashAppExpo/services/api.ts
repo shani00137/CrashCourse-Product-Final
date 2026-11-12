@@ -960,6 +960,7 @@ export interface TakeQuestion {
   questionContent: string;
   rightOption: number;
   options: string[];
+  explanation: string;
 }
 
 export interface ExplainQuestionInput {
@@ -1029,6 +1030,8 @@ export async function takeExercise(
           typeof r.questionContent === "string" ? r.questionContent : "",
         rightOption: Number(r.rightOption) || 0,
         options,
+        explanation:
+          typeof r.explanation === "string" ? r.explanation.trim() : "",
       };
     })
     .filter((c) => c.questionId > 0 && c.options.length > 0);

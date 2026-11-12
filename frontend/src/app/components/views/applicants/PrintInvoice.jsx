@@ -161,6 +161,7 @@ function PrintInvoice({ invoice, onClose }) {
         <div class="info-label">Invoice Details</div>
         <div class="info-value">Date: ${invoice.dateTime ? new Date(invoice.dateTime).toLocaleDateString() : "—"}</div>
         <div class="info-value" style="margin-top:2px">Currency: ${invoice.currency || "AED"}</div>
+        ${invoice.invoiceType ? `<div class="info-value" style="margin-top:2px">Type: ${invoice.invoiceType}</div>` : ""}
       </div>
     </div>
 
@@ -253,6 +254,7 @@ function PrintInvoice({ invoice, onClose }) {
             <div className="text-right">
               <p className="text-[15px] text-[#718096]">Date</p>
               <p className="text-xs text-[#1A202C]">{invoice.dateTime ? new Date(invoice.dateTime).toLocaleDateString() : "—"}</p>
+              {invoice.invoiceType && <p className="text-xs text-[#1A202C] mt-0.5">Type: {invoice.invoiceType}</p>}
             </div>
           </div>
           <div className="mb-3">
