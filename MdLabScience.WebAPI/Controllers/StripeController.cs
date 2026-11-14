@@ -171,7 +171,8 @@ namespace MdLabScience.Controllers
                         Phone = applicant.Mobile,
                         ItemName = itemName,
                         Months = service.ProMonths,
-                        IncludeAIAssistant = includeAI
+                        IncludeAIAssistant = includeAI,
+                        PreserveExistingCourses = value.PreserveExistingCourses
                     };
 
                     StripePaymentIntentResult result =
@@ -273,7 +274,8 @@ namespace MdLabScience.Controllers
                             // back to the client flag (guarded by the amount
                             // check above).
                             bool includeAI = intent.IncludesAIAssistant || value.IncludeAIAssistant;
-                            ActivateAccess(db, value.AppUserId, applicant, courseId, nowLocal, service.ProMonths, value.PaymentIntentId, includeAI);
+                            bool preserveCourses = intent.PreservesExistingCourses || value.PreserveExistingCourses;
+                            ActivateAccess(db, value.AppUserId, applicant, courseId, nowLocal, service.ProMonths, value.PaymentIntentId, includeAI, preserveCourses);
 
                             return Ok(new
                             {
@@ -321,7 +323,7 @@ namespace MdLabScience.Controllers
                     // Record an owner approval request so nothing is activated
                     // on trust alone.
                     DateTime requestedOn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Pakistan_Standard_Time);
-                    RecordPendingApproval(db, value.AppUserId, applicant.ApplicantId ?? 0, courseId, requestedOn);
+                    RecordPendingApproval(db, value.AppUserId, applicant.ApplicantId ?? 0, courseId, requestedOn, value.PreserveExistingCourses);
 
                     return Ok(new
                     {
@@ -382,6 +384,10 @@ namespace MdLabScience.Controllers
                     (string?)metadata["includeAIAssistant"],
                     "true",
                     StringComparison.OrdinalIgnoreCase);
+                bool preserveCourses = string.Equals(
+                    (string?)metadata["preserveExistingCourses"],
+                    "true",
+                    StringComparison.OrdinalIgnoreCase);
 
                 if (appUserId <= 0)
                 {
@@ -412,7 +418,8 @@ namespace MdLabScience.Controllers
                         nowLocal,
                         service.ProMonths,
                         (string?)intent["id"],
-                        includeAI);
+                        includeAI,
+                        preserveCourses);
 
                     return Ok();
                 }
@@ -451,7 +458,8 @@ namespace MdLabScience.Controllers
             DateTime nowLocal,
             int months,
             string? paymentIntentId = null,
-            bool includeAIAssistant = false)
+            bool includeAIAssistant = false,
+            bool preserveExistingCourses = false)
         {
             if (!applicant.RegistrationDate.HasValue)
             {
@@ -480,7 +488,7 @@ namespace MdLabScience.Controllers
                 request.ResolvedOn = nowLocal;
             }
 
-            SetApplicantCourse(db, applicant.ApplicantId ?? 0, courseId ?? 0);
+            SetApplicantCourse(db, applicant.ApplicantId ?? 0, courseId ?? 0, preserveExistingCourses);
 
             db.SaveChanges();
 
@@ -691,7 +699,8 @@ namespace MdLabScience.Controllers
             int appUserId,
             int applicantId,
             int? courseId,
-            DateTime nowLocal)
+            DateTime nowLocal,
+            bool preserveExistingCourses = false)
         {
             var pending = db.ProUpgradeRequestTbs
                 .Where(x => x.AppUserId == appUserId && x.Status == "Pending")
@@ -714,7 +723,7 @@ namespace MdLabScience.Controllers
                 pending.RequestedOn = nowLocal;
             }
 
-            SetApplicantCourse(db, applicantId, courseId ?? 0);
+            SetApplicantCourse(db, applicantId, courseId ?? 0, preserveExistingCourses);
 
             db.SaveChanges();
         }
@@ -725,7 +734,7 @@ namespace MdLabScience.Controllers
         // replaced: the paid course becomes the applicant's course. CourseCode
         // is copied from CourseTb. Idempotent — re-buying the same course just
         // refreshes the existing row instead of creating a duplicate.
-        private void SetApplicantCourse(MdLabScienceDbEntities db, int applicantId, int courseId)
+        private void SetApplicantCourse(MdLabScienceDbEntities db, int applicantId, int courseId, bool preserveExistingCourses = false)
         {
             if (applicantId <= 0 || courseId <= 0) return;
 
@@ -747,11 +756,16 @@ namespace MdLabScience.Controllers
             // The row already pointing at the paid course, if any.
             var match = existing.FirstOrDefault(x => x.CourseId == courseId);
 
-            // Drop every other selection: payment is for one course only.
-            var stale = existing.Where(x => x.CourseId != courseId).ToList();
-            if (stale.Count > 0)
+            // The mobile flow replaces the registration's single course. The
+            // web storefront can buy several courses in one cart, so it asks to
+            // preserve the ones already purchased.
+            if (!preserveExistingCourses)
             {
-                db.ApplicantCourseSelectionTbs.RemoveRange(stale);
+                var stale = existing.Where(x => x.CourseId != courseId).ToList();
+                if (stale.Count > 0)
+                {
+                    db.ApplicantCourseSelectionTbs.RemoveRange(stale);
+                }
             }
 
             if (match != null)

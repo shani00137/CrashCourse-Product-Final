@@ -17,6 +17,12 @@ namespace MdLabScience.Models
         // When true the amount includes the add-on and the paid user is granted
         // AI access.
         public bool IncludeAIAssistant { get; set; }
+
+        // Web storefront only: keep courses the applicant already bought and
+        // add this one instead of replacing the whole selection. The mobile app
+        // leaves this false because a course purchase there replaces the
+        // registration's single course.
+        public bool PreserveExistingCourses { get; set; }
     }
 
     // Sent by the mobile app after the Stripe SDK reports a successful payment.
@@ -34,5 +40,9 @@ namespace MdLabScience.Models
         // When true the user bought the AI Assistant add-on; the server enables
         // AI access once the payment is verified.
         public bool IncludeAIAssistant { get; set; }
+
+        // Web storefront only: keep courses the applicant already bought and
+        // add this one instead of replacing the whole selection.
+        public bool PreserveExistingCourses { get; set; }
     }
 }

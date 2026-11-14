@@ -278,6 +278,10 @@ namespace MdLabScience.Utility
                         (string?)metadata?["includeAIAssistant"],
                         "true",
                         StringComparison.OrdinalIgnoreCase);
+                    bool preserveExistingCourses = string.Equals(
+                        (string?)metadata?["preserveExistingCourses"],
+                        "true",
+                        StringComparison.OrdinalIgnoreCase);
 
                     return new StripePaymentIntentResult
                     {
@@ -292,6 +296,7 @@ namespace MdLabScience.Utility
                         Currency = ((string?)json["currency"] ?? "").ToUpperInvariant(),
                         Status = status,
                         IncludesAIAssistant = includesAI,
+                        PreservesExistingCourses = preserveExistingCourses,
                         Message = succeeded ? null : "This payment wasn't completed."
                     };
                 }
@@ -374,6 +379,7 @@ namespace MdLabScience.Utility
                 new("metadata[applicantId]", context.ApplicantId.ToString(CultureInfo.InvariantCulture)),
                 new("metadata[courseId]", (context.CourseId ?? 0).ToString(CultureInfo.InvariantCulture)),
                 new("metadata[includeAIAssistant]", context.IncludeAIAssistant ? "true" : "false"),
+                new("metadata[preserveExistingCourses]", context.PreserveExistingCourses ? "true" : "false"),
                 new("metadata[months]", context.Months.ToString(CultureInfo.InvariantCulture))
             };
 
@@ -426,6 +432,9 @@ namespace MdLabScience.Utility
         // When true the payment also covers the AI Assistant add-on, and the
         // paid user gets IsAIAllowed enabled.
         public bool IncludeAIAssistant { get; set; }
+        // Web storefront cart purchases keep previously bought courses instead
+        // of replacing the applicant's course selection.
+        public bool PreserveExistingCourses { get; set; }
     }
 
     public class StripePaymentIntentResult
@@ -442,5 +451,8 @@ namespace MdLabScience.Utility
         public string? Message { get; set; }
         // Whether the PaymentIntent's metadata says the AI add-on was included.
         public bool IncludesAIAssistant { get; set; }
+        // Whether the PaymentIntent's metadata says existing course selections
+        // must be kept (web cart checkout).
+        public bool PreservesExistingCourses { get; set; }
     }
 }

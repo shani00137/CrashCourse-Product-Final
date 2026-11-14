@@ -7,6 +7,7 @@ import { onAuthExpired } from "../services/apiClient";
 import { changeApplicantStatus } from "../services/applicantService";
 import { LoginScreen } from "./components/views/auth/Login";
 import { AdminShell } from "./components/layout/AdminShell";
+import { Storefront } from "./components/views/client/Storefront";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -75,7 +76,7 @@ function ProtectedApp() {
       auth.logout();
       setUser(null);
       setAuthed(false);
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true });
     });
     return off;
   }, [navigate]);
@@ -88,7 +89,7 @@ function ProtectedApp() {
     auth.logout();
     setUser(null);
     setAuthed(false);
-    navigate("/login", { replace: true });
+    navigate("/", { replace: true });
   };
 
   return (
@@ -110,11 +111,17 @@ function ProtectedApp() {
   );
 }
 
+function RootPage() {
+  return auth.isAuthenticated() ? <ProtectedApp /> : <Storefront />;
+}
+
 function App() {
   return (
     <>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/store/*" element={<Storefront />} />
+        <Route path="/" element={<RootPage />} />
         <Route path="/*" element={<ProtectedApp />} />
       </Routes>
       <Toaster position="top-right" richColors closeButton />

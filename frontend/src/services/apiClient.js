@@ -7,6 +7,7 @@ class ApiError extends Error {
     this.name = "ApiError";
   }
 }
+//users
 const AUTH_EXPIRED_EVENT = "mds_auth_expired";
 function notifyAuthExpired() {
   window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
