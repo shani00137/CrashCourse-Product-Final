@@ -52,7 +52,22 @@ namespace MdLabScience.Utility
         }
 
         private string SecretKey => _config["Stripe:SecretKey"]?.Trim() ?? "";
-        public string PublishableKey => _config["Stripe:PublishableKey"]?.Trim() ?? "";
+
+        /// <summary>
+        /// Publishable key handed to browser / mobile clients. Only a real
+        /// publishable key (<c>pk_...</c>) is ever returned: if the deployment
+        /// was misconfigured with a secret key (<c>sk_...</c>) this resolves to
+        /// an empty string so the secret is never leaked to clients.
+        /// </summary>
+        public string PublishableKey
+        {
+            get
+            {
+                string key = _config["Stripe:PublishableKey"]?.Trim() ?? "";
+                return key.StartsWith("pk_", StringComparison.Ordinal) ? key : "";
+            }
+        }
+
         private string WebhookSecret => _config["Stripe:WebhookSecret"]?.Trim() ?? "";
 
         public string Currency

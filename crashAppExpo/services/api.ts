@@ -749,9 +749,12 @@ export async function getStripePlan(): Promise<StripePlanInfo> {
   try {
     const data = await get<unknown>(ENDPOINTS.stripePlan);
     const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+    const publishableKey =
+      typeof r.publishableKey === "string" ? r.publishableKey.trim() : "";
     return {
       configured: r.configured === true,
-      publishableKey: typeof r.publishableKey === "string" ? r.publishableKey : "",
+      // Stripe.js / the native SDK reject secret keys; only accept pk_*.
+      publishableKey: publishableKey.startsWith("pk_") ? publishableKey : "",
       amountCents: typeof r.amountCents === "number" ? r.amountCents : 0,
       currency: typeof r.currency === "string" ? r.currency : "USD",
       months: typeof r.months === "number" && r.months > 0 ? r.months : 1,

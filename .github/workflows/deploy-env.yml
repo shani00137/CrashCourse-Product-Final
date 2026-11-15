@@ -116,6 +116,24 @@ jobs:
                       cur = cur.setdefault(k, {})
                   cur[keys[-1]] = value
 
+          # Catch swapped/mistyped Stripe secrets at deploy time. A publishable
+          # key must be pk_*; putting the secret key here makes Stripe.js fail
+          # with "You should not use your secret key with Stripe.js" and leaks
+          # the secret to every client.
+          sk = os.environ.get("STRIPE_SECRET_KEY", "").strip()
+          pk = os.environ.get("STRIPE_PUBLISHABLE_KEY", "").strip()
+          if sk and not (sk.startswith("sk_") or sk.startswith("rk_")):
+              sys.exit(
+                  "ERROR: STRIPE_SECRET_KEY must start with 'sk_' (or 'rk_' for a "
+                  "restricted key). Fix the GitHub secret and re-run the deploy."
+              )
+          if pk and not pk.startswith("pk_"):
+              sys.exit(
+                  "ERROR: STRIPE_PUBLISHABLE_KEY must start with 'pk_'. It currently "
+                  "looks like a secret key; update the GitHub secret and re-run the "
+                  "deploy."
+              )
+
           db = os.environ.get("DB_CONNECTION_STRING", "").strip()
           set_if(data, ["ConnectionStrings", "DefaultConnection"], db)
           set_if(data, ["OpenAI", "ApiKey1"], os.environ.get("OPENAI_API_KEY", "").strip())

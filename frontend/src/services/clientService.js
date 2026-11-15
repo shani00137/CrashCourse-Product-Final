@@ -307,9 +307,12 @@ async function registerClient(input) {
 async function getStripePlan() {
   const data = await clientFetch("/api/Stripe/api/Stripe/Plan");
   const plan = data && typeof data === "object" ? data : {};
+  const publishableKey =
+    typeof plan.publishableKey === "string" ? plan.publishableKey.trim() : "";
   return {
     configured: plan.configured === true,
-    publishableKey: typeof plan.publishableKey === "string" ? plan.publishableKey : "",
+    // Never let a secret key (sk_...) reach Stripe.js.
+    publishableKey: publishableKey.startsWith("pk_") ? publishableKey : "",
     amountCents: Number(plan.amountCents) || 0,
     currency: typeof plan.currency === "string" ? plan.currency : "USD",
     months: Number(plan.months) || 1
@@ -382,9 +385,15 @@ function loadStripeScript() {
 }
 
 async function getStripe(publishableKey) {
+  const key = typeof publishableKey === "string" ? publishableKey.trim() : "";
+  if (!key.startsWith("pk_")) {
+    throw new Error(
+      "Card payments are misconfigured on the server. Please contact support."
+    );
+  }
   const Stripe = await loadStripeScript();
   if (!Stripe) throw new Error("Stripe is unavailable.");
-  return Stripe(publishableKey);
+  return Stripe(key);
 }
 
 function resolveAssetUrl(url) {

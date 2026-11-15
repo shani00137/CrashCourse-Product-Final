@@ -96,8 +96,7 @@ export default function UpgradeScreen() {
 
       // If the backend owns the publishable key (and it differs from the env
       // fallback), re-initialize the native SDK with it so checkout works even
-      // when the env value is unset.
-      console.log("[stripe] publishable key:", info.publishableKey);
+      // when the env value is unset. Never log or use a secret key here.
       if (info.publishableKey && info.publishableKey !== STRIPE_PUBLISHABLE_KEY) {
         try {
           await initStripe({
