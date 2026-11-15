@@ -7,129 +7,173 @@ using MdLabScience.Services;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Serilog;
+using Serilog.Events;
 using System.Text;
 
-var builder = WebApplication.CreateBuilder(args);
+var logDirectory = Path.Combine(AppContext.BaseDirectory, "logs");
+Directory.CreateDirectory(logDirectory);
 
-builder.Services.AddSingleton<MdLabScience.Services.R2StorageService>();
-builder.Services.AddControllers(options =>
-    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
-builder.Services.AddEndpointsApiExplorer();
+const string logOutputTemplate =
+    "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}";
 
-builder.Services.AddCors(options =>
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate: logOutputTemplate)
+    .WriteTo.File(
+        Path.Combine(logDirectory, "log-.txt"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        shared: true,
+        outputTemplate: logOutputTemplate)
+    .CreateLogger();
+
+try
 {
-    options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins("http://localhost:5008")
-              .AllowAnyHeader()
-              .AllowAnyMethod());
-});
+    var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    builder.Host.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.Console(outputTemplate: logOutputTemplate)
+        .WriteTo.File(
+            Path.Combine(logDirectory, "log-.txt"),
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 30,
+            shared: true,
+            outputTemplate: logOutputTemplate)
+        .WriteTo.File(
+            Path.Combine(logDirectory, "error-.txt"),
+            restrictedToMinimumLevel: LogEventLevel.Error,
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 60,
+            shared: true,
+            outputTemplate: logOutputTemplate));
+
+    Log.Information("MdLabScience WebAPI starting up");
+
+    builder.Services.AddSingleton<MdLabScience.Services.R2StorageService>();
+    builder.Services.AddControllers(options =>
+        options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
+    builder.Services.AddEndpointsApiExplorer();
+
+    builder.Services.AddCors(options =>
     {
-        // Read the signing key but never pass null to Encoding.GetBytes: a
-        // missing/stale appsettings.json on the host previously turned every
-        // authenticated request into an opaque 500 (ArgumentNullException 's').
-        var jwtKey = builder.Configuration["Jwt:Key"];
-        if (string.IsNullOrWhiteSpace(jwtKey))
-        {
-            Console.WriteLine(
-                "[Config] WARNING: Jwt:Key is missing from configuration. " +
-                "Falling back to the built-in default key so the API stays " +
-                "reachable. Set Jwt:Key (or Jwt__Key) on the host.");
-            jwtKey = "MdLabScience-Super-Secret-Signing-Key-ChangeMe-In-Production-2026";
-        }
-
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "MdLabScience.WebAPI",
-            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "MdLabScience.Clients",
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtKey))
-        };
-        options.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = context =>
-            {
-                Console.WriteLine($"[JWT] Token rejected: {context.Exception?.Message}");
-                return Task.CompletedTask;
-            },
-            OnChallenge = context =>
-            {
-                Console.WriteLine($"[JWT] Challenge sent for: {context.HttpContext.Request.Path}");
-                return Task.CompletedTask;
-            }
-        };
+        options.AddPolicy("Frontend", policy =>
+            policy.WithOrigins("http://localhost:5008")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod());
     });
-builder.Services.AddAuthorization();
 
-builder.Services.AddSwaggerGen(c =>
-{
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Enter the JWT token returned by the login endpoint."
-    });
-    c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-    {
-        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
-    });
-});
-builder.Services.AddOpenApi();
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-// Treat an unconfigured placeholder as "no connection string" so a deploy that
-// forgot to inject the real secret fails loudly at startup instead of throwing
-// a confusing SQL error on every request (SqlException 53).
-if (!string.IsNullOrWhiteSpace(connectionString)
-    && connectionString.Contains("REPLACE_ME", StringComparison.OrdinalIgnoreCase))
-{
-    Console.WriteLine(
-        "[Config] WARNING: ConnectionStrings:DefaultConnection is still the " +
-        "placeholder value. Set it via the deploy secret (DB_CONNECTION_STRING) " +
-        "or the host's app settings (ConnectionStrings__DefaultConnection). " +
-        "The API will start but database-backed endpoints will be unavailable.");
-    connectionString = null;
-}
-
-if (!string.IsNullOrEmpty(connectionString))
-{
-    var optionsBuilder = new DbContextOptionsBuilder<MdLabScienceDbEntities>();
-    optionsBuilder.UseSqlServer(connectionString);
-    MdLabScienceDbEntities.SetOptions(optionsBuilder.Options);
-}
-
-var app = builder.Build();
-
-if (!string.IsNullOrEmpty(connectionString))
-{
-    using (var db = new MdLabScienceDbEntities())
-    {
-        // Each block runs in its own try/catch so a failure in one table never
-        // prevents the remaining tables from being upgraded.
-        void RunMigration(string name, string sql)
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
         {
-            try
+            // Read the signing key but never pass null to Encoding.GetBytes: a
+            // missing/stale appsettings.json on the host previously turned every
+            // authenticated request into an opaque 500 (ArgumentNullException 's').
+            var jwtKey = builder.Configuration["Jwt:Key"];
+            if (string.IsNullOrWhiteSpace(jwtKey))
             {
-                db.Database.ExecuteSqlRaw(sql);
-                Console.WriteLine($"[Migration] {name} verified.");
+                Console.WriteLine(
+                    "[Config] WARNING: Jwt:Key is missing from configuration. " +
+                    "Falling back to the built-in default key so the API stays " +
+                    "reachable. Set Jwt:Key (or Jwt__Key) on the host.");
+                jwtKey = "MdLabScience-Super-Secret-Signing-Key-ChangeMe-In-Production-2026";
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[Migration] {name} FAILED: {ex.Message}");
-            }
-        }
 
-        RunMigration("ServiceTb PurchasePrice/SalePrice", @"
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "MdLabScience.WebAPI",
+                ValidAudience = builder.Configuration["Jwt:Audience"] ?? "MdLabScience.Clients",
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtKey))
+            };
+            options.Events = new JwtBearerEvents
+            {
+                OnAuthenticationFailed = context =>
+                {
+                    Console.WriteLine($"[JWT] Token rejected: {context.Exception?.Message}");
+                    return Task.CompletedTask;
+                },
+                OnChallenge = context =>
+                {
+                    Console.WriteLine($"[JWT] Challenge sent for: {context.HttpContext.Request.Path}");
+                    return Task.CompletedTask;
+                }
+            };
+        });
+    builder.Services.AddAuthorization();
+
+    builder.Services.AddSwaggerGen(c =>
+    {
+        c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description = "Enter the JWT token returned by the login endpoint."
+        });
+        c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+        });
+    });
+    builder.Services.AddOpenApi();
+
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+    // Treat an unconfigured placeholder as "no connection string" so a deploy that
+    // forgot to inject the real secret fails loudly at startup instead of throwing
+    // a confusing SQL error on every request (SqlException 53).
+    if (!string.IsNullOrWhiteSpace(connectionString)
+        && connectionString.Contains("REPLACE_ME", StringComparison.OrdinalIgnoreCase))
+    {
+        Console.WriteLine(
+            "[Config] WARNING: ConnectionStrings:DefaultConnection is still the " +
+            "placeholder value. Set it via the deploy secret (DB_CONNECTION_STRING) " +
+            "or the host's app settings (ConnectionStrings__DefaultConnection). " +
+            "The API will start but database-backed endpoints will be unavailable.");
+        connectionString = null;
+    }
+
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<MdLabScienceDbEntities>();
+        optionsBuilder.UseSqlServer(connectionString);
+        MdLabScienceDbEntities.SetOptions(optionsBuilder.Options);
+    }
+
+    var app = builder.Build();
+
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        using (var db = new MdLabScienceDbEntities())
+        {
+            // Each block runs in its own try/catch so a failure in one table never
+            // prevents the remaining tables from being upgraded.
+            void RunMigration(string name, string sql)
+            {
+                try
+                {
+                    db.Database.ExecuteSqlRaw(sql);
+                    Console.WriteLine($"[Migration] {name} verified.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Migration] {name} FAILED: {ex.Message}");
+                }
+            }
+
+            RunMigration("ServiceTb PurchasePrice/SalePrice", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ServiceTb') AND name = 'PurchasePrice')
             BEGIN
                 ALTER TABLE ServiceTb ADD PurchasePrice DECIMAL(18,2) NOT NULL DEFAULT 0;
@@ -140,7 +184,7 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
 
-        RunMigration("CertificateInvoiceTb PurchaseAmount/IsCompleted", @"
+            RunMigration("CertificateInvoiceTb PurchaseAmount/IsCompleted", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('CertificateInvoiceTb') AND name = 'PurchaseAmount')
             BEGIN
                 ALTER TABLE CertificateInvoiceTb ADD PurchaseAmount FLOAT NULL;
@@ -151,21 +195,21 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
 
-        RunMigration("QuestionsTB VerifiedBy", @"
+            RunMigration("QuestionsTB VerifiedBy", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('QuestionsTB') AND name = 'VerifiedBy')
             BEGIN
                 ALTER TABLE QuestionsTB ADD VerifiedBy NVARCHAR(50) NULL;
             END
         ");
 
-        RunMigration("AppUserTb IsAIAllowed", @"
+            RunMigration("AppUserTb IsAIAllowed", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AppUserTb') AND name = 'IsAIAllowed')
             BEGIN
                 ALTER TABLE AppUserTb ADD IsAIAllowed BIT NULL;
             END
         ");
 
-        RunMigration("ApplicantInvoiceTB discount columns", @"
+            RunMigration("ApplicantInvoiceTB discount columns", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ApplicantInvoiceTB') AND name = 'DiscountType')
             BEGIN
                 ALTER TABLE ApplicantInvoiceTB ADD DiscountType NVARCHAR(20) NULL;
@@ -180,7 +224,7 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
 
-        RunMigration("ApplicantInvoiceTB tax columns", @"
+            RunMigration("ApplicantInvoiceTB tax columns", @"
             IF OBJECT_ID('ApplicantInvoiceTB') IS NULL
             BEGIN
                 RAISERROR('ApplicantInvoiceTB does not exist in this database.', 16, 1);
@@ -200,20 +244,20 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
 
-        // The backfill must be its own batch: SQL Server compiles an entire batch
-        // before running it, so referencing TaxAmount in the same batch that adds
-        // the column fails with "Invalid column name 'TaxAmount'".
-        RunMigration("ApplicantInvoiceTB tax backfill", @"
+            // The backfill must be its own batch: SQL Server compiles an entire batch
+            // before running it, so referencing TaxAmount in the same batch that adds
+            // the column fails with "Invalid column name 'TaxAmount'".
+            RunMigration("ApplicantInvoiceTB tax backfill", @"
             IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ApplicantInvoiceTB') AND name = 'TaxAmount')
             BEGIN
                 UPDATE ApplicantInvoiceTB SET TaxAmount = 0 WHERE TaxAmount IS NULL;
             END
         ");
 
-        // Pro-upgrade approval workflow: trial users send a request from the
-        // app; it lands in this table and the plan changes ONLY after an
-        // administrator approves the row in the admin panel.
-        RunMigration("ProUpgradeRequestTb", @"
+            // Pro-upgrade approval workflow: trial users send a request from the
+            // app; it lands in this table and the plan changes ONLY after an
+            // administrator approves the row in the admin panel.
+            RunMigration("ProUpgradeRequestTb", @"
             IF OBJECT_ID(N'dbo.ProUpgradeRequestTb', N'U') IS NULL
             BEGIN
                 CREATE TABLE ProUpgradeRequestTb (
@@ -228,10 +272,10 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
 
-        // Latest released app version, read by the in-app "update available"
-        // prompt (Course/GetLatestAppVersion). Seeded with one row so the
-        // endpoint returns a sane default instead of an empty result.
-        RunMigration("AppVersionTb", @"
+            // Latest released app version, read by the in-app "update available"
+            // prompt (Course/GetLatestAppVersion). Seeded with one row so the
+            // endpoint returns a sane default instead of an empty result.
+            RunMigration("AppVersionTb", @"
             IF OBJECT_ID(N'dbo.AppVersionTb', N'U') IS NULL
             BEGIN
                 CREATE TABLE AppVersionTb (
@@ -251,11 +295,11 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
 
-        // Extra course fields surfaced in the admin panel and the mobile app:
-        // SaleRate (double), IsForMobile (bit) and CoursePhotourl (nvarchar).
-        // IsForMobile defaults to 1 so existing courses keep appearing on the
-        // mobile app until an administrator deliberately turns one off.
-        RunMigration("CourseTb SaleRate/IsForMobile/CoursePhotourl", @"
+            // Extra course fields surfaced in the admin panel and the mobile app:
+            // SaleRate (double), IsForMobile (bit) and CoursePhotourl (nvarchar).
+            // IsForMobile defaults to 1 so existing courses keep appearing on the
+            // mobile app until an administrator deliberately turns one off.
+            RunMigration("CourseTb SaleRate/IsForMobile/CoursePhotourl", @"
             IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('CourseTb') AND name = 'SaleRate')
             BEGIN
                 ALTER TABLE CourseTb ADD SaleRate FLOAT NOT NULL DEFAULT 0;
@@ -270,80 +314,92 @@ if (!string.IsNullOrEmpty(connectionString))
             END
         ");
 
-    }
-}
-
-app.UseSwagger();
-app.UseSwaggerUI();
-app.MapOpenApi();
-
-// Global exception handler: catches anything thrown further down the pipeline,
-// logs the full exception to stdout (visible in the host's log) and returns the
-// details as JSON so an opaque "500 Internal Server Error" becomes diagnosable.
-app.UseExceptionHandler(errorApp =>
-{
-    errorApp.Run(async context =>
-    {
-        var feature = context.Features.Get<IExceptionHandlerFeature>();
-        var ex = feature?.Error;
-
-        Console.WriteLine("==================== UNHANDLED EXCEPTION ====================");
-        Console.WriteLine($"[{DateTime.UtcNow:O}] {context.Request.Method} {context.Request.Path}{context.Request.QueryString}");
-        Console.WriteLine(ex?.ToString() ?? "No exception details available.");
-        if (ex?.InnerException != null)
-        {
-            Console.WriteLine("--- Inner exception ---");
-            Console.WriteLine(ex.InnerException.ToString());
         }
-        Console.WriteLine("============================================================");
-
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        context.Response.ContentType = "application/json; charset=utf-8";
-
-        // The handler is also used for API clients, so return the message rather
-        // than the default empty body. Stack traces are included so problems can
-        // be diagnosed remotely; nothing sensitive should be thrown by design.
-        var payload = new
-        {
-            succeeded = false,
-            message = ex?.Message ?? "An unexpected error occurred.",
-            type = ex?.GetType().FullName,
-            detail = ex?.ToString(),
-            innerException = ex?.InnerException?.Message,
-            path = context.Request.Path.Value,
-            timestampUtc = DateTime.UtcNow
-        };
-
-        await context.Response.WriteAsJsonAsync(payload);
-    });
-});
-
-app.UseCors("Frontend");
-//swagger UI finalzed
-app.UseDefaultFiles();
-app.UseStaticFiles();
-var staticDirs = new[] { "Uploads", "Images", "Screenshots" };
-foreach (var dir in staticDirs)
-{
-    var dirPath = Path.Combine(app.Environment.ContentRootPath, dir);
-    if (Directory.Exists(dirPath))
-    {
-        app.UseStaticFiles(new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(dirPath),
-            RequestPath = "/" + dir,
-            OnPrepareResponse = ctx =>
-            {
-                // Allow the in-app PDF viewer (WebView, null origin) to read files directly.
-                ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-            }
-        });
     }
+
+    app.UseSwagger();
+    app.UseSwaggerUI();
+    app.MapOpenApi();
+
+    // Global exception handler: catches anything thrown further down the pipeline,
+    // writes the full exception (with request details) to the Serilog log files and
+    // returns the details as JSON so an opaque "500 Internal Server Error" becomes
+    // diagnosable.
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            var feature = context.Features.Get<IExceptionHandlerFeature>();
+            var ex = feature?.Error;
+            var logger = context.RequestServices
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("GlobalExceptionHandler");
+
+            logger.LogError(
+                ex,
+                "Unhandled exception while processing {Method} {Path}{QueryString}",
+                context.Request.Method,
+                context.Request.Path,
+                context.Request.QueryString);
+
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            context.Response.ContentType = "application/json; charset=utf-8";
+
+            // The handler is also used for API clients, so return the message rather
+            // than the default empty body. Stack traces are included so problems can
+            // be diagnosed remotely; nothing sensitive should be thrown by design.
+            var payload = new
+            {
+                succeeded = false,
+                message = ex?.Message ?? "An unexpected error occurred.",
+                type = ex?.GetType().FullName,
+                detail = ex?.ToString(),
+                innerException = ex?.InnerException?.Message,
+                path = context.Request.Path.Value,
+                timestampUtc = DateTime.UtcNow
+            };
+
+            await context.Response.WriteAsJsonAsync(payload);
+        });
+    });
+
+    app.UseSerilogRequestLogging();
+
+    app.UseCors("Frontend");
+    //swagger UI finalzed
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+    var staticDirs = new[] { "Uploads", "Images", "Screenshots" };
+    foreach (var dir in staticDirs)
+    {
+        var dirPath = Path.Combine(app.Environment.ContentRootPath, dir);
+        if (Directory.Exists(dirPath))
+        {
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(dirPath),
+                RequestPath = "/" + dir,
+                OnPrepareResponse = ctx =>
+                {
+                    // Allow the in-app PDF viewer (WebView, null origin) to read files directly.
+                    ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                }
+            });
+        }
+    }
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.MapControllers();
+    app.MapFallbackToFile("index.html");
+
+    app.Run();
 }
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
-app.MapFallbackToFile("index.html");
-
-app.Run();
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

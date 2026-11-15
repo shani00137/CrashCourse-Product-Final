@@ -15,3 +15,7 @@ MdLabScience.WebAPI/wwwroot/
 appsettings.Development.json
 appsettings.Local.json
 appsettings.Production.json
+
+# Serilog rolling log files
+MdLabScience.WebAPI/logs/
+logs/
