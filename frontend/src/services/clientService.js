@@ -305,7 +305,7 @@ async function registerClient(input) {
 }
 
 async function getStripePlan() {
-  const data = await clientFetch("/api/Stripe/api/Stripe/Plan");
+  const data = await clientFetch("/api/Stripe/Plan");
   const plan = data && typeof data === "object" ? data : {};
   const publishableKey =
     typeof plan.publishableKey === "string" ? plan.publishableKey.trim() : "";
@@ -320,7 +320,7 @@ async function getStripePlan() {
 }
 
 async function createPaymentIntent({ appUserId, courseId, includeAIAssistant = false }) {
-  const data = await clientFetch("/api/Stripe/api/Stripe/CreatePaymentIntent", {
+  const data = await clientFetch("/api/Stripe/CreatePaymentIntent", {
     method: "POST",
     body: JSON.stringify({
       appUserId,
@@ -342,7 +342,7 @@ async function createPaymentIntent({ appUserId, courseId, includeAIAssistant = f
 }
 
 async function confirmPayment({ appUserId, paymentIntentId, courseId, includeAIAssistant = false }) {
-  const data = await clientFetch("/api/Stripe/api/Stripe/Confirm", {
+  const data = await clientFetch("/api/Stripe/Confirm", {
     method: "POST",
     body: JSON.stringify({
       appUserId,

@@ -144,7 +144,17 @@ namespace MdLabScience.Utility
         /// need a secret key (the amount comes from the course); the Pro-only
         /// paywall additionally needs a positive <see cref="ProAmountCents"/>.
         /// </summary>
-        public bool IsConfigured => !string.IsNullOrWhiteSpace(SecretKey);
+        public bool IsConfigured
+        {
+            get
+            {
+                string key = SecretKey;
+                return !string.IsNullOrWhiteSpace(key)
+                    && !key.Contains("REPLACE_ME", StringComparison.OrdinalIgnoreCase)
+                    && (key.StartsWith("sk_", StringComparison.Ordinal)
+                        || key.StartsWith("rk_", StringComparison.Ordinal));
+            }
+        }
 
         /// <summary>
         /// Converts a major-unit amount from the course object into Stripe's

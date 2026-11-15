@@ -45,7 +45,10 @@ namespace MdLabScience.Controllers
         // stale token.
         [AllowAnonymous]
         [AcceptVerbs("GET", "POST")]
-        [Route("api/Stripe/Plan")]
+        [Route("Plan")]
+        // Legacy path kept so already-installed apps / cached web bundles that
+        // call the old double-prefixed URL keep working.
+        [Route("~/api/Stripe/api/Stripe/Plan")]
         public IActionResult Plan()
         {
             StripeService service = new StripeService(_config);
@@ -68,7 +71,8 @@ namespace MdLabScience.Controllers
         // amount comes from the course object (CourseTb.SaleRate); the
         // Pro-only paywall falls back to the configured Pro price.
         [HttpPost]
-        [Route("api/Stripe/CreatePaymentIntent")]
+        [Route("CreatePaymentIntent")]
+        [Route("~/api/Stripe/api/Stripe/CreatePaymentIntent")]
         public async Task<IActionResult> CreatePaymentIntent([FromBody] StripeIntentionModel value)
         {
             try
@@ -205,7 +209,8 @@ namespace MdLabScience.Controllers
         // it records a manual owner-approval request rather than trusting the
         // client. The paid amount is matched against the expected course price.
         [HttpPost]
-        [Route("api/Stripe/Confirm")]
+        [Route("Confirm")]
+        [Route("~/api/Stripe/api/Stripe/Confirm")]
         public async Task<IActionResult> Confirm([FromBody] StripeConfirmModel value)
         {
             try
@@ -344,7 +349,8 @@ namespace MdLabScience.Controllers
         // authenticated by the Stripe-Signature header, not a bearer token.
         [HttpPost]
         [AllowAnonymous]
-        [Route("api/Stripe/Webhook")]
+        [Route("Webhook")]
+        [Route("~/api/Stripe/api/Stripe/Webhook")]
         public async Task<IActionResult> Webhook()
         {
             try

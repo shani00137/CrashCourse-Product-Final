@@ -18,9 +18,9 @@ export const ENDPOINTS = {
     `/AppUser/api/AppUser/GetDetailOfUserById/${appUserId}`,
   changePlan: "/AppUser/api/AppUser/ChangePlan",
   requestProUpgrade: "/AppUser/api/AppUser/RequestProUpgrade",
-  stripePlan: "/Stripe/api/Stripe/Plan",
-  stripeCreatePaymentIntent: "/Stripe/api/Stripe/CreatePaymentIntent",
-  stripeConfirm: "/Stripe/api/Stripe/Confirm",
+  stripePlan: "/Stripe/Plan",
+  stripeCreatePaymentIntent: "/Stripe/CreatePaymentIntent",
+  stripeConfirm: "/Stripe/Confirm",
   myProRequest: (appUserId: number) =>
     `/ProUpgradeRequest/api/ProUpgradeRequest/MyRequest/${appUserId}`,
   takeExercise: (start: number, end: number, courseId: number) =>

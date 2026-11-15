@@ -128,17 +128,20 @@ jobs:
                   "restricted key). Fix the GitHub secret and re-run the deploy."
               )
           if pk and not pk.startswith("pk_"):
-              sys.exit(
-                  "ERROR: STRIPE_PUBLISHABLE_KEY must start with 'pk_'. It currently "
-                  "looks like a secret key; update the GitHub secret and re-run the "
-                  "deploy."
+              # Never write a secret key into the publishable slot: that would
+              # leak it to every browser and break Stripe.js. Keep the valid
+              # publishable key already committed in appsettings instead.
+              print(
+                  "WARNING: STRIPE_PUBLISHABLE_KEY does not start with 'pk_'; "
+                  "ignoring it and keeping the committed publishable key."
               )
+              pk = ""
 
           db = os.environ.get("DB_CONNECTION_STRING", "").strip()
           set_if(data, ["ConnectionStrings", "DefaultConnection"], db)
           set_if(data, ["OpenAI", "ApiKey1"], os.environ.get("OPENAI_API_KEY", "").strip())
           set_if(data, ["Stripe", "SecretKey"], os.environ.get("STRIPE_SECRET_KEY", "").strip())
-          set_if(data, ["Stripe", "PublishableKey"], os.environ.get("STRIPE_PUBLISHABLE_KEY", "").strip())
+          set_if(data, ["Stripe", "PublishableKey"], pk)
           set_if(data, ["Stripe", "WebhookSecret"], os.environ.get("STRIPE_WEBHOOK_SECRET", "").strip())
           set_if(data, ["Smtp", "Password"], os.environ.get("SMTP_PASSWORD", "").strip())
 
