@@ -122,11 +122,27 @@ jobs:
           # the secret to every client.
           sk = os.environ.get("STRIPE_SECRET_KEY", "").strip()
           pk = os.environ.get("STRIPE_PUBLISHABLE_KEY", "").strip()
-          if sk and not (sk.startswith("sk_") or sk.startswith("rk_")):
-              sys.exit(
-                  "ERROR: STRIPE_SECRET_KEY must start with 'sk_' (or 'rk_' for a "
-                  "restricted key). Fix the GitHub secret and re-run the deploy."
+
+          # The two GitHub secrets are sometimes swapped. If the secret slot
+          # holds a publishable key and the publishable slot holds a secret key,
+          # swap them back instead of blocking the deploy.
+          if sk.startswith("pk_") and (pk.startswith("sk_") or pk.startswith("rk_")):
+              print(
+                  "WARNING: STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY are "
+                  "swapped in GitHub secrets; swapping them for this deploy."
               )
+              sk, pk = pk, sk
+
+          if sk and not (sk.startswith("sk_") or sk.startswith("rk_")):
+              # Don't block the whole deployment on a bad Stripe secret: keep
+              # the committed value and warn. Payments stay disabled (the API
+              # rejects placeholder/invalid keys) but other features deploy.
+              print(
+                  "WARNING: STRIPE_SECRET_KEY is not a valid secret key "
+                  "(sk_/rk_); ignoring it and keeping the committed value."
+              )
+              sk = ""
+
           if pk and not pk.startswith("pk_"):
               # Never write a secret key into the publishable slot: that would
               # leak it to every browser and break Stripe.js. Keep the valid
@@ -140,7 +156,7 @@ jobs:
           db = os.environ.get("DB_CONNECTION_STRING", "").strip()
           set_if(data, ["ConnectionStrings", "DefaultConnection"], db)
           set_if(data, ["OpenAI", "ApiKey1"], os.environ.get("OPENAI_API_KEY", "").strip())
-          set_if(data, ["Stripe", "SecretKey"], os.environ.get("STRIPE_SECRET_KEY", "").strip())
+          set_if(data, ["Stripe", "SecretKey"], sk)
           set_if(data, ["Stripe", "PublishableKey"], pk)
           set_if(data, ["Stripe", "WebhookSecret"], os.environ.get("STRIPE_WEBHOOK_SECRET", "").strip())
           set_if(data, ["Smtp", "Password"], os.environ.get("SMTP_PASSWORD", "").strip())
