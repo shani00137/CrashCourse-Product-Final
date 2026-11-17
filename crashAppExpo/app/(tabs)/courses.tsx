@@ -266,6 +266,7 @@ export default function CoursesScreen() {
         url,
         fileName: item.fileName || item.courseUrl || "Course PDF",
         courseName: pdfCourse?.courseName || "",
+        materialId: String(item.courseMaterialId ?? ""),
       },
     });
   };

@@ -104,6 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         if (mounted) {
           setUser(session.user);
+          setSessionToken(session.token || "");
           setApiToken(session.token || "");
         }
         // Register the device for push notifications as soon as the session is

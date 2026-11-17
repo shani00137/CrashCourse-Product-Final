@@ -17,24 +17,27 @@ import Slider from "@react-native-community/slider";
 import { type ThemePalette } from "@/constants/theme";
 import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { buildPdfViewerHtml, pdfPageKey } from "@/constants/pdfViewerHtml";
+import { API_BASE_URL } from "@/constants/api";
 import { bytesToBase64, loadSecurePdfBytes } from "@/services/securePdf";
 import { useApp } from "@/context/AppContext";
 
 export default function PdfPreviewScreen() {
   const { colors, gradients } = useTheme();
   const styles = useThemedStyles(makeStyles);
-  const { user } = useApp();
+  const { user, sessionToken } = useApp();
   const isTrial = !!user?.isTrial;
 
   const params = useLocalSearchParams<{
     url: string;
     fileName: string;
     courseName: string;
+    materialId: string;
   }>();
 
   const uri = params.url;
   const fileName = params.fileName || "Course PDF";
   const courseName = params.courseName || "";
+  const materialId = Number(params.materialId) || 0;
 
   const [ready, setReady] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -95,9 +98,21 @@ export default function PdfPreviewScreen() {
 
       try {
         // Download once to the hidden app-private cache and decrypt in memory.
-        // No plaintext PDF is ever written to a user-visible location.
+        // No plaintext PDF is ever written to a user-visible location. Prefer
+        // the authenticated API stream: stored material URLs can point at a
+        // private R2 bucket, so a direct GET would return an error document
+        // instead of the PDF.
         setBusyLabel("Decrypting…");
-        const bytes = await loadSecurePdfBytes(uri);
+        const downloadUrl =
+          materialId > 0
+            ? `${API_BASE_URL}/Course/api/Course/GetCourseMaterialPdf/${materialId}`
+            : uri;
+        const bytes = await loadSecurePdfBytes(downloadUrl, {
+          headers: sessionToken
+            ? { Authorization: `Bearer ${sessionToken}` }
+            : undefined,
+          cacheKey: uri,
+        });
         if (cancelled) return;
         bytesRef.current = bytes;
         setPdfLoaded(true);
@@ -118,7 +133,7 @@ export default function PdfPreviewScreen() {
       cancelled = true;
       feedAbortRef.current = true;
     };
-  }, [uri, attempt, isTrial]);
+  }, [uri, materialId, sessionToken, attempt, isTrial]);
 
   useEffect(() => {
     if (!loading) return;

@@ -55,7 +55,9 @@ namespace MdLabScience.Controllers
 
                 var pagedData = Query
                     .Skip((filter.PageNumber - 1) * filter.PageSize)
-                    .Take(filter.PageSize).ToList();
+                    .Take(filter.PageSize)
+                    .Select(WithPublicPath)
+                    .ToList();
                 var totalRecords = Query.Count();
                 return Ok(new PagedResponse<List<CourseModel>>(pagedData, filter.PageNumber, filter.PageSize, totalRecords));
             }
@@ -68,6 +70,11 @@ namespace MdLabScience.Controllers
             using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
             {
                 var Query = db.CourseTbs.Where(x => x.IsActive == true).ToList();
+                foreach (var course in Query)
+                {
+                    course.CourseUrl = _r2Storage.ToPublicPath(course.CourseUrl);
+                    course.CoursePhotourl = _r2Storage.ToPublicPath(course.CoursePhotourl);
+                }
                 return Ok(Query);
             }
         }
@@ -96,7 +103,7 @@ namespace MdLabScience.Controllers
                         CoursePhotourl = x.CoursePhotourl
                     })
                     .ToList();
-                return Ok(Query);
+                return Ok(Query.Select(WithPublicPath).ToList());
             }
         }
 
@@ -242,6 +249,10 @@ namespace MdLabScience.Controllers
                              }).OrderByDescending(x => x.CourseMaterialId).ToList();
                 string CourseName = Query.Select(x => x.CourseName).FirstOrDefault();
                 int? Question = Query.Select(x => x.Questions).FirstOrDefault();
+                foreach (var material in Query)
+                {
+                    material.CourseUrl = _r2Storage.ToPublicPath(material.CourseUrl);
+                }
                 var list = new List<CourseMaterialModel>(Query);
                 list.Add(new CourseMaterialModel { Questions = Question, CourseId = CourseId, MaterialType = "MCQS", CourseUrl = "", CourseMaterialId = 1000, CourseName = CourseName, FileName = "MCQS" });
                 return Ok(list.OrderByDescending(x => x.CourseMaterialId));
@@ -265,6 +276,28 @@ namespace MdLabScience.Controllers
                 var fileName = string.IsNullOrWhiteSpace(material.FileName)
                     ? Path.GetFileName(material.CourseUrl)
                     : material.FileName;
+
+                // R2 objects (new api/Files paths and legacy private S3 URLs) are
+                // read with the configured credentials. An anonymous HttpClient
+                // request would get a 403 and the app would receive XML instead
+                // of a PDF.
+                if (_r2Storage.GetObjectKey(material.CourseUrl) != null)
+                {
+                    var stored = await _r2Storage.OpenReadAsync(material.CourseUrl, HttpContext.RequestAborted);
+                    if (stored == null)
+                    {
+                        return NotFound(new { succeeded = false, message = "The file could not be retrieved from storage." });
+                    }
+
+                    // Keep the S3 response alive until MVC has copied the stream.
+                    Response.RegisterForDispose(stored);
+                    var storedType = stored.Headers.ContentType;
+                    return File(
+                        stored.ResponseStream,
+                        string.IsNullOrWhiteSpace(storedType) ? "application/pdf" : storedType,
+                        fileName,
+                        enableRangeProcessing: true);
+                }
 
                 if (material.CourseUrl.StartsWith("http://") || material.CourseUrl.StartsWith("https://"))
                 {
@@ -546,6 +579,15 @@ namespace MdLabScience.Controllers
             return file;
         }
 
+        // Rewrites legacy/private storage URLs to the api/Files path clients can
+        // actually load, without touching local Uploads paths.
+        private CourseModel WithPublicPath(CourseModel course)
+        {
+            course.CourseUrl = _r2Storage.ToPublicPath(course.CourseUrl);
+            course.CoursePhotourl = _r2Storage.ToPublicPath(course.CoursePhotourl);
+            return course;
+        }
+
         // Best-effort removal of a previously uploaded file; never lets a
         // missing/locked file block the save.
         private async Task DeleteStoredFileAsync(string? storedPath)
@@ -555,23 +597,19 @@ namespace MdLabScience.Controllers
                 return;
             }
 
+            // New rows store api/Files/... paths and older rows store the private
+            // R2 URL; both map back to an object key.
+            var key = _r2Storage.GetObjectKey(storedPath);
+            if (!string.IsNullOrEmpty(key))
+            {
+                await _r2Storage.DeleteAsync(key);
+                return;
+            }
+
             if (storedPath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                 storedPath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                try
-                {
-                    var uri = new Uri(storedPath);
-                    var key = uri.AbsolutePath.TrimStart('/');
-                    if (!string.IsNullOrEmpty(key))
-                    {
-                        await _r2Storage.DeleteAsync(key);
-                    }
-                }
-                catch
-                {
-                    // ignored
-                }
-                return;
+                return; // external URL, nothing local to delete
             }
 
             DeleteUploadedFile(storedPath);

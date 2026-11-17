@@ -49,7 +49,31 @@ export function buildPdfViewerHtml(url: string, initialPage: number): string {
 <div id="viewer"><canvas id="pdf"></canvas></div>
 <div id="spinner">Opening PDF…</div>
 <div id="err"></div>
-<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script>
+(function () {
+  // Load PDF.js from the first reachable mirror. A single blocked/failing CDN
+  // used to leave the viewer with "Could not load the PDF engine" even when
+  // the PDF itself had downloaded fine.
+  var sources = [
+    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js',
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+  ];
+  var index = 0;
+  function loadNext() {
+    if (index >= sources.length) return;
+    var script = document.createElement('script');
+    script.src = sources[index++];
+    script.onload = function () { window.__pdfjsSrc = script.src; };
+    script.onerror = function () {
+      if (script.parentNode) script.parentNode.removeChild(script);
+      loadNext();
+    };
+    document.head.appendChild(script);
+  }
+  loadNext();
+})();
+</script>
 <script>
 (function () {
   var url = ${safeUrl};
@@ -400,7 +424,10 @@ export function buildPdfViewerHtml(url: string, initialPage: number): string {
     var lib = window.pdfjsLib;
     if (!lib) return;
     started = true;
-    try { lib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; } catch (e) {}
+    try {
+      var engineSrc = window.__pdfjsSrc || 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js';
+      lib.GlobalWorkerOptions.workerSrc = engineSrc.replace('pdf.min.js', 'pdf.worker.min.js');
+    } catch (e) {}
     lib.getDocument({ data: pendingData, disableWorker: true, isEvalSupported: false }).promise.then(function (doc) {
       pdfDoc = doc;
       maxPages = doc.numPages;

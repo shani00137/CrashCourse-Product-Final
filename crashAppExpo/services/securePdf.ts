@@ -123,13 +123,28 @@ export function hasSecurePdf(url: string): boolean {
   }
 }
 
+interface LoadSecurePdfOptions {
+  /** Extra request headers, e.g. the Bearer token for the API stream endpoint. */
+  headers?: Record<string, string>;
+  /**
+   * Identity used for the on-device cache. Defaults to the download URL, but
+   * callers can keep a stable key when the location may change (for example the
+   * API endpoint vs. the legacy direct file URL).
+   */
+  cacheKey?: string;
+}
+
 /**
  * Downloads (if needed) and decrypts a PDF, returning the raw bytes. The
  * plaintext only ever lives in memory.
  */
-export async function loadSecurePdfBytes(url: string): Promise<Uint8Array> {
+export async function loadSecurePdfBytes(
+  url: string,
+  options?: LoadSecurePdfOptions
+): Promise<Uint8Array> {
   ensureDirs();
-  const stored = cacheFile(url);
+  const key = options?.cacheKey || url;
+  const stored = cacheFile(key);
 
   if (stored.exists) {
     try {
@@ -149,7 +164,7 @@ export async function loadSecurePdfBytes(url: string): Promise<Uint8Array> {
 
   const tmpDir = new Directory(Paths.cache, SECURE_DIR_NAME);
   if (!tmpDir.exists) tmpDir.create({ intermediates: true, idempotent: true });
-  const part = tmpFile(url);
+  const part = tmpFile(key);
   if (part.exists) {
     try {
       part.delete();
@@ -158,7 +173,9 @@ export async function loadSecurePdfBytes(url: string): Promise<Uint8Array> {
     }
   }
 
-  const downloaded = await File.downloadFileAsync(toSafeUri(url), part);
+  const downloaded = await File.downloadFileAsync(toSafeUri(url), part, {
+    headers: options?.headers,
+  });
   const plain = await downloaded.bytes();
   if (!looksLikePdf(plain)) {
     try {

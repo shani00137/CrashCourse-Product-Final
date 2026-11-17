@@ -72,17 +72,10 @@ namespace MdLabScience.Services
 
                 await _s3Client.PutObjectAsync(request);
 
-                if (!string.IsNullOrEmpty(_publicUrl))
-                {
-                    return $"{_publicUrl.TrimEnd('/')}/{key}";
-                }
-
-                if (!string.IsNullOrEmpty(_accountId))
-                {
-                    return $"https://pub-{_accountId}.r2.dev/{key}";
-                }
-
-                return $"https://{_bucketName}.r2.dev/{key}";
+                // Store a path that the API (and therefore the browser/app) can
+                // always resolve. The R2 S3 endpoint is private, so handing out
+                // a direct URL results in 403 XML when opened in a browser.
+                return PublicPathFor(key);
             }
             catch (Exception ex)
             {
@@ -103,6 +96,114 @@ namespace MdLabScience.Services
             catch
             {
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// API path that serves a stored object, e.g. <c>api/Files/courses/x.pdf</c>.
+        /// This is what should be saved in the database.
+        /// </summary>
+        public static string PublicPathFor(string key)
+        {
+            return $"api/Files/{key.TrimStart('/')}";
+        }
+
+        /// <summary>
+        /// Converts any stored value (new relative path, legacy private R2 URL,
+        /// public bucket URL or bare key) into the API path used by clients.
+        /// Values that are not ours (local Uploads paths, external URLs) are
+        /// returned unchanged.
+        /// </summary>
+        public string ToPublicPath(string? storedPath)
+        {
+            var key = GetObjectKey(storedPath);
+            return string.IsNullOrEmpty(key) ? (storedPath ?? string.Empty) : PublicPathFor(key);
+        }
+
+        /// <summary>
+        /// Extracts the R2 object key from a stored file path or URL.
+        /// </summary>
+        public string? GetObjectKey(string? storedPath)
+        {
+            if (string.IsNullOrWhiteSpace(storedPath)) return null;
+
+            var value = storedPath.Trim();
+            const string apiPrefix = "api/Files/";
+
+            if (value.StartsWith("/" + apiPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                value = value.Substring(apiPrefix.Length + 1);
+            }
+            else if (value.StartsWith(apiPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                value = value.Substring(apiPrefix.Length);
+            }
+
+            if (!value.Contains("://", StringComparison.Ordinal))
+            {
+                var bare = value.TrimStart('/');
+                return bare.StartsWith("courses/", StringComparison.OrdinalIgnoreCase)
+                    ? Uri.UnescapeDataString(bare.Split('?', '#')[0])
+                    : null;
+            }
+
+            if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) return null;
+
+            var host = uri.Host;
+            if (host.EndsWith(".r2.cloudflarestorage.com", StringComparison.OrdinalIgnoreCase) ||
+                host.EndsWith(".r2.dev", StringComparison.OrdinalIgnoreCase))
+            {
+                var key = uri.AbsolutePath.TrimStart('/');
+                var bucketPrefix = _bucketName + "/";
+                if (key.StartsWith(bucketPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    key = key.Substring(bucketPrefix.Length);
+                }
+                key = Uri.UnescapeDataString(key);
+                return string.IsNullOrWhiteSpace(key) ? null : key;
+            }
+
+            var publicUrl = _publicUrl?.TrimEnd('/');
+            if (!string.IsNullOrEmpty(publicUrl) &&
+                value.StartsWith(publicUrl + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                var key = value.Substring(publicUrl.Length + 1).Split('?', '#')[0];
+                return string.IsNullOrWhiteSpace(key) ? null : Uri.UnescapeDataString(key);
+            }
+
+            // A full URL to our own api/Files proxy.
+            var proxyIndex = uri.AbsolutePath.IndexOf("/api/Files/", StringComparison.OrdinalIgnoreCase);
+            if (proxyIndex >= 0)
+            {
+                var key = uri.AbsolutePath.Substring(proxyIndex + "/api/Files/".Length);
+                return string.IsNullOrWhiteSpace(key) ? null : Uri.UnescapeDataString(key);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Opens an object in the configured bucket for reading. The caller owns
+        /// the returned response and must dispose it after the stream is copied.
+        /// </summary>
+        public async Task<GetObjectResponse?> OpenReadAsync(string storedPath, CancellationToken cancellationToken = default)
+        {
+            if (_s3Client == null || !_isConfigured) return null;
+            var key = GetObjectKey(storedPath);
+            if (string.IsNullOrEmpty(key)) return null;
+
+            try
+            {
+                return await _s3Client.GetObjectAsync(new GetObjectRequest
+                {
+                    BucketName = _bucketName,
+                    Key = key
+                }, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "R2 download failed for key {Key}", key);
+                return null;
             }
         }
     }
