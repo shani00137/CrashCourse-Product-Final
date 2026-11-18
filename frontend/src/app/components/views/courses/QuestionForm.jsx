@@ -4,7 +4,7 @@ import { Btn, Card, SearchableSelect } from "../../shared/ui";
 import { RichTextEditor } from "../../shared/RichTextEditor";
 import { saveQuestion, editQuestion } from "../../../../services/questionService";
 import { getActiveCourses } from "../../../../services/applicantService";
-import { htmlToText } from "../../../../utils/html";
+import { htmlToText, normalizeFileUrls } from "../../../../utils/html";
 
 const BLANK_OPTIONS = ["", "", "", ""];
 const MAX_OPTIONS = 8;
@@ -15,11 +15,11 @@ export function QuestionFormScreen({ question, onBack }) {
   const [courseId, setCourseId] = useState(editing ? String(question.courseId) : "");
   const [content, setContent] = useState(() => {
     if (!editing) return "";
-    return question.questionContent ?? "";
+    return normalizeFileUrls(question.questionContent);
   });
   const [explanation, setExplanation] = useState(() => {
     if (!editing) return "";
-    return question.explanation ?? "";
+    return normalizeFileUrls(question.explanation);
   });
   const [options, setOptions] = useState(() => {
     if (!editing) return [...BLANK_OPTIONS];
@@ -55,8 +55,8 @@ export function QuestionFormScreen({ question, onBack }) {
     if (editing) {
       // Reset back to the originally loaded question
       setCourseId(String(question.courseId));
-      setContent(question.questionContent ?? "");
-      setExplanation(question.explanation ?? "");
+      setContent(normalizeFileUrls(question.questionContent));
+      setExplanation(normalizeFileUrls(question.explanation));
       const opts = Array.isArray(question.questionOptions) ? question.questionOptions : [];
       const mapped = opts.map(o => o.options ?? "");
       while (mapped.length < 4) mapped.push("");
@@ -94,14 +94,16 @@ export function QuestionFormScreen({ question, onBack }) {
   const handleSave = async (e) => {
     e.preventDefault();
     const courseIdNum = Number(courseId);
-    const questionHtml = content;
-    const questionText = htmlToText(content);
+    const questionHtml = normalizeFileUrls(content);
+    const explanationHtml = normalizeFileUrls(explanation);
+    const questionText = htmlToText(questionHtml);
+    const hasQuestionImage = /<img\b/i.test(questionHtml);
     if (!courseIdNum) {
       setError("Please select a course.");
       return;
     }
-    if (!questionText.trim()) {
-      setError("Please enter the question text.");
+    if (!questionText.trim() && !hasQuestionImage) {
+      setError("Please enter the question text or insert an image.");
       return;
     }
     if (options.every(o => !htmlToText(o).trim())) {
@@ -113,7 +115,7 @@ export function QuestionFormScreen({ question, onBack }) {
     const payload = {
       courseId: courseIdNum,
       questionContent: questionHtml,
-      explanation: explanation.trim() ? explanation : null,
+      explanation: explanationHtml.trim() ? explanationHtml : null,
       questionOptionsList: nonEmptyOptions.map((opt, i) => ({ options: htmlToText(opt), isRightAns: i === finalCorrect }))
     };
     setSaving(true);
@@ -241,6 +243,7 @@ export function QuestionFormScreen({ question, onBack }) {
                       className="min-h-[48px]"
                       minHeight="min-h-[48px]"
                       maxHeight="max-h-[120px]"
+                      allowImages={false}
                     />
                   </div>
                 </div>

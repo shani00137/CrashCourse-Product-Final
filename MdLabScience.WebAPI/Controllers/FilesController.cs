@@ -24,10 +24,13 @@ namespace MdLabScience.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Get(string key)
         {
-            // Only course assets are public. Everything else (applicant photos,
-            // certificates, ...) stays offline unless served by its own endpoint.
+            // Only course assets and question images are public. Everything else
+            // (applicant photos, certificates, ...) stays offline unless served
+            // by its own endpoint.
+            var isCourseAsset = key?.StartsWith("courses/", StringComparison.OrdinalIgnoreCase) == true;
+            var isQuestionImage = key?.StartsWith("questions/images/", StringComparison.OrdinalIgnoreCase) == true;
             if (string.IsNullOrWhiteSpace(key) ||
-                !key.StartsWith("courses/", StringComparison.OrdinalIgnoreCase) ||
+                (!isCourseAsset && !isQuestionImage) ||
                 key.Contains("..", StringComparison.Ordinal))
             {
                 return NotFound();
@@ -41,6 +44,7 @@ namespace MdLabScience.Controllers
 
             Response.RegisterForDispose(stored);
             Response.Headers.CacheControl = "public,max-age=31536000,immutable";
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
 
             var contentType = stored.Headers.ContentType;
             if (string.IsNullOrWhiteSpace(contentType) ||

@@ -18,6 +18,7 @@ import { useApp } from "@/context/AppContext";
 import { useTheme, useThemedStyles } from "@/context/ThemeContext";
 import { ProgressBar } from "@/components/ProgressBar";
 import { ScoreRing } from "@/components/ScoreRing";
+import { HtmlText } from "@/components/HtmlText";
 import { QuestionAiModal } from "@/components/QuestionAiModal";
 import SwipeSheet from "@/components/SwipeSheet";
 import ProctorViolationDialog from "@/components/ProctorViolationDialog";
@@ -732,7 +733,12 @@ const pct = Math.round((score / totalQ) * 100);
               </Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.questionText}>{q.question}</Text>
+          <HtmlText
+            html={q.question}
+            fontSize={16}
+            color={colors.foreground}
+            style={styles.questionHtml}
+          />
         </View>
 
         {/* Options */}
@@ -841,17 +847,12 @@ const pct = Math.round((score / totalQ) * 100);
                 ? "✓ Correct — Explanation"
                 : "✗ Incorrect — Explanation"}
             </Text>
-            <Text
-              style={[
-                styles.explanationText,
-                {
-                  color:
-                    selected === q.correct ? colors.green : colors.warningText,
-                },
-              ]}
-            >
-              {q.explanation}
-            </Text>
+            <HtmlText
+              html={q.explanation}
+              fontSize={13}
+              color={selected === q.correct ? colors.green : colors.warningText}
+              style={styles.explanationHtml}
+            />
           </View>
         )}
       </ScrollView>
@@ -1221,6 +1222,9 @@ modalScreen: {
     color: colors.foreground,
     textAlign: "left",
   },
+  questionHtml: {
+    minHeight: 25,
+  },
   optionsContainer: {
     gap: 12,
   },
@@ -1264,6 +1268,9 @@ modalScreen: {
   explanationText: {
     fontSize: 13,
     lineHeight: 20,
+  },
+  explanationHtml: {
+    minHeight: 20,
   },
   // ── Bottom bar ─────────────────────────────────────────────────────────
   bottomBar: {

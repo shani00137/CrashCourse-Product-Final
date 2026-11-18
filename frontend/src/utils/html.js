@@ -1,3 +1,8 @@
+function normalizeFileUrls(html) {
+  if (!html) return "";
+  return String(html).replace(/https?:\/\/[^\"'<>\s]+\/api\/Files\//gi, "/api/Files/");
+}
+
 function htmlToText(html) {
   if (!html) return "";
   const text = String(html)
@@ -10,5 +15,6 @@ function htmlToText(html) {
   return el.value.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 export {
-  htmlToText
+  htmlToText,
+  normalizeFileUrls
 };

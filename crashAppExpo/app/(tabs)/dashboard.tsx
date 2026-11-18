@@ -107,8 +107,11 @@ export default function DashboardScreen() {
     },
   ];
 
-  const topModules = study.modules.slice(0, 3);
-  const maxModuleMinutes = study.modules[0]?.minutes || 1;
+  const courseModules = courseId
+    ? study.modules.filter((mod) => mod.courseId === courseId)
+    : study.modules;
+  const topModules = courseModules.slice(0, 3);
+  const maxModuleMinutes = courseModules[0]?.minutes || 1;
 
   return (
     <ScrollView
@@ -260,9 +263,9 @@ export default function DashboardScreen() {
               <Text style={styles.emptyText}>Loading your reading progress...</Text>
             </View>
           ) : topModules.length > 0 ? (
-            topModules.map((mod) => (
+            topModules.map((mod, index) => (
               <TouchableOpacity
-                key={`${mod.exerciseStart}-${mod.exerciseEnd}`}
+                key={`${mod.courseId}-${mod.exerciseStart}-${mod.exerciseEnd}-${index}`}
                 style={styles.courseCard}
                 onPress={() =>
                   router.push({

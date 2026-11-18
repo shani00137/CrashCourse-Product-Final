@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getAllReadingTime, getUserTests, type UserTestInfo } from "@/services/api";
 
 export interface ReadingModule {
+  courseId: number;
   exerciseStart: number;
   exerciseEnd: number;
   minutes: number;
@@ -59,12 +60,32 @@ export function useStudyData(appUserId?: number): StudyData {
     try {
       const rows = await getAllReadingTime(appUserId);
       if (Array.isArray(rows)) {
-        mods = rows
-          .filter((r) => (r.totalSeconds || 0) > 0)
+        const totals = new Map<
+          string,
+          { courseId: number; exerciseStart: number; exerciseEnd: number; seconds: number }
+        >();
+        rows.forEach((r) => {
+          const seconds = Number(r.totalSeconds) || 0;
+          if (seconds <= 0) return;
+          const key = `${r.courseId}-${r.exerciseStart}-${r.exerciseEnd}`;
+          const existing = totals.get(key);
+          if (existing) {
+            existing.seconds += seconds;
+          } else {
+            totals.set(key, {
+              courseId: r.courseId,
+              exerciseStart: r.exerciseStart,
+              exerciseEnd: r.exerciseEnd,
+              seconds,
+            });
+          }
+        });
+        mods = Array.from(totals.values())
           .map((r) => ({
+            courseId: r.courseId,
             exerciseStart: r.exerciseStart,
             exerciseEnd: r.exerciseEnd,
-            minutes: Math.max(1, Math.round((r.totalSeconds || 0) / 60)),
+            minutes: Math.max(1, Math.round(r.seconds / 60)),
           }))
           .sort((a, b) => b.minutes - a.minutes);
         minutes = mods.reduce((a, b) => a + b.minutes, 0);

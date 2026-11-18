@@ -31,7 +31,13 @@ var stdin_default = defineConfig({
   assetsInclude: ["**/*.svg", "**/*.csv"],
   server: {
     port: 5008,
-    strictPort: true
+    strictPort: true,
+    proxy: {
+      "/api": {
+        target: process.env.VITE_API_URL || "http://localhost:5006",
+        changeOrigin: true
+      }
+    }
   }
 });
 export {

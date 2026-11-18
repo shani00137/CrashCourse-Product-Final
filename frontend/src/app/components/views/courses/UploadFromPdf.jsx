@@ -702,6 +702,7 @@ export function UploadFromPdfScreen({ onBack }) {
                               }}
                               placeholder={`Option ${String.fromCharCode(65 + oi)}...`}
                               className="flex-1"
+                              allowImages={false}
                             />
                           </div>
                         ))}

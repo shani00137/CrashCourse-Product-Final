@@ -6,6 +6,7 @@ using EMCQWebApi.Models;
 using ExcelDataReader;
 using MdLabScience.DbContext;
 using MdLabScience.Models;
+using MdLabScience.Services;
 using MdLabScience.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,11 +34,71 @@ namespace MdLabScience.Controllers
         private static TimeZoneInfo Pakistan_Standard_Time = TimeZoneInfo.FindSystemTimeZoneById("Pakistan Standard Time");
         private readonly IWebHostEnvironment _env;
         private readonly IConfiguration _configuration;
+        private readonly R2StorageService _r2Storage;
 
-        public QuestionsController(IWebHostEnvironment env, IConfiguration configuration)
+        public QuestionsController(IWebHostEnvironment env, IConfiguration configuration, R2StorageService r2Storage)
         {
             _env = env;
             _configuration = configuration;
+            _r2Storage = r2Storage;
+        }
+
+        // Rich-text editors upload images here first; the returned path is then
+        // embedded in QuestionContent/Explanation as an <img src="..."> tag.
+        [HttpPost]
+        [Route("api/Questions/UploadImage")]
+        [Route("UploadImage")]
+        public async Task<IActionResult> UploadImage([FromForm] IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { message = "No image was uploaded." });
+            }
+
+            var contentType = (file.ContentType ?? string.Empty).ToLowerInvariant();
+            var allowed = new[] { "image/png", "image/jpeg", "image/webp", "image/gif" };
+            if (!allowed.Contains(contentType))
+            {
+                return BadRequest(new { message = "Only PNG, JPG, WEBP and GIF images are allowed." });
+            }
+
+            const long maxBytes = 5 * 1024 * 1024;
+            if (file.Length > maxBytes)
+            {
+                return BadRequest(new { message = "Image must be 5 MB or smaller." });
+            }
+
+            var storedPath = await _r2Storage.UploadAsync(file, "questions/images");
+            if (string.IsNullOrWhiteSpace(storedPath))
+            {
+                return StatusCode(500, new { message = "Image upload failed. Please try again." });
+            }
+
+            return Ok(new { url = storedPath, name = Path.GetFileName(file.FileName) });
+        }
+
+        [HttpPost]
+        [Route("api/Questions/DeleteImage")]
+        [Route("DeleteImage")]
+        public async Task<IActionResult> DeleteImage([FromBody] DeleteQuestionImageRequest request)
+        {
+            var key = _r2Storage.GetObjectKey(request?.Path ?? request?.Url ?? request?.Key);
+            if (string.IsNullOrWhiteSpace(key) ||
+                !key.StartsWith("questions/images/", StringComparison.OrdinalIgnoreCase) ||
+                key.Contains("..") ||
+                key.Contains("\\") ||
+                key.StartsWith("/"))
+            {
+                return BadRequest(new { message = "Invalid image path." });
+            }
+
+            var deleted = await _r2Storage.DeleteAsync(key);
+            if (!deleted)
+            {
+                return StatusCode(500, new { message = "Image deletion failed. Please try again." });
+            }
+
+            return Ok(new { deleted = true, key });
         }
 
         [HttpPost]
@@ -478,6 +539,16 @@ namespace MdLabScience.Controllers
         {
             var regex = new Regex("<[^>]+>", RegexOptions.IgnoreCase);
             return System.Net.WebUtility.HtmlDecode(regex.Replace(html, ""));
+        }
+
+        [NonAction]
+        public string SanitizeRichText(string html)
+        {
+            if (string.IsNullOrWhiteSpace(html)) return "";
+            var cleaned = Regex.Replace(html, "<script[\\s\\S]*?</script>", "", RegexOptions.IgnoreCase);
+            cleaned = Regex.Replace(cleaned, "\\son\\w+\\s*=\\s*([\"']).*?\\1", "", RegexOptions.IgnoreCase);
+            cleaned = Regex.Replace(cleaned, "javascript:", "", RegexOptions.IgnoreCase);
+            return System.Net.WebUtility.HtmlDecode(cleaned);
         }
 
         [HttpGet]
@@ -1371,7 +1442,7 @@ Question to review (JSON):
                     result.Add(new
                     {
                         QuestionId = q.QuestionId,
-                        QuestionContent = StripHTML(q.QuestionContent),
+                        QuestionContent = SanitizeRichText(q.QuestionContent),
                         RightOption,
                         Option1 = GetOption(options, "Option1"),
                         Option2 = GetOption(options, "Option2"),
@@ -1381,7 +1452,7 @@ Question to review (JSON):
                         Option6 = GetOption(options, "Option6"),
                         Option7 = GetOption(options, "Option7"),
                         Option8 = GetOption(options, "Option8"),
-                        Explanation = string.IsNullOrWhiteSpace(q.Explanation) ? "" : StripHTML(q.Explanation),
+                        Explanation = string.IsNullOrWhiteSpace(q.Explanation) ? "" : SanitizeRichText(q.Explanation),
                         isSelected = false
                     });
                 }
@@ -1471,5 +1542,12 @@ Rules:
         {
             return options.TryGetValue(key, out var value) ? value : null;
         }
+    }
+
+    public class DeleteQuestionImageRequest
+    {
+        public string? Path { get; set; }
+        public string? Url { get; set; }
+        public string? Key { get; set; }
     }
 }

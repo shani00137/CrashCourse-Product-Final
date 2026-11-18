@@ -92,6 +92,21 @@ async function importQuestions(file) {
     body: formData
   });
 }
+/** Uploads an image to Cloudflare R2 via the API and returns its stored path. */
+async function uploadQuestionImage(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch("/api/Questions/api/Questions/UploadImage", {
+    method: "POST",
+    body: formData
+  });
+}
+async function deleteQuestionImage(path) {
+  return apiFetch("/api/Questions/api/Questions/DeleteImage", {
+    method: "POST",
+    body: JSON.stringify({ path })
+  });
+}
 async function downloadQuestionModel(filename) {
   const token = getToken();
   const response = await fetch(`${API_BASE_URL}/api/Questions/api/Questions/DownloadQuestionModel/${filename}`, {
@@ -137,6 +152,7 @@ export {
   bulkSaveQuestions,
   deleteMultipleQuestions,
   deleteQuestion,
+  deleteQuestionImage,
   deleteQuestionsByCourse,
   downloadQuestionModel,
   editQuestion,
@@ -149,5 +165,6 @@ export {
   QUESTION_IMPORT_COLUMNS,
   reviewQuestion,
   saveQuestion,
-  updateQuestionVerifiedBy
+  updateQuestionVerifiedBy,
+  uploadQuestionImage
 };

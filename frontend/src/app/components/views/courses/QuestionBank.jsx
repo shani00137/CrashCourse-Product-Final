@@ -31,7 +31,7 @@ import {
   updateQuestionVerifiedBy
 } from "../../../../services/questionService";
 import { getActiveCourses } from "../../../../services/applicantService";
-import { htmlToText } from "../../../../utils/html";
+import { htmlToText, normalizeFileUrls } from "../../../../utils/html";
 
 export function QuestionBankScreen({ setScreen, onEdit }) {
   const pageSize = 10;
@@ -507,7 +507,10 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
                   </button>
                 </div>
               </div>
-              <p className="text-sm font-medium text-[#1A202C] mb-3 leading-relaxed whitespace-pre-line">{htmlToText(q.questionContent)}</p>
+              <div
+                className="text-sm font-medium text-[#1A202C] mb-3 leading-relaxed [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded [&_img]:my-1"
+                dangerouslySetInnerHTML={{ __html: normalizeFileUrls(q.questionContent) }}
+              />
               <div className="grid grid-cols-2 gap-2">
                 {options.map((opt, oi) => (
                   <div key={opt.questionJobOptionId ?? oi} className={`flex items-start gap-2.5 p-2.5 rounded-lg text-xs border transition ${opt.isRightAns ? "border-emerald-200 bg-emerald-50" : "border-[rgba(0,0,0,0.07)] bg-[#F7FAFC]"}`}>
@@ -521,7 +524,10 @@ export function QuestionBankScreen({ setScreen, onEdit }) {
               {q.explanation && (
                 <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Explanation</span>
-                  <p className="mt-1 text-xs text-[#4A5568] leading-relaxed whitespace-pre-line">{htmlToText(q.explanation)}</p>
+                  <div
+                    className="mt-1 text-xs text-[#4A5568] leading-relaxed [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded [&_img]:my-1"
+                    dangerouslySetInnerHTML={{ __html: normalizeFileUrls(q.explanation) }}
+                  />
                 </div>
               )}
             </Card>

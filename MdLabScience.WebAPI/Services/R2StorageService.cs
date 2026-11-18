@@ -142,7 +142,9 @@ namespace MdLabScience.Services
             if (!value.Contains("://", StringComparison.Ordinal))
             {
                 var bare = value.TrimStart('/');
-                return bare.StartsWith("courses/", StringComparison.OrdinalIgnoreCase)
+                var isKnownKey = bare.StartsWith("courses/", StringComparison.OrdinalIgnoreCase) ||
+                                 bare.StartsWith("questions/images/", StringComparison.OrdinalIgnoreCase);
+                return isKnownKey
                     ? Uri.UnescapeDataString(bare.Split('?', '#')[0])
                     : null;
             }
