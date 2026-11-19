@@ -184,6 +184,36 @@ namespace MdLabScience.Services
             return null;
         }
 
+        public string? CreatePresignedReadUrl(string storedPath, string? downloadFileName = null, TimeSpan? expiresIn = null)
+        {
+            if (_s3Client == null || !_isConfigured) return null;
+
+            var key = GetObjectKey(storedPath);
+            if (string.IsNullOrEmpty(key)) return null;
+
+            var fileName = string.IsNullOrWhiteSpace(downloadFileName)
+                ? Path.GetFileName(key)
+                : Path.GetFileName(downloadFileName);
+            if (string.IsNullOrWhiteSpace(fileName)) fileName = "download";
+            var safeFileName = new string(fileName
+                .Select(c => char.IsControl(c) || c == '"' || c > 127 ? '_' : c)
+                .ToArray());
+
+            var request = new GetPreSignedUrlRequest
+            {
+                BucketName = _bucketName,
+                Key = key,
+                Verb = HttpVerb.GET,
+                Expires = DateTime.UtcNow.Add(expiresIn ?? TimeSpan.FromMinutes(10)),
+                ResponseHeaderOverrides = new ResponseHeaderOverrides
+                {
+                    ContentDisposition = $"attachment; filename=\"{safeFileName}\""
+                }
+            };
+
+            return _s3Client.GetPreSignedURL(request);
+        }
+
         /// <summary>
         /// Opens an object in the configured bucket for reading. The caller owns
         /// the returned response and must dispose it after the stream is copied.

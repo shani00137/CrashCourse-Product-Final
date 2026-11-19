@@ -204,15 +204,7 @@ function CoursesScreen() {
     if (!id || downloadingIds.includes(id)) return;
     setDownloadingIds((prev) => [...prev, id]);
     try {
-      const blob = await downloadCourseMaterial(id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = m.fileName ?? "attachment";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await downloadCourseMaterial(id);
     } catch {
       showToast("error", "Could not download the file.");
     } finally {

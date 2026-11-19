@@ -260,6 +260,49 @@ namespace MdLabScience.Controllers
         }
 
         [HttpGet]
+        [Route("api/Course/GetCourseMaterialPdfUrl/{CourseMaterialId}")]
+        public IActionResult GetCourseMaterialPdfUrl(int CourseMaterialId)
+        {
+            using (MdLabScienceDbEntities db = new MdLabScienceDbEntities())
+            {
+                var material = db.CourseMaterialTbs
+                    .Where(x => x.CourseMaterialId == CourseMaterialId)
+                    .FirstOrDefault();
+                if (material == null || string.IsNullOrWhiteSpace(material.CourseUrl))
+                {
+                    return NotFound(new { succeeded = false, message = "Course material not found." });
+                }
+
+                var fileName = GetMaterialFileName(material.CourseUrl, material.FileName);
+                var presignedUrl = _r2Storage.CreatePresignedReadUrl(
+                    material.CourseUrl,
+                    fileName,
+                    TimeSpan.FromMinutes(10));
+
+                Response.Headers["Cache-Control"] = "no-store";
+
+                if (!string.IsNullOrEmpty(presignedUrl))
+                {
+                    return Ok(new
+                    {
+                        downloadUrl = presignedUrl,
+                        fileName,
+                        direct = true,
+                        expiresInSeconds = 600
+                    });
+                }
+
+                return Ok(new
+                {
+                    downloadUrl = $"/api/Course/api/Course/GetCourseMaterialPdf/{CourseMaterialId}",
+                    fileName,
+                    direct = false,
+                    expiresInSeconds = 0
+                });
+            }
+        }
+
+        [HttpGet]
         [Route("api/Course/GetCourseMaterialPdf/{CourseMaterialId}")]
         public async Task<IActionResult> GetCourseMaterialPdf(int CourseMaterialId)
         {
@@ -577,6 +620,21 @@ namespace MdLabScience.Controllers
                 file = Request.Form.Files[0];
             }
             return file;
+        }
+
+        private static string GetMaterialFileName(string? courseUrl, string? storedFileName)
+        {
+            var rawName = storedFileName;
+            if (string.IsNullOrWhiteSpace(rawName) &&
+                Uri.TryCreate(courseUrl, UriKind.Absolute, out var uri))
+            {
+                rawName = Path.GetFileName(uri.AbsolutePath);
+            }
+            if (string.IsNullOrWhiteSpace(rawName))
+            {
+                rawName = Path.GetFileName((courseUrl ?? string.Empty).Split('?', '#')[0]);
+            }
+            return string.IsNullOrWhiteSpace(rawName) ? "download" : rawName;
         }
 
         // Rewrites legacy/private storage URLs to the api/Files path clients can

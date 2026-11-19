@@ -1,4 +1,4 @@
-import { apiFetch, ApiError, API_BASE_URL } from "./apiClient";
+import { apiFetch, ApiError, API_BASE_URL, notifyAuthExpired } from "./apiClient";
 import { getToken } from "./storage";
 async function getAllCourses(query) {
   return apiFetch("/api/Course/api/Course/GetAllCourses", {
@@ -60,21 +60,37 @@ function courseFileUrl(url) {
   return `${API_BASE_URL}/${url.replace(/^\//, "")}`;
 }
 
-// Downloads through the API instead of the storage URL so the browser never
-// performs a cross-origin request to Cloudflare R2 (which has no CORS headers).
 async function downloadCourseMaterial(courseMaterialId) {
-  const token = getToken();
-  const response = await fetch(
-    `${API_BASE_URL}/api/Course/api/Course/GetCourseMaterialPdf/${courseMaterialId}`,
-    { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+  const info = await apiFetch(
+    `/api/Course/api/Course/GetCourseMaterialPdfUrl/${courseMaterialId}`
   );
+  const fileName = info?.fileName || "attachment";
+
+  if (info?.direct && info?.downloadUrl) {
+    window.location.assign(info.downloadUrl);
+    return;
+  }
+
+  const token = getToken();
+  const response = await fetch(`${API_BASE_URL}${info?.downloadUrl || ""}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
   if (response.status === 401) {
+    notifyAuthExpired();
     throw new ApiError("Your session has expired. Please sign in again.", 401);
   }
   if (!response.ok) {
     throw new ApiError(`Request failed with status ${response.status}.`, response.status);
   }
-  return await response.blob();
+
+  const objectUrl = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
 }
 export {
   changeCourseStatus,
