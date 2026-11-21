@@ -57,18 +57,17 @@ namespace MdLabScience.Services
                 var extension = Path.GetExtension(file.FileName);
                 var key = $"{folder}/{Guid.NewGuid():N}{extension}";
 
-                using var ms = new MemoryStream();
-                await file.CopyToAsync(ms);
-                ms.Position = 0;
+            using var stream = file.OpenReadStream();
+            var request = new PutObjectRequest
+            {
+                BucketName = _bucketName,
+                Key = key,
+                InputStream = stream,
+                ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                UseChunkEncoding = false
+            };
+            request.Headers.ContentLength = file.Length;
 
-                var request = new PutObjectRequest
-                {
-                    BucketName = _bucketName,
-                    Key = key,
-                    InputStream = ms,
-                    ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
-                    UseChunkEncoding = false
-                };
 
                 await _s3Client.PutObjectAsync(request);
 

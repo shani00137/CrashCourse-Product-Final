@@ -38,7 +38,9 @@ function uploadCourseMaterial(form, onProgress) {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(xhr.responseText || "");
       } else {
-        let message = `Request failed with status ${xhr.status}.`;
+        let message = [404, 413, 502, 503].includes(xhr.status)
+          ? `Upload failed (${xhr.status}). The file may be too large or the server may be restarting.`
+          : `Request failed with status ${xhr.status}.`;
         try {
           const body = JSON.parse(xhr.responseText);
           if (body && typeof body.message === "string" && body.message) {

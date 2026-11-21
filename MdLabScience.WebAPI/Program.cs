@@ -1,6 +1,7 @@
 using MdLabScience.DbContext;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using MdLabScience.Services;
@@ -10,6 +11,8 @@ using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Events;
 using System.Text;
+
+const long MaxUploadBytes = 524288000;
 
 var logDirectory = Path.Combine(AppContext.BaseDirectory, "logs");
 Directory.CreateDirectory(logDirectory);
@@ -33,6 +36,14 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+
+    builder.WebHost.ConfigureKestrel(options =>
+        options.Limits.MaxRequestBodySize = MaxUploadBytes);
+    builder.Services.Configure<FormOptions>(options =>
+    {
+        options.MultipartBodyLengthLimit = MaxUploadBytes;
+        options.MemoryBufferThreshold = 64 * 1024;
+    });
 
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)

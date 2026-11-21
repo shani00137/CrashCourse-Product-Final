@@ -32,6 +32,7 @@ import {
   downloadCourseMaterial,
   courseFileUrl
 } from "../../../../services/courseService";
+const MAX_MATERIAL_UPLOAD_BYTES = 500 * 1024 * 1024;
 function CoursesScreen() {
   const pageSize = 10;
   const [rows, setRows] = useState([]);
@@ -226,6 +227,10 @@ function CoursesScreen() {
     if (!materialCourse) return;
     if (!materialFile) {
       setMaterialsError("Please choose a file to upload.");
+      return;
+    }
+    if (materialFile.size > MAX_MATERIAL_UPLOAD_BYTES) {
+      setMaterialsError("The file is too large. Maximum upload size is 500 MB.");
       return;
     }
     setUploading(true);
